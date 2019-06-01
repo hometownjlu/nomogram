@@ -164,7 +164,7 @@ s
 ```
 
 ## Relaxed Cubic Splines For Continuous Variables
-HOW DO YOU DECIDE HOW MANY KNOTS TO USE?
+HOW DO YOU DECIDE HOW MANY KNOTS TO USE ON CONTINUOUS VARIABLES WITH RELAXED SPLINES?
 ```{r, echo=TRUE, include=FALSE, fig.width=7, fig.asp=1}
 #Age Splines
 Hmisc::rcspline.eval(x=all_data$Age, nk=5, type="logistic", inclx = TRUE, knots.only = TRUE, norm = 2, fractied=0.05)  #tells where the knots are located
@@ -220,7 +220,7 @@ table1_all_data <- arsenal::tableby(Match_Status ~
                                       Count_of_Peer_Reviewed_Articles_Abstracts + 
                                       Count_of_Peer_Reviewed_Book_Chapter + 
                                       Count_of_Peer_Reviewed_Other_than_Published + 
-                                      Count_of_Peer_Reviewed_Online_Publication + 
+                                      Count_of_Online_Publications + 
                                       Visa_Sponsorship_Needed +
                                       Medical_Degree,
                                     data=all_data, control = tableby.control(test = TRUE, total = F, digits = 1L, digits.p = 2L, digits.count = 0L, numeric.simplify = F, numeric.stats = c("median", "q1q3"), cat.stats = c("Nmiss","countpct"), stats.labels = list(Nmiss = "N Missing", Nmiss2 ="N Missing", meansd = "Mean (SD)", medianrange = "Median (Range)", median ="Median", medianq1q3 = "Median (Q1, Q3)", q1q3 = "Q1, Q3", iqr = "IQR",range = "Range", countpct = "Count (Pct)", Nevents = "Events", medSurv ="Median Survival", medTime = "Median Follow-Up")))
@@ -279,7 +279,7 @@ In this kind of plot we want to look for the bright, large circles which immedia
 
 ```{r, warning= FALSE, message=FALSE, echo=FALSE}
 set.seed(0)
-train_corrleation <- train %>% select(Age, USMLE_Step_1_Score, Count_of_Poster_Presentation, Count_of_Oral_Presentation, Count_of_Peer_Reviewed_Articles_Abstracts, Count_of_Peer_Reviewed_Book_Chapter, Count_of_Peer_Reviewed_Other_than_Published, Count_of_Peer_Reviewed_Online_Publication) %>%
+train_corrleation <- train %>% select(Age, USMLE_Step_1_Score, Count_of_Poster_Presentation, Count_of_Oral_Presentation, Count_of_Peer_Reviewed_Articles_Abstracts, Count_of_Peer_Reviewed_Book_Chapter, Count_of_Peer_Reviewed_Other_than_Published, Count_of_Online_Publications) %>%
   #mutate(Gender = fct_recode(Gender,"0" = "Male", "1" = "Female")) %>%
   #mutate(Couples_Match = fct_recode(Couples_Match,"0" = "No", "1" = "Yes")) %>%
   #mutate(US_or_Canadian_Applicant = fct_recode(US_or_Canadian_Applicant,"0" = "No", "1" = "Yes")) %>%
@@ -321,14 +321,14 @@ Create a Kitchen Sink model with all factors first. This is essentially a screen
 d <- datadist(train)
 options(datadist = "d")
 
-kitchen.sink <- lrm(Match_Status ~ white_non_white +  rcs(Age, 5) + Gender +  Couples_Match + US_or_Canadian_Applicant +  Medical_Education_Interrupted + Alpha_Omega_Alpha +  Military_Service_Obligation + rcs(USMLE_Step_1_Score, 4) + rcs(Count_of_Poster_Presentation,3) +  Count_of_Oral_Presentation + Count_of_Peer_Reviewed_Articles_Abstracts + Count_of_Peer_Reviewed_Book_Chapter + Count_of_Peer_Reviewed_Other_than_Published + Count_of_Peer_Reviewed_Online_Publication + Visa_Sponsorship_Needed + Medical_Degree, data = train, x = T, y = T)
+kitchen.sink <- lrm(Match_Status ~ white_non_white +  rcs(Age, 5) + Gender +  Couples_Match + US_or_Canadian_Applicant +  Medical_Education_Interrupted + Alpha_Omega_Alpha +  Military_Service_Obligation + rcs(USMLE_Step_1_Score, 4) + rcs(Count_of_Poster_Presentation,3) +  Count_of_Oral_Presentation + Count_of_Peer_Reviewed_Articles_Abstracts + Count_of_Peer_Reviewed_Book_Chapter + Count_of_Peer_Reviewed_Other_than_Published + Count_of_Online_Publications + Visa_Sponsorship_Needed + Medical_Degree, data = train, x = T, y = T)
 
 kitchen.sink
 ```
 
 Are there predictor interactions?????  HOW WOULD I RECOGNIZED THE INTERACTIONS AND DISPLAY THE RESULTS IN A READABLE WAY?
 ```{r, echo=TRUE}
-lm.fit2 <- lm(Match_Status ~ (white_non_white + Age + Gender +  Couples_Match + US_or_Canadian_Applicant +  Medical_Education_Interrupted + Alpha_Omega_Alpha +  Military_Service_Obligation + USMLE_Step_1_Score + Count_of_Poster_Presentation +  Count_of_Oral_Presentation + Count_of_Peer_Reviewed_Articles_Abstracts + Count_of_Peer_Reviewed_Book_Chapter + Count_of_Peer_Reviewed_Other_than_Published + Count_of_Peer_Reviewed_Online_Publication + Visa_Sponsorship_Needed + Medical_Degree)^2, data = all_data)
+lm.fit2 <- lm(Match_Status ~ (white_non_white + Age + Gender +  Couples_Match + US_or_Canadian_Applicant +  Medical_Education_Interrupted + Alpha_Omega_Alpha +  Military_Service_Obligation + USMLE_Step_1_Score + Count_of_Poster_Presentation +  Count_of_Oral_Presentation + Count_of_Peer_Reviewed_Articles_Abstracts + Count_of_Peer_Reviewed_Book_Chapter + Count_of_Peer_Reviewed_Other_than_Published + Count_of_Online_Publications + Visa_Sponsorship_Needed + Medical_Degree)^2, data = all_data)
 ```
 
 ```{r, include=FALSE, echo=FALSE}
@@ -1493,7 +1493,7 @@ table1_all_data <- arsenal::tableby(Match_Status ~
                                       Count_of_Peer_Reviewed_Articles_Abstracts + 
                                       Count_of_Peer_Reviewed_Book_Chapter + 
                                       Count_of_Peer_Reviewed_Other_than_Published + 
-                                      Count_of_Peer_Reviewed_Online_Publication + 
+                                      Count_of_Online_Publications + 
                                       Visa_Sponsorship_Needed +
                                       Medical_Degree,
                                     data=train, control = tableby.control(test = TRUE, total = TRUE, digits = 1L, digits.p = 2L, digits.count = 0L, numeric.simplify = F, numeric.stats = c("median", "q1q3"), cat.stats = c("Nmiss","countpct"), stats.labels = list(Nmiss = "N Missing", Nmiss2 ="N Missing", meansd = "Mean (SD)", medianrange = "Median (Range)", median ="Median", medianq1q3 = "Median (Q1, Q3)", q1q3 = "Q1, Q3", iqr = "IQR",range = "Range", countpct = "Count (Pct)", Nevents = "Events", medSurv ="Median Survival", medTime = "Median Follow-Up")))
