@@ -3,17 +3,17 @@ title: "DRAFT:  A model to predict chances of matching into Obstetrics and Gynec
 author: "Tyler M. Muffly, MD"
 date: '`r format(Sys.time(), "%d %B, %Y")`'
 output:
-  pdf_document: 
-    latex_engine: xelatex
-    df_print: kable
-    toc: true
-    #pandoc_args: ["--wrap=none", "--top-level-division=chapter"]
-  word_document: default
   html_document:
     toc: true
     toc_depth: 2
     dev: 'svg'
     code_folding: show
+  word_document: default
+  pdf_document: 
+    latex_engine: xelatex
+    df_print: kable
+    toc: true
+    #pandoc_args: ["--wrap=none", "--top-level-division=chapter"]
 fontsize: 12pt
 geometry: margin=1in
 ---
@@ -52,7 +52,7 @@ options(repos = r)
 install.packages("anonymizer", type="source")
 
 if(!require(pacman))install.packages("pacman")
-pacman::p_load('caret', 'readxl', 'XML', 'reshape2', 'devtools', 'purrr', 'readr', 'ggplot2', 'dplyr', 'magick', 'janitor', 'lubridate', 'hms', 'tidyr', 'stringr', 'readr', 'openxlsx', 'forcats', 'RcppRoll', 'tibble', 'bit64', 'munsell', 'scales', 'rgdal', 'tidyverse', "foreach", "PASWR", "rms", "pROC", "ROCR", "nnet", "janitor", "packrat", "DynNom", "export", "caTools", "mlbench", "randomForest", "ipred", "xgboost", "Metrics", "RANN", "AppliedPredictiveModeling", "nomogramEx", "shiny", "earth", "fastAdaboost", "Boruta", "glmnet", "ggforce", "tidylog", "InformationValue", "pscl", "scoring", "DescTools", "gbm", "Hmisc", "arsenal", "pander", "moments", "leaps", "MatchIt", "car", "mice", "rpart", "beepr", "fansi", "utf8", "zoom", "lmtest", "ResourceSelection", "rpart", "rmarkdown", "rattle", "rmda", "funModeling", "DynNom", "tinytex", "caretEnsemble", "broom", "Rmisc", "corrplot", "GGally", "alluvial", "progress", "car", "perturb", "vctrs", "highr", "labeling", "DataExplorer", "rsconnect", "inspectdf", "ggpubr", "esquisse", "rmarkdown", "stargazer", "tableone", "knitr", "drake", "visNetwork", "rpart")
+pacman::p_load('caret', 'readxl', 'XML', 'reshape2', 'devtools', 'purrr', 'readr', 'ggplot2', 'dplyr', 'magick', 'janitor', 'lubridate', 'hms', 'tidyr', 'stringr', 'readr', 'openxlsx', 'forcats', 'RcppRoll', 'tibble', 'bit64', 'munsell', 'scales', 'rgdal', 'tidyverse', "foreach", "PASWR", "rms", "pROC", "ROCR", "nnet", "janitor", "packrat", "DynNom", "export", "caTools", "mlbench", "randomForest", "ipred", "xgboost", "Metrics", "RANN", "AppliedPredictiveModeling", "nomogramEx", "shiny", "earth", "fastAdaboost", "Boruta", "glmnet", "ggforce", "tidylog", "InformationValue", "pscl", "scoring", "DescTools", "gbm", "Hmisc", "arsenal", "pander", "moments", "leaps", "MatchIt", "car", "mice", "rpart", "beepr", "fansi", "utf8", "zoom", "lmtest", "ResourceSelection", "rpart", "rmarkdown", "rattle", "rmda", "funModeling", "DynNom", "tinytex", "caretEnsemble", "broom", "Rmisc", "corrplot", "GGally", "alluvial", "progress", "car", "perturb", "vctrs", "highr", "labeling", "DataExplorer", "rsconnect", "inspectdf", "ggpubr", "esquisse", "rmarkdown", "stargazer", "tableone", "knitr", "drake", "visNetwork", "rpart", "psych")
 
 #install.packages('knitr', dependencies = TRUE, type = "source")
 # update all existing packages first
@@ -213,11 +213,6 @@ stargazer::stargazer(all_data[1:4, ], output='latex', summary=FALSE, rownames=FA
 
 ```{r, echo=FALSE, warning= FALSE, message=FALSE, include=FALSE, fig.width=7, fig.asp=1}
 plot(s, main= "Univariate Analysis", cex.sub = 0.5, cex.axis=0.2, cex.main=0.3, cex.lab=0.4, xlim=c(0,0.99), subtitles = FALSE, xlab = "Chance of Matching into OBGYN Residency")
-```
-
-```{r rpart EDA}
-t.model <- rpart((Match_Status~.), data = train)
-t.model$variable.importance
 ```
 
 The simple tree was plotted below. 
@@ -444,27 +439,59 @@ rms::fastbw(kitchen.sink, rule = "aic")
 ```
 
 ## Correlation overview
-In this kind of plot we want to look for the bright, large circles which immediately show the strong correlations (size and shading depends on the absolute values of the coefficients; color depends on direction).  This shows whether two features are connected so that one changes with a predictable trend if you change the other. The closer this coefficient is to zero the weaker is the correlation. Anything that you would have to squint to see is usually not worth seeing!  CAN ONLY CORRELATE CONTINOUS VARIABLES.  
+In this kind of plot we want to look for the bright, large circles which immediately show the strong correlations (size and shading depends on the absolute values of the coefficients; color depends on direction).  This shows whether two features are connected so that one changes with a predictable trend if you change the other. The closer this coefficient is to zero the weaker is the correlation. Anything that you would have to squint to see is usually not worth seeing!  
 
-Match_Status is correlated with US_or_Canadian_applicant, USMLE_Step_1, Visa_Sponsorship_Needed, and White_non_white.  
-```{r, warning= FALSE, message=FALSE, echo=FALSE}
-set.seed(0)
-train_corrleation <- train %>% select(Age, USMLE_Step_1_Score, Count_of_Poster_Presentation, Count_of_Oral_Presentation, Count_of_Peer_Reviewed_Articles_Abstracts, Count_of_Peer_Reviewed_Book_Chapter, Count_of_Peer_Reviewed_Other_than_Published, Count_of_Peer_Reviewed_Online_Publication) %>%
-  #mutate(Gender = fct_recode(Gender,"0" = "Male", "1" = "Female")) %>%
-  #mutate(Couples_Match = fct_recode(Couples_Match,"0" = "No", "1" = "Yes")) %>%
-  #mutate(US_or_Canadian_Applicant = fct_recode(US_or_Canadian_Applicant,"0" = "No", "1" = "Yes")) %>%
-  #mutate(Medical_Education_Interrupted = fct_recode(Medical_Education_Interrupted,"0" = "No", "1" = "Elections_Senior_Year", "2" = "Yes")) %>%
-  mutate_all(as.integer)%>%
-  stats::cor(use="pairwise.complete.obs") %>%
-  corrplot::corrplot(type="lower", diag=FALSE, order = "hclust", tl.cex = 0.5, tl.col = "black", sig.level = "0.01", insig = "blank", pch = TRUE)
+We load the caret package to dummify all factor variables as the cor function only accepts numerical values:
+```{r, echo=FALSE, results="asis"}
+#https://youtu.be/igPQ-pI8Bjo?t=269
+dmy <- dummyVars(" ~ .", data = train)
+adultsTrsf <- data.frame(predict(dmy, newdata = train))
+
+## Correlation matrix with p-values. See http://goo.gl/nahmV for documentation of this function
+cor.prob <- function (X, dfr = nrow(X) - 2) {
+  R <- cor(X, use="pairwise.complete.obs")
+  above <- row(R) < col(R)
+  r2 <- R[above]^2
+  Fstat <- r2 * dfr/(1 - r2)
+  R[above] <- 1 - pf(Fstat, 1, dfr)
+  R[row(R) == col(R)] <- NA
+  R
+}
+
+## Use this to dump the cor.prob output to a 4 column matrix
+## with row/column indices, correlation, and p-value.
+## See StackOverflow question: http://goo.gl/fCUcQ
+flattenSquareMatrix <- function(m) {
+  if( (class(m) != "matrix") | (nrow(m) != ncol(m))) stop("Must be a square matrix.") 
+  if(!identical(rownames(m), colnames(m))) stop("Row and column names must be equal.")
+  ut <- upper.tri(m)
+  data.frame(i = rownames(m)[row(m)[ut]],
+             j = rownames(m)[col(m)[ut]],
+             cor=t(m)[ut],
+             p=m[ut])
+}
+
+corMasterList <- flattenSquareMatrix (cor.prob(adultsTrsf))
+print(head(corMasterList,10))
+
+corList <- corMasterList[order(-abs(corMasterList$cor)),]
+print(head(corList,10))
+
+selectedSub <- subset(corList, (abs(cor) > 0.2 & j == 'Match_Status'))
+print(selectedSub)
+
+bestSub <- as.character(selectedSub$i)
+bestSub
+
+knitr::kable(bestSub)
+```
+
+The pairs plot, and in particular the last Match_Status column, tell us a lot about our data set. Being a US or Canadian applicant is the most positively correlated with Matching_Status. Not being a US citizen and Age are the most negatively correlated.
+```{r, echo=FALSE}
+correlation_plot <- pairs.panels(adultsTrsf[c(bestSub, 'Match_Status')])
 ```
 
 p-value associated with the null hypothesis of 0 correlation, small values indicate evidence that the true correlation is not equal to 0.
-```{r, echo=FALSE}
-inspect_cor(all_data, show_plot = FALSE, alpha = 0.05)
-```
-
-Usually it’s most interesting to start with the strong signals in the correlation plot and to examine them more in detail.
 
 # Step 5: Factor Selection using a LASSO model (Penalized Logistic Regression)
 Here, we use Lasso for simplicity and interpretability. The aim is to avoid over-parametrization and unnecessary model bias by carrying feature selection on-the-go. Key to this task will be cross-validation.  Start by creating a custom train control providing the number of cross-validations and setting the classProbs to TRUE for logistic regression.  
@@ -487,7 +514,7 @@ levels(train$Match_Status) <- c("NoMatch", "Matched")
 levels(test$Match_Status) <- c("NoMatch", "Matched")
 ```
 
-Create the LASSO using glmnet within the caret package.  Here we are solely using the train dataset to determine what varaiables predict the outcome.  
+Create the LASSO using glmnet within the `caret` package.  Here we are solely using the `train` dataset to determine what varaiables predict the outcome.  
 ```{r}
 # Train glmnet with custom trainControl and tuning: model
 lasso.mod <- caret::train(
