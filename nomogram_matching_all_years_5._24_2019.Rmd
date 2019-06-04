@@ -82,7 +82,7 @@ all_data <- all_data %>%
   select(-"Gold_Humanism_Honor_Society", -"Sigma_Sigma_Phi", -"Misdemeanor_Conviction", -"Malpractice_Cases_Pending", -"Match_Status_Dichot", -"Citizenship", -"BLS", -"Positions_offered")
 ```
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
 file.exists("~/Dropbox/Nomogram/nomogram/data/all_years_reorder_cols_84.rds")
 
 create_plot_num <- function(data) {funModeling::plot_num(data, path_out = "~/Dropbox/Nomogram/nomogram/results")} #Export results
@@ -107,17 +107,21 @@ vis_drake_graph(config)
 drake::make(plan)
 ```
 
-
 Bring in the columns that are desired for all_data.  
 ```{r, echo=FALSE, cache=TRUE}
 all_data <- all_data[c('white_non_white', 'Age',  'Year', 'Gender', 'Couples_Match', 'US_or_Canadian_Applicant', "Medical_Education_or_Training_Interrupted", "Alpha_Omega_Alpha",  "Military_Service_Obligation", "USMLE_Step_1_Score", "Count_of_Poster_Presentation",  "Count_of_Oral_Presentation", "Count_of_Peer_Reviewed_Journal_Articles_Abstracts", "Count_of_Peer_Reviewed_Book_Chapter", "Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published", "Count_of_Peer_Reviewed_Online_Publication", "Visa_Sponsorship_Needed", "Medical_Degree", 'Match_Status')]
 
-colnames(all_data)[colnames(all_data)=="Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published"] <- "Count_of_Peer_Reviewed_Other_than_Published"
+colnames(all_data)[colnames(all_data)=="Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published"] <- "Count_of_Other_than_Published"
 
-colnames(all_data)[colnames(all_data)=="Count_of_Peer_Reviewed_Journal_Articles_Abstracts"] <- "Count_of_Peer_Reviewed_Articles_Abstracts"
+colnames(all_data)[colnames(all_data)=="Count_of_Peer_Reviewed_Journal_Articles_Abstracts"] <- "Count_of_Articles_Abstracts"
 
 colnames(all_data)[colnames(all_data)=="Medical_Education_or_Training_Interrupted"] <- "Medical_Education_Interrupted"
 
+colnames(all_data)[colnames(all_data)=="Count_of_Peer_Reviewed_Online_Publication"] <- "Count_of_Online_Publications"
+all_data$Year <- as.factor(all_data$Year)
+all_data$Gender <- as.factor(all_data$Gender)
+all_data$US_or_Canadian_Applicant <- as.factor(all_data$US_or_Canadian_Applicant)
+all_data<- Hmisc::upData(all_data)
 colnames(all_data)
 ```
 
@@ -128,9 +132,23 @@ dim(all_data)
 plot_intro(all_data)
 ```
 
+## Data Quality Check of `all_data`
+A summary of the 19 variables are listed below:
+
+1. Eleven of the variables were a factor.  All factors had two levels except for Alpha_Omega_Alpha had three levels.  The target variable is `all_data$Match_Status`.  
+
+2. Seven of the variables were integers. 
+
+3. One of the variables was a number.  Age was calculated as a number.  
+
 ```{r, echo=FALSE}
 print(str(all_data))
 inspectdf::inspect_types(all_data, show_plot = TRUE)
+```
+
+```{r structure data 2}
+all_data <- Hmisc::upData(all_data)
+str(all_data)
 ```
 
 ```{r, echo=FALSE}
@@ -141,7 +159,7 @@ sum(is.na(all_data))
 #head(all_data)
 stargazer(all_data, type = 'latex')
 ```
-## Univariate Analysis
+## Data size and structure
 ```{r, results='asis', echo=FALSE}
 DataExplorer::plot_bar(all_data)
 #DataExplorer::plot_boxplot(all_data, by = "Match_Status")
@@ -162,9 +180,8 @@ ggpairs(data=all_data_ggally, progress=TRUE, columns = c("Match_Status" ,  "Medi
 
 ggpairs(data=all_data_ggally, progress=TRUE, columns = c("Match_Status" , "Medical_Degree", "Visa_Sponsorship_Needed", "Count_of_Peer_Reviewed_Book_Chapter"))
 
-ggpairs(data=all_data_ggally, progress=TRUE, columns = c("US_or_Canadian_Applicant" , "Couples_Match", "Visa_Sponsorship_Needed", "Count_of_Poster_Presentation"))
+ggpairs(data=all_data_ggally, progress=TRUE, columns = c("Match_Status" , "US_or_Canadian_Applicant" , "Couples_Match", "Visa_Sponsorship_Needed", "Count_of_Poster_Presentation"))
 ```
-
 
 ```{r, echo=FALSE}
 Hmisc::label(all_data$Medical_Degree) <- "Medical Degree"
@@ -483,15 +500,13 @@ print(selectedSub)
 bestSub <- as.character(selectedSub$i)
 bestSub
 
-knitr::kable(bestSub)
+knitr::kable(bestSub, caption = "Highly Correlated Factors for Matching into OBGYN")
 ```
 
 The pairs plot, and in particular the last Match_Status column, tell us a lot about our data set. Being a US or Canadian applicant is the most positively correlated with Matching_Status. Not being a US citizen and Age are the most negatively correlated.
 ```{r, echo=FALSE}
 correlation_plot <- pairs.panels(adultsTrsf[c(bestSub, 'Match_Status')])
 ```
-
-p-value associated with the null hypothesis of 0 correlation, small values indicate evidence that the true correlation is not equal to 0.
 
 # Step 5: Factor Selection using a LASSO model (Penalized Logistic Regression)
 Here, we use Lasso for simplicity and interpretability. The aim is to avoid over-parametrization and unnecessary model bias by carrying feature selection on-the-go. Key to this task will be cross-validation.  Start by creating a custom train control providing the number of cross-validations and setting the classProbs to TRUE for logistic regression.  
