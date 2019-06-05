@@ -1,0 +1,15 @@
+I want to use all the same variables in all the models.
+
+Do you think that the drake package is overkill?
+
+What variables should I include in a correlation plot? The target variable of Match_Status? Only continuous variables?
+
+Should I run the correlation plot on the train data set or the entire data set?
+
+Are there predictor interactions? How would I determine if there were any interactions please?
+
+Is there a way to check for collinearity among the predictors? The variables with splines have a very high variation influence factor. Why is this so and should I keep the predictors with splines in even if they have high collinearity?
+
+I do not understand woe.binning, when do we use it and why? Why would we need to bin both numerical and factor variables?
+
+Do all variables for a tree analysis need to be factors?

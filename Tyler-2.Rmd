@@ -34,13 +34,17 @@ options(repos = r)
 data_folder <- paste0("Data/")
 # results_folder <- paste0("~/Dropbox/Nomogram/nomogram/results")
 results_folder <- paste0("Results/")
+packrat::set_opts(local.repos = c("packrat/lib/x86_64-apple-darwin15.6.0/3.6.0/"))
 ```
 
 ```{r, include=FALSE, echo=FALSE}
-install.packages("anonymizer", type="source")
+library(packrat)
+packrat::packrat_mode(on = TRUE)
+
+# install.packages("anonymizer", type="source")
 if(!require(pacman))install.packages("pacman")
 pacman::p_load('caret', 'readxl', 'XML', 'reshape2', 'devtools', 'purrr', 'readr', 'ggplot2', 'dplyr', 'magick', 'janitor', 'lubridate', 'hms', 'tidyr', 'stringr', 'readr', 'openxlsx', 'forcats', 'RcppRoll', 'tibble', 'bit64', 'munsell', 'scales', 'rgdal', 'tidyverse', "foreach", "PASWR", "rms", "pROC", "ROCR", "nnet", "janitor", "packrat", "DynNom", "export", "caTools", "mlbench", "randomForest", "ipred", "xgboost", "Metrics", "RANN", "AppliedPredictiveModeling", "nomogramEx", "shiny", "earth", "fastAdaboost", "Boruta", "glmnet", "ggforce", "tidylog", "InformationValue", "pscl", "scoring", "DescTools", "gbm", "Hmisc", "arsenal", "pander", "moments", "leaps", "MatchIt", "car", "mice", "rpart", "beepr", "fansi", "utf8", "zoom", "lmtest", "ResourceSelection", "rpart", "rmarkdown", "rattle", "rmda", "funModeling", "DynNom", "tinytex", "caretEnsemble", "broom", "Rmisc", "corrplot", "GGally", "alluvial", "progress", "car", "perturb", "vctrs", "highr", "labeling", "DataExplorer", "rsconnect", "inspectdf", "ggpubr", "esquisse", "rmarkdown", "stargazer", "tableone", "knitr", "drake", "visNetwork", "rpart", "woeBinning", "OneR", "rattle", "rpart.plot", "RColorBrewer", "randomForest", "kableExtra", "kernlab", "naivebayes", "dplR")
-packrat::packrat_mode(on = TRUE)
+
 library(dplR)
 ```
 
@@ -199,11 +203,12 @@ describe(as.factor(all_data$Match_Status))
 DataExplorer::plot_bar(all_data)
 #DataExplorer::plot_boxplot(all_data, by = "Match_Status")
 #DataExplorer::plot_histogram(all_data)
-inspectdf::inspect_cat(all_data, show_plot = TRUE)
-inspectdf::inspect_imb(all_data, show_plot = TRUE)
-imb <- inspectdf::inspect_imb(all_data, show_plot = FALSE)
+inspectdf::inspect_cat(all_data) %>% show_plot()
+inspectdf::inspect_cat(all_data) %>% show_plot()
+inspectdf::inspect_imb(all_data) %>% show_plot()
+imb <- inspectdf::inspect_imb(all_data) %>% show_plot()
 knitr::kable(imb)
-inspectdf::inspect_num(all_data, show_plot = TRUE) #Breaks the Rmarkdown compiling for some reason.  Ugh.  
+inspectdf::inspect_num(all_data) %>% show_plot() #Breaks the Rmarkdown compiling for some reason.  Ugh.  
 ```
 
 
@@ -461,9 +466,9 @@ stargazer::stargazer(all_data,
 After the data check was completed, an exploratory data analysis (EDA) was conducted to look for interesting relationships among the variables. Histograms were used to visualize distributions among predictors. Since the assignment was a classification problem, relationships between predictors and the dichotomous outcome were also performed. Distributions of all variables were skewed right. Examples of histograms of seven variables: age, Count of articles and abstracts, count of oral presentations, count of poster presentations, Count of online pubications, count of non-published publications, count of peer-reviewed book chapters,  are demonstrated below.
 
 ```{r, train vs test, warning=FALSE, echo=TRUE, message=FALSE}
-train <- filter(all_data, Year != "2018")  #Train on years 2015, 2016, 2017
+train <- filter(all_data, !Year %in% c("2017", "2018"))  #Train on years 2015, 2016
 nrow(train) 
-test <- filter(all_data, Year == "2018") #Test on 2018 data
+test <- filter(all_data, Year %in%  c("2017", "2018")) #Test on 2017, 2018 data
 nrow(test)
 test <- test %>% select(-"Year")
 train <- train %>% select(-"Year")
@@ -541,13 +546,21 @@ I'M NOT SURE WHY THE PROPORTION OF MATCHED VS UNMATCHED DATA IS DIFFERENT BETWEE
 Check Proportions of Matched
 
 ```{r, results="asis", echo=FALSE}
-levels(train$Match_Status) <- 
-  c("NoMatch", 
-    "Matched")
-
-levels(test$Match_Status) <- 
-  c("NoMatch", 
-    "Matched")
+train <- train %>% 
+  mutate(Match_Status = factor(Match_Status,
+                               levels=c(0,1),
+                               labels=c("NoMatch", "Matched")))
+test <- test %>% 
+  mutate(Match_Status = factor(Match_Status,
+                               levels=c(0,1),
+                               labels=c("NoMatch", "Matched")))
+# levels(train$Match_Status) <- 
+#   c("NoMatch", 
+#     "Matched")
+# 
+# levels(test$Match_Status) <- 
+#   c("NoMatch", 
+#     "Matched")
 
 # Examine the proportions of the Match_Status class lable across the datasets.
 crude_summary <- 
@@ -578,15 +591,15 @@ options(datadist = "d")
 kitchen.sink <- 
   lrm(Match_Status ~ 
         white_non_white +  
-        rcs(Age, 5) + 
+        rms::rcs(Age, 5) + 
         Gender +  
         Couples_Match + 
         US_or_Canadian_Applicant +  
         Medical_Education_Interrupted + 
         Alpha_Omega_Alpha +  
         Military_Service_Obligation + 
-        rcs(USMLE_Step_1_Score, 4) + 
-        rcs(Count_of_Poster_Presentation,3) +  
+        rms::rcs(USMLE_Step_1_Score, 4) + 
+        rms::rcs(Count_of_Poster_Presentation,3) +  
         Count_of_Oral_Presentation + 
         Count_of_Articles_Abstracts + 
         Count_of_Peer_Reviewed_Book_Chapter + 
@@ -679,18 +692,18 @@ myControl <-
     classProbs = TRUE, # IMPORTANT!
     verboseIter = FALSE)
 
-train$Match_Status <- 
-  as.factor(train$Match_Status)
-
-test$Match_Status <- 
-  as.factor(test$Match_Status)
-
-#Levels of the target outcome variable for glmnet need to be words and not numbers.  
-levels(train$Match_Status) <- 
-  c("NoMatch", "Matched")
-
-levels(test$Match_Status) <- 
-  c("NoMatch", "Matched")
+# train$Match_Status <- 
+#   as.factor(train$Match_Status)
+# 
+# test$Match_Status <- 
+#   as.factor(test$Match_Status)
+# 
+# #Levels of the target outcome variable for glmnet need to be words and not numbers.  
+# levels(train$Match_Status) <- 
+#   c("NoMatch", "Matched")
+# 
+# levels(test$Match_Status) <- 
+#   c("NoMatch", "Matched")
 ```
 
 Create the LASSO using glmnet within the caret package.  Here we are solely using the train dataset to determine what varaiables predict the outcome.  
@@ -888,12 +901,13 @@ results <-
 
 par(mar=c(5,15,4,2)) # increase y-axis margin. 
 
-xx <- 
-  barplot(results$Weight, width = 0.85, 
-              main = paste("Variable Importance of all_data - Matching"), horiz = T, 
-              xlab = "< (-) importance >  < neutral >  < importance (+) >", axes = FALSE, 
-              col = ifelse((results$Weight > 0), 'blue', 'red')) +
-  axis(2, at=xx, labels=results$VariableName, tick=FALSE, las=2, line=-0.3, cex.axis=0.6)  
+
+barplot(results$Weight, width = 0.85, 
+        main = paste("Variable Importance of all_data - Matching"), horiz = T, 
+        xlab = "< (-) importance >  < neutral >  < importance (+) >", axes = FALSE, 
+        col = ifelse((results$Weight > 0), 'blue', 'red')) +
+  # axis(2, at=xx, labels=results$VariableName, tick=FALSE, las=2, line=-0.3, cex.axis=0.6)  
+  axis(2, at= seq_along(results$VariableName), labels=results$VariableName, tick=FALSE, las=2, line=-0.3, cex.axis=0.6)  
 ```
 
 
@@ -909,7 +923,7 @@ options(datadist = "d")
 
 lrm.with.lasso.variables <- 
   lrm(Match_Status ~ 
-        rcs(Age, 5) + 
+        rms::rcs(Age, 5) + 
         Alpha_Omega_Alpha + 
         Count_of_Oral_Presentation + 
         Count_of_Peer_Reviewed_Book_Chapter + 
@@ -918,7 +932,7 @@ lrm.with.lasso.variables <-
         Medical_Degree + 
         Military_Service_Obligation + 
         US_or_Canadian_Applicant +  
-        rcs(USMLE_Step_1_Score, 4) + 
+        rms::rcs(USMLE_Step_1_Score, 4) + 
         Visa_Sponsorship_Needed + 
         white_non_white, 
       data = train, 
@@ -950,7 +964,7 @@ lrm.with.lasso.variables <-
         Gender +  
         Military_Service_Obligation + 
         US_or_Canadian_Applicant +  
-        rcs(USMLE_Step_1_Score, 4) + 
+        rms::rcs(USMLE_Step_1_Score, 4) + 
         Visa_Sponsorship_Needed + 
         white_non_white, 
       data = train, 
@@ -1033,10 +1047,10 @@ levels(d$Match_Status) <-
   c("NoMatch", "Matched")
 
 test$Match_Status <- 
-  as.numeric(test$Match_Status)  #pROC only accepts numeric variables, not a matrix
+  as.numeric(test$Match_Status)-1  #pROC only accepts numeric variables, not a matrix
 
-test$Match_Status <- 
-  (test$Match_Status - 1)
+# test$Match_Status <- 
+#   (test$Match_Status - 1)
 
 predictions <- 
   as.numeric(predictions)
@@ -1045,22 +1059,24 @@ predictions <-
 First, we need to fit lrm.with.lasso.variables in GLM, rather than rms to get the AUC.  There is probably a better way to do this.  Using the test data set.  Also built the same model in lrm.  
 
 ```{r, echo=TRUE, warning=FALSE}
-test$Match_Status <- 
-  as.integer(test$Match_Status+2)
+# test$Match_Status <- 
+#   as.integer(test$Match_Status+2)
 
-test$Match_Status <- 
-  as.factor(test$Match_Status)
+test <- test %>% 
+  mutate(Match_Status = factor(Match_Status,
+                               levels=c(0,1),
+                               labels=c("NoMatch", "Matched")))
 
 train.glm.with.lasso.variables  <- 
   glm(Match_Status ~ 
-        rcs(Age, 5) + 
+        rms::rcs(Age, 5) + 
         Alpha_Omega_Alpha + 
         Count_of_Oral_Presentation + 
         Count_of_Peer_Reviewed_Book_Chapter + 
         Couples_Match + Gender + Medical_Degree + 
         Military_Service_Obligation + 
         US_or_Canadian_Applicant +  
-        rcs(USMLE_Step_1_Score, 4) + 
+        rms::rcs(USMLE_Step_1_Score, 4) + 
         Visa_Sponsorship_Needed + 
         white_non_white,
       data = test, 
@@ -1068,7 +1084,7 @@ train.glm.with.lasso.variables  <-
 
 train.lrm.with.lasso.variables <- 
   lrm(Match_Status ~ 
-        rcs(Age, 5) + 
+        rms::rcs(Age, 5) + 
         Alpha_Omega_Alpha + 
         Count_of_Oral_Presentation + 
         Count_of_Peer_Reviewed_Book_Chapter + 
@@ -1077,7 +1093,7 @@ train.lrm.with.lasso.variables <-
         Medical_Degree + 
         Military_Service_Obligation + 
         US_or_Canadian_Applicant + 
-        rcs(USMLE_Step_1_Score, 4) + 
+        rms::rcs(USMLE_Step_1_Score, 4) + 
         Visa_Sponsorship_Needed + 
         white_non_white, 
       data = train, 
@@ -1218,32 +1234,31 @@ woe.binning.plot(binning, "1:5")
 bin.top.five <- binning[1:5,c(1,3)]
 pander::pander(bin.top.five, style = "simple", justify = c('left', 'center'))
 ```
-
 These top five binned variables were used for the training and test set.
 
 ```{r bin train}
 # Deploy the binning solution to the data frame
 # (add all binned variables and corresponding WOE variables)
-train.df.with.binned.vars.added <- 
+train.df.with.binned.vars.added <-
   woe.binning.deploy(train, binning, add.woe.or.dum.var='woe')
 
-train.df.binned <- 
+train.df.binned <-
   train.df.with.binned.vars.added
 
 # Removing char_freq_dollar raw variable since binned is present
-train.df.binned <- 
+train.df.binned <-
   dplyr::select(train.df.binned, -USMLE_Step_1_Score)
 
 # Removing word_freq_remove raw variable since binned is present
-train.df.binned <- 
+train.df.binned <-
   dplyr::select(train.df.binned, -Age)
 
 # Removing char_freq_exclamation raw variable since binned is present
-train.df.binned <- 
+train.df.binned <-
   dplyr::select(train.df.binned, -Count_of_Poster_Presentation)
 
 # Removing word_freq_hp raw variable since binned is present
-train.df.binned <- 
+train.df.binned <-
   dplyr::select(train.df.binned, -Count_of_Articles_Abstracts)
 
 # Removing capital_run_length_average raw variable since binned is present
@@ -1251,55 +1266,121 @@ train.df.binned <-
   dplyr::select(train.df.binned, -Count_of_Oral_Presentation)
 
 # Removing capital_run_length_average raw variable since binned is present
-train.df.binned <- 
+train.df.binned <-
   dplyr::select(train.df.binned, -Count_of_Other_than_Published)
 
 # Removing capital_run_length_average raw variable since binned is present
-train.df.binned <- 
+train.df.binned <-
   dplyr::select(train.df.binned, -Count_of_Peer_Reviewed_Book_Chapter)
 
 # Removing capital_run_length_average raw variable since binned is present
-train.df.binned <- 
+train.df.binned <-
   dplyr::select(train.df.binned, -Count_of_Online_Publications)
 
-str(train.df.binned)
+# str(train.df.binned)
 ```
+
 
 ```{r stargazer train, eval=FALSE, include=FALSE}
 stargazer::stargazer(train.df.binned, header=FALSE, title = "Descriptive Statistics of Binned Training Match_Status Data", type='latex', nobs = TRUE, mean.sd = TRUE, median = TRUE, iqr = TRUE, digits = 1, font.size = "small", flip = FALSE)
 ```
 
 ```{r, include = TRUE, align = 'center', echo=FALSE}
-# WOE binning 
+# WOE binning
 # Confirming target variable is numeric and 0 or 1
-test$Match_Status <- 
-  as.numeric(test$Match_Status)
+test$Match_Status <-
+  as.numeric(test$Match_Status) - 1
 
 table(test$Match_Status)
 
 test <- as.data.frame(test)
-
-# Bin all variables of the data frame (apart from the target variable)
-# with default parameter settings
-binning <- 
-  woe.binning(test, 
-              'Match_Status', 
-              c(
-                'Age',
-                'USMLE_Step_1_Score', 
-                "Count_of_Poster_Presentation", 
-                "Count_of_Oral_Presentation", 
-                "Count_of_Articles_Abstracts", 
-                "Count_of_Peer_Reviewed_Book_Chapter", 
-                "Count_of_Other_than_Published", 
-                "Count_of_Online_Publications"))
-
-woe.binning.plot(binning, "1:5")
-#woe.binning.plot(binning)
-bin.top.five <- binning[1:5,c(1,3)]
-pander::pander(bin.top.five, style = "simple", justify = c('left', 'center'))
+# 
+# # Bin all variables of the data frame (apart from the target variable)
+# # with default parameter settings
+# binning <-
+#   woe.binning(test,
+#               'Match_Status',
+#               c(
+#                 'Age',
+#                 'USMLE_Step_1_Score',
+#                 "Count_of_Poster_Presentation",
+#                 "Count_of_Oral_Presentation",
+#                 "Count_of_Articles_Abstracts",
+#                 "Count_of_Peer_Reviewed_Book_Chapter",
+#                 "Count_of_Other_than_Published",
+#                 "Count_of_Online_Publications"))
+# 
+# woe.binning.plot(binning, "1:5")
+# #woe.binning.plot(binning)
+# bin.top.five <- binning[1:5,c(1,3)]
+# pander::pander(bin.top.five, style = "simple", justify = c('left', 'center'))
 ```
-
+```{r bin test}
+# # Deploy the binning solution to the data frame
+# # (add all binned variables and corresponding WOE variables)
+# test <- as.data.frame(test)
+# # Bin all variables of the data frame (apart from the target variable)
+# 
+# # with default parameter settings
+# binning.test <-
+#   woe.binning(test,
+#               'Match_Status',
+#               c('Age',
+#                 "USMLE_Step_1_Score",
+#                 "Count_of_Poster_Presentation",
+#                 "Count_of_Oral_Presentation",
+#                 "Count_of_Articles_Abstracts",
+#                 "Count_of_Peer_Reviewed_Book_Chapter",
+#                 "Count_of_Other_than_Published",
+#                 "Count_of_Online_Publications"))
+# 
+# woe.binning.plot(binning.test, "1:5")
+# #woe.binning.plot(binning)
+# bin.top.five <-
+#   binning.test[1:5,c(1,3)]
+# 
+# pander::pander(bin.top.five, style = "simple", justify = c('left', 'center'))
+# 
+# # test.df.with.binned.vars.added <-
+# #   woe.binning.deploy(test, binning, min.iv.total=0.5,add.woe.or.dum.var='woe')
+# 
+# test.df.with.binned.vars.added <-
+#   woe.binning.deploy(test, binning, add.woe.or.dum.var='woe')
+# 
+# test.df.binned <-
+#   test.df.with.binned.vars.added[-18]
+# 
+# # Removing char_freq_dollar raw variable since binned is present
+# test.df.binned <-
+#   dplyr::select(test.df.binned, -"USMLE_Step_1_Score")
+# 
+# # Removing word_freq_remove raw variable since binned is present
+# test.df.binned <-
+#   dplyr::select(test.df.binned, -Age)
+# 
+# # Removing char_freq_exclamation raw variable since binned is present
+# test.df.binned <-
+#   dplyr::select(test.df.binned, -Count_of_Poster_Presentation)
+# 
+# # Removing word_freq_hp raw variable since binned is present
+# test.df.binned <-
+#   dplyr::select(test.df.binned, -Count_of_Articles_Abstracts)
+# 
+# # Removing capital_run_length_average raw variable since binned is present
+# test.df.binned <-
+#   dplyr::select(test.df.binned, -Count_of_Oral_Presentation)
+# 
+# # Removing capital_run_length_average raw variable since binned is present
+# test.df.binned <- dplyr::select(test.df.binned, -Count_of_Other_than_Published)
+# 
+# # Removing capital_run_length_average raw variable since binned is present
+# test.df.binned <- dplyr::select(test.df.binned, -Count_of_Peer_Reviewed_Book_Chapter)
+# 
+# # Removing capital_run_length_average raw variable since binned is present
+# test.df.binned <- dplyr::select(test.df.binned, -Count_of_Online_Publications)
+# 
+# # str(test.df.binned)
+```
 
 ```{r bin test}
 # Deploy the binning solution to the data frame
@@ -1308,49 +1389,52 @@ test <- as.data.frame(test)
 # Bin all variables of the data frame (apart from the target variable)
 
 # with default parameter settings
-binning.test <- 
-  woe.binning(test, 
-              'Match_Status', 
+binning.test <-
+  woe.binning(test,
+              'Match_Status',
               c('Age',
-                "USMLE_Step_1_Score", 
-                "Count_of_Poster_Presentation", 
-                "Count_of_Oral_Presentation", 
-                "Count_of_Articles_Abstracts", 
-                "Count_of_Peer_Reviewed_Book_Chapter", 
-                "Count_of_Other_than_Published", 
+                "USMLE_Step_1_Score",
+                "Count_of_Poster_Presentation",
+                "Count_of_Oral_Presentation",
+                "Count_of_Articles_Abstracts",
+                "Count_of_Peer_Reviewed_Book_Chapter",
+                "Count_of_Other_than_Published",
                 "Count_of_Online_Publications"))
 
 woe.binning.plot(binning.test, "1:5")
 #woe.binning.plot(binning)
-bin.top.five <- 
+bin.top.five <-
   binning.test[1:5,c(1,3)]
 
 pander::pander(bin.top.five, style = "simple", justify = c('left', 'center'))
 
-test.df.with.binned.vars.added <- 
-  woe.binning.deploy(test, binning, min.iv.total=0.5,add.woe.or.dum.var='woe')
+# test.df.with.binned.vars.added <-
+#   woe.binning.deploy(test, binning, min.iv.total=0.5,add.woe.or.dum.var='woe')
 
-test.df.binned <- 
+test.df.with.binned.vars.added <-
+  woe.binning.deploy(test, binning, add.woe.or.dum.var='woe')
+
+test.df.binned <-
   test.df.with.binned.vars.added[-18]
 
 # Removing char_freq_dollar raw variable since binned is present
-test.df.binned <- 
+test.df.binned <-
   dplyr::select(test.df.binned, -"USMLE_Step_1_Score")
 
 # Removing word_freq_remove raw variable since binned is present
-test.df.binned <- 
+test.df.binned <-
   dplyr::select(test.df.binned, -Age)
 
 # Removing char_freq_exclamation raw variable since binned is present
-test.df.binned <- 
+test.df.binned <-
   dplyr::select(test.df.binned, -Count_of_Poster_Presentation)
 
 # Removing word_freq_hp raw variable since binned is present
-test.df.binned <- 
+test.df.binned <-
   dplyr::select(test.df.binned, -Count_of_Articles_Abstracts)
 
 # Removing capital_run_length_average raw variable since binned is present
-test.df.binned <- 
+test.df.binned <-
   dplyr::select(test.df.binned, -Count_of_Oral_Presentation)
 
 # Removing capital_run_length_average raw variable since binned is present
@@ -1362,7 +1446,7 @@ test.df.binned <- dplyr::select(test.df.binned, -Count_of_Peer_Reviewed_Book_Cha
 # Removing capital_run_length_average raw variable since binned is present
 test.df.binned <- dplyr::select(test.df.binned, -Count_of_Online_Publications)
 
-str(test.df.binned)
+# str(test.df.binned)
 ```
 
 ```{r stargazer test, eval=FALSE, include=FALSE}
@@ -1373,52 +1457,52 @@ Relationships between binned variables and `Match_Status` were explored using mo
 
 ```{r OneR chunk}
 # Fit a model to a single attribute;
-model.1 <- 
-  OneR(Match_Status ~ 
-         Age.binned, 
-       data=train.df.binned, 
+model.1 <-
+  OneR(Match_Status ~
+         Age.binned,
+       data=train.df.binned,
        verbose=TRUE);
 
-model.2 <- 
-  OneR(Match_Status ~ 
-         USMLE_Step_1_Score.binned, 
-       data=train.df.binned, 
+model.2 <-
+  OneR(Match_Status ~
+         USMLE_Step_1_Score.binned,
+       data=train.df.binned,
        verbose=TRUE);
 
-model.3 <- 
-  OneR(Match_Status ~ 
-         Count_of_Poster_Presentation.binned, 
-       data=train.df.binned, 
+model.3 <-
+  OneR(Match_Status ~
+         Count_of_Poster_Presentation.binned,
+       data=train.df.binned,
        verbose=TRUE);
 
-model.4 <- 
-  OneR(Match_Status ~ 
-         Count_of_Articles_Abstracts.binned, 
-       data=train.df.binned, 
+model.4 <-
+  OneR(Match_Status ~
+         Count_of_Articles_Abstracts.binned,
+       data=train.df.binned,
        verbose=TRUE);
 
-model.5 <- 
-  OneR(Match_Status ~ 
-         Count_of_Oral_Presentation.binned, 
-       data=train.df.binned, 
+model.5 <-
+  OneR(Match_Status ~
+         Count_of_Oral_Presentation.binned,
+       data=train.df.binned,
        verbose=TRUE);
 
-model.6 <- 
-  OneR(Match_Status ~ 
-         Count_of_Other_than_Published.binned, 
-       data=train.df.binned, 
+model.6 <-
+  OneR(Match_Status ~
+         Count_of_Other_than_Published.binned,
+       data=train.df.binned,
        verbose=TRUE);
 
-model.7 <- 
-  OneR(Match_Status ~ 
-         Count_of_Peer_Reviewed_Book_Chapter.binned, 
-       data=train.df.binned, 
+model.7 <-
+  OneR(Match_Status ~
+         Count_of_Peer_Reviewed_Book_Chapter.binned,
+       data=train.df.binned,
        verbose=TRUE);
 
-model.8 <- 
-  OneR(Match_Status ~ 
+model.8 <-
+  OneR(Match_Status ~
          Count_of_Online_Publications.binned,
-       data=train.df.binned, 
+       data=train.df.binned,
        verbose=TRUE);
 ```
 
@@ -1441,8 +1525,8 @@ A simple decision tree model was used for exploration. The variable importance s
 CAN WE USE ONLY FACTORS IN THIS TREE MODEL?
 
 ```{r rpart EDA}
-t.model <- 
-  rpart(as.factor(Match_Status) ~., 
+t.model <-
+  rpart(as.factor(Match_Status) ~.,
         data = train.df.binned)
 
 t.model$variable.importance
@@ -1451,7 +1535,7 @@ t.model$variable.importance
 The simple tree was plotted below. The a, b and c variables were near the roots of the tree demonstrating importance. DO ALL THE VARIABLES NEED TO BE BINNED AS FACTORS TO RUN A TREE PLOT?
 
 ```{r fancyR plot rpart EDA, include=TRUE}
-# plot 
+# plot
 fancyRpartPlot(t.model, caption = NULL)
 ```
 
@@ -1461,16 +1545,16 @@ Exploratory random forest was also performed. The variable importance for the ra
 # Random forest for EDA
 set.seed(12345)
 
-Y <- 
+Y <-
   as.factor(train.df.binned$Match_Status)
 
-X <- 
+X <-
   train.df.binned[,-10]
 
 #train default model and the most regularized model with same predictive performance
 rf.eda = randomForest(X,Y,sampsize=25,ntree=5000,mtry=4,
                          keep.inbag = T,
-                         keep.forest = T, 
+                         keep.forest = T,
                          importance = TRUE)
 varImpPlot(rf.eda, main = "Random Forest EDA Variable Importance", cex = 0.75)
 ```
@@ -1479,29 +1563,29 @@ varImpPlot(rf.eda, main = "Random Forest EDA Variable Importance", cex = 0.75)
 
 All models were fit using the data labeled train and validated using the data labeled test. 10-fold cross-validation was performed for variable selection and parameter estimation was performed using cross-validation where appropriate.
 
-**(1) Logistic regression using backwards variable selection model** 
+**(1) Logistic regression using backwards variable selection model**
 
 A logistic regression model using backwards variable selection was fit. The summary of the model coefficients for the final model is presented in Table 3. Table 4 demonstrates the confusion matrix for the in-sample performance of the model and Table 5 demonstrates the confusion matrix? or AUC? for the out-of-sample performance.
 
 
 #I'M NOT SURE IF I INCLUDED ALL THE RIGHT VARIABLES
 ```{r Backwards LR model, message=FALSE, warning=FALSE, cache=TRUE}
-full.model <- glm(as.factor(Match_Status) ~ 
-                  white_non_white + woe.Age.binned + 
+full.model <- glm(as.factor(Match_Status) ~
+                  white_non_white + woe.Age.binned +
                          Gender +  Couples_Match +
-                         US_or_Canadian_Applicant + Medical_Education_Interrupted + 
+                         US_or_Canadian_Applicant + Medical_Education_Interrupted +
                          Alpha_Omega_Alpha +
-                         Military_Service_Obligation + 
-                         Visa_Sponsorship_Needed + Medical_Degree  + 
-                    woe.USMLE_Step_1_Score.binned + woe.Count_of_Poster_Presentation.binned + 
-                    woe.Count_of_Articles_Abstracts.binned + 
-                    woe.Count_of_Oral_Presentation.binned + 
-                    woe.Count_of_Other_than_Published.binned + 
-                    woe.Count_of_Peer_Reviewed_Book_Chapter.binned + 
-                    woe.Count_of_Online_Publications.binned, 
+                         Military_Service_Obligation +
+                         Visa_Sponsorship_Needed + Medical_Degree  +
+                    woe.USMLE_Step_1_Score.binned + woe.Count_of_Poster_Presentation.binned +
+                    woe.Count_of_Articles_Abstracts.binned +
+                    woe.Count_of_Oral_Presentation.binned +
+                    woe.Count_of_Other_than_Published.binned +
+                    woe.Count_of_Peer_Reviewed_Book_Chapter.binned +
+                    woe.Count_of_Online_Publications.binned,
                   data = train.df.binned, family = binomial)
  backwards = step(full.model) # Backwards selection is the default
- 
+
 backwards_results = backwards$coefficients
 
 ```
@@ -1511,14 +1595,14 @@ stargazer::stargazer(backwards_results, title="Backwards Logistic Regression Mod
 ```
 
 ```{r train backwards, align= 'center'}
-train.backwards <- 
+train.backwards <-
   predict(backwards, newdata = train.df.binned, type = "response")
 
-train.backwards <- 
+train.backwards <-
   ifelse(train.backwards > 0.50, 1, 0)
 
-lr.accuracy <- 
-  caret::postResample(pred = train.backwards, obs = as.factor(train.df.binned$Match_Status)) 
+lr.accuracy <-
+  caret::postResample(pred = train.backwards, obs = as.factor(train.df.binned$Match_Status))
 
 #cat("\n","----- Accuracy of Backwards LR on train set -----","\n")
 lr.accuracy[1]
@@ -1528,14 +1612,14 @@ lr.accuracy[1]
 # Scale the confusion matrix to accuracy rates by normalizing
 # by the row totals; row totals are used because true values are rows and predicted values are columns.
 #cat("\n","----- Confusion matrix of Backwards LR on train set -----","\n")
-t <- 
+t <-
   table(as.factor(train.df.binned$Match_Status),train.backwards)
 
-row.totals <- 
+row.totals <-
   apply(t,MAR=1,FUN=sum)
 
 #t/row.totals
-dt <- 
+dt <-
   t/row.totals
 
 library(kableExtra)
@@ -1548,15 +1632,15 @@ kable(dt, "latex", booktabs = T, caption = "Confusion matrix of Backwards LR on 
 test.backwards <-
   predict(backwards, newdata = test.df.binned, type = "response")
 
-test.backwards <- 
+test.backwards <-
   ifelse(test.backwards > 0.50, 1, 0)
 
 #cat("\n","----- Accuracy of Backwards LR on test set -----","\n")
-lr.accuracy.test <- 
-  caret::postResample(pred = test.backwards, obs = as.factor(test.df.with.binned.vars.added$Match_Status)) 
+lr.accuracy.test <-
+  caret::postResample(pred = test.backwards, obs = as.factor(test.df.with.binned.vars.added$Match_Status))
 
-lr.accuracy <- 
-  caret::postResample(pred = train.backwards, obs = as.factor(test.df.with.binned.vars.added$Match_Status)) 
+lr.accuracy <-
+  caret::postResample(pred = train.backwards, obs = as.factor(train.df.with.binned.vars.added$Match_Status))
 
 lr.accuracy.test[1]
 ```
@@ -1579,7 +1663,7 @@ The in-sample accuracy was `r lr.accuracy[1]` and the out-of-sample accuracy was
 
 \pagebreak
 
-**(2) Tree model** 
+**(2) Tree model**
 
 A CART model was fit using the rpart package. The final model is presented in the figure below. The majority of final predictors were derived from the binning process. The variables char_free_exclamation.binned, word_freq_removed.binned, and woe.char_freq_dollar.binned had significant influence in the model. Table 6 demonstrates the confusion matrix for the in-sample performance of the model and Table 7 demonstrates the confusion matrix for the out-of-sample performance.
 
@@ -1595,8 +1679,8 @@ fitControl <- trainControl(method = "repeatedcv",
                            repeats = 2)
 
 cart.model <-    train(as.factor(Match_Status) ~ .
-                           , 
-                data = train.df.binned, 
+                           ,
+                data = train.df.binned,
                 method = 'rpart',
                 trControl = fitControl,
                 tuneLength = 8,
@@ -1636,12 +1720,12 @@ kable(dt, "latex", booktabs = T, caption = "Confusion matrix of CART on train se
 
 NOT WORKING, BECAUSE TEST HAS NOT BEEN WOE BINNED???
 
-It is not working because the training model had a different amount of columns then the test data you're feeding into it. Just ensure that they have the correct columns that match. I am commenting this out as it's not something I should fix. 
+It is not working because the training model had a different amount of columns then the test data you're feeding into it. Just ensure that they have the correct columns that match. I am commenting this out as it's not something I should fix.
 
 ```{r cart test accuracy}
 
 
-#test.cart <- predict(cart.model, test.df.with.binned.vars.added)
+test.cart <- predict(cart.model, test.df.with.binned.vars.added)
 
 # Check to ensure the dfs are matching columns
 colnames(train.df.binned)
@@ -1649,9 +1733,9 @@ colnames(test.df.binned)
 
 
 
-#cat("\n","----- Performance of cart on test set -----","\n")
-#cart.accuracy.test <- caret::postResample(pred = test.cart, obs = as.factor(test.df.binned$Match_Status))
-#cart.accuracy.test[1]
+cat("\n","----- Performance of cart on test set -----","\n")
+cart.accuracy.test <- caret::postResample(pred = test.cart, obs = as.factor(test.df.with.binned.vars.added$Match_Status))
+cart.accuracy.test[1]
 ```
 
 ```{r CART test conf matrix, align = 'center', include=TRUE}
@@ -1671,7 +1755,7 @@ For the CART model, the in-sample accuracy was `r cart.accuracy[1]` and out-of-s
 
 \pagebreak
 
-**(3) a Support Vector Machine model** 
+**(3) a Support Vector Machine model**
 
 The support vector machine model was fit. Cross validation identified a cost C = 1 using a linear kernel and a sigma =  ???  using ??? support vectors.
 
@@ -1685,8 +1769,8 @@ fitControl <- trainControl(method = "repeatedcv",
                            number = 10,
                            repeats = 2)
 svm.model <-    train(as.factor(Match_Status) ~ .
-                           , 
-                data = train.df.binned, 
+                           ,
+                data = train.df.binned,
                 method = 'svmLinear',
                 trControl = fitControl,
                 tuneLength = 8,
@@ -1706,79 +1790,38 @@ all.medians <- apply(data.numcols, 2, median)
 all.means <- colMeans(data.numcols)
 ```
 
-I DO NOT KNOW HOW TO MAKE THIS WORK. 
+I DO NOT KNOW HOW TO MAKE THIS WORK.
+Georg: I am working on this
 
 ```{r SVM model one, eval=FALSE, include=FALSE}
 # Fit the SVM using C value of 1
 require(e1071)
-svm.model.one <- svm(Match_Status ~ .
-                     , data=train.df.binned)
+train.df.binned <- train.df.binned %>%
+  mutate(Match_Status = factor(Match_Status,
+                               levels=c(0,1),
+                               labels=c("NoMatch", "Matched")))
+# train.df.binned <- train.df.binned %>% 
+#   mutate(Match_Status = as.numeric(Match_Status)-1)
+svm.model.one <- svm(Match_Status ~ .,
+                     data=train.df.binned)
+svm.model.one <- svm(Match_Status ~ Gender +US_or_Canadian_Applicant,
+                     data=train.df.binned)
+      woe.Count_of_Other_than_Published.binned,
+                     data=train.df.binned)
+
+svm.plot <-
+  plot(x = svm.model.one,
+       Match_Status ~ Gender,
+       data=train.df.binned)
+plot(model.frame(svm.model.one)[,-1], col=predict(svm.model.one))
 
 
-svm.plot <- 
-  plot(svm.model.one, 
-       train.df.binned,
-       Match_Status ~ 
-         word_freq_make, 
-       slice = list(#word_freq_make = 0, 
-                    word_freq_address = 0,
-                    word_freq_all = 0,
-                    word_freq_3d = 0,
-                    word_freq_our = 0,  
-                    word_freq_over = 0,     
-                    word_freq_internet = 0,    
-                    word_freq_order = 0,   
-                    word_freq_mail = 0, 
-                    word_freq_receive = 0,
-                    word_freq_will = 0.15,
-                    word_freq_people = 0,
-                    word_freq_report = 0,
-                    word_freq_addresses = 0,
-                    word_freq_free = 0,
-                    word_freq_business = 0,
-                    word_freq_email = 0,
-                    word_freq_you = 1.31,
-                    word_freq_credit = 0,
-                    word_freq_your = 0.23,
-                    word_freq_font = 0,
-                    word_freq_000 = 0,
-                                                                         word_freq_money = 0,
-                                                                         word_freq_hpl = 0,
-                                                                         word_freq_george = 0,
-                                                                         word_freq_650 = 0,
-                                                                         word_freq_lab = 0,
-                                                                         word_freq_labs = 0,
-                                                                         word_freq_telnet = 0,
-                                                                         word_freq_857 = 0,
-                                                                         word_freq_data = 0,
-                                                                         word_freq_415 = 0,
-                                                                         word_freq_85 = 0,
-                                                                         word_freq_technology = 0,
-                                                                         word_freq_1999 = 0,
-                                                                         word_freq_parts = 0,
-                                                                         word_freq_pm = 0,
-                                                                         word_freq_direct = 0,
-                                                                         word_freq_cs = 0,
-                                                                         word_freq_meeting = 0,
-                                                                         word_freq_original = 0,
-                                                                         word_freq_project = 0,
-                                                                         word_freq_re = 0,
-                                                                         word_freq_edu = 0,
-                                                                         word_freq_table = 0,
-                                                                         word_freq_conference = 0,
-                                                                         char_freq_semicolon = 0,
-                                                                         char_freq_parent = 0.066,
-                                                                         char_freq_bracket = 0,
-                                                                         char_freq_number = 0,
-                                                                         capital_run_length_longest = 15,
-                                                                         capital_run_length_total = 96,
-                                                                         woe.char_freq_dollar.binned = 85.8059270,
-                                                                         woe.word_freq_remove.binned = 53.4642233,
-                                                                         woe.char_freq_exclamation.binned = 145.0184770,
-                                                                         woe.word_freq_hp.binned = -44.7334349,
-                                                                         woe.capital_run_length_average.binned = 0.1781977))
-                                                                         
-                                                                         
+plot(svm.model.one,
+       train.df.binned, 
+    Match_Status ~ woe.Count_of_Online_Publications.binned)
+
+plot()
+
 svm.plot
 ```
 
@@ -1851,8 +1894,8 @@ fitControl <- trainControl(method = "repeatedcv",
                            number = 10,
                            repeats = 2)
 #rf.model <-    train(as.factor(Match_Status) ~ .
-                #           , 
-                #data = train.df.binned, 
+                #           ,
+                #data = train.df.binned,
                 #method = 'rf',
                 #trControl = fitControl,
                 #tuneLength = 8,
@@ -1916,7 +1959,7 @@ For the random forest model, the in-sample accuracy was `r rf.accuracy[1]` and o
 
 ## 4) Naïve Bayes with WOE Binning model
 
-Finally, a Naïve Bayes model was fit. Similar to the previous models, the top 5 WOE binned variables were also included in this model. Cross-validation demonstrated that the tuning parameter 'laplace' was held constant at a value of 0 and tuning parameter 'adjust' was held constant at a value of 1. 
+Finally, a Naïve Bayes model was fit. Similar to the previous models, the top 5 WOE binned variables were also included in this model. Cross-validation demonstrated that the tuning parameter 'laplace' was held constant at a value of 0 and tuning parameter 'adjust' was held constant at a value of 1.
 
 ```{r NB model, cache=TRUE}
 #Naive Bayes with WOE Binning
@@ -1928,8 +1971,8 @@ fitControl <- trainControl(method = "repeatedcv",
                            number = 10,
                            repeats = 2)
 nbwoe <-    train(as.factor(Match_Status) ~ .
-                           , 
-                data = train.df.binned, 
+                           ,
+                data = train.df.binned,
                 method = 'naive_bayes',
                 trControl = fitControl,
                 tuneLength = 8,
@@ -1991,17 +2034,17 @@ Table 14 summarizes the overall in-sample and out-of-sample accuracy of each mod
 
 ```{r model comparison, align = 'center', include=TRUE}
 # Training set performance summary
-x <- postResample(pred = train.backwards, obs = as.factor(train.df$Match_Status)) 
-a <- postResample(pred = train.cart, obs = as.factor(train.df.binned$Match_Status)) 
-c <- postResample(pred = train.svm, obs = as.factor(train.df.binned$Match_Status)) 
-#e <- postResample(pred = train.rf, obs = as.factor(train.df.binned$Match_Status)) 
-g <- postResample(pred = train.nbwoe, obs = as.factor(train.df.binned$Match_Status)) 
+x <- postResample(pred = train.backwards, obs = as.factor(train.df$Match_Status))
+a <- postResample(pred = train.cart, obs = as.factor(train.df.binned$Match_Status))
+c <- postResample(pred = train.svm, obs = as.factor(train.df.binned$Match_Status))
+#e <- postResample(pred = train.rf, obs = as.factor(train.df.binned$Match_Status))
+g <- postResample(pred = train.nbwoe, obs = as.factor(train.df.binned$Match_Status))
 # Test set performance summary
-#xt <- postResample(pred = test.backwards, obs = as.factor(test.df$Match_Status)) 
-#at <- postResample(pred = test.cart, obs = as.factor(test.df.binned$Match_Status)) 
-ct <- postResample(pred = test.svm, obs = as.factor(test.df.binned$Match_Status)) 
-#et  <- postResample(pred = test.rf, obs = as.factor(test.df.binned$Match_Status)) 
-#gt <- postResample(pred = test.nbwoe, obs = as.factor(test.df.binned$Match_Status)) 
+#xt <- postResample(pred = test.backwards, obs = as.factor(test.df$Match_Status))
+#at <- postResample(pred = test.cart, obs = as.factor(test.df.binned$Match_Status))
+ct <- postResample(pred = test.svm, obs = as.factor(test.df.binned$Match_Status))
+#et  <- postResample(pred = test.rf, obs = as.factor(test.df.binned$Match_Status))
+#gt <- postResample(pred = test.nbwoe, obs = as.factor(test.df.binned$Match_Status))
 #matrix <- matrix(data = c(x[1], a[1], c[1], e[1], g[1], xt[1], at[1], ct[1], et[1], gt[1]), nrow = 5, ncol = 2, byrow = FALSE)
 #colnames(matrix) <- c("Training Set Accuracy", "Test Set Accuracy")
 #rownames(matrix) <- c("LR Backwards Elimination", "CART", "Support Vector Machine", "Random Forest", "Naive Bayes")
@@ -2013,18 +2056,18 @@ ct <- postResample(pred = test.svm, obs = as.factor(test.df.binned$Match_Status)
 \pagebreak
 
 ```{r,  fig.width=7, fig.asp=1}
-###NOMOGRAM 
+###NOMOGRAM
 #fun.at - Demarcations on the function axis: "Matching into obgyn"
 #lp=FALSE so we don't have the logistic progression
 d <- rms::datadist(test)
 options(datadist = "d")
-nomo.from.lrm.with.lasso.variables <- rms::nomogram(train.lrm.with.lasso.variables, 
+nomo.from.lrm.with.lasso.variables <- rms::nomogram(train.lrm.with.lasso.variables,
          #lp.at = seq(-3,4,by=0.5),
-        fun = plogis, 
-        fun.at = c(0.001, 0.01, 0.05, seq(0.2, 0.8, by = 0.2), 0.95, 0.99, 0.999), 
-        funlabel = "Chance of Matching in OBGYN", 
+        fun = plogis,
+        fun.at = c(0.001, 0.01, 0.05, seq(0.2, 0.8, by = 0.2), 0.95, 0.99, 0.999),
+        funlabel = "Chance of Matching in OBGYN",
         lp =FALSE,
-        #conf.int = c(0.1,0.7), 
+        #conf.int = c(0.1,0.7),
         abbrev = F,
         minlength = 9)
 nomogramEx::nomogramEx(nomo=nomo.from.lrm.with.lasso.variables ,np=1,digit=2)  #Gives the polynomial formula
@@ -2040,10 +2083,10 @@ nomo_final <- plot(nomo.from.lrm.with.lasso.variables, lplabel="Linear Predictor
 ```
 
 
-#Annotation:  Manuscript Figure 1:  The first row called points assigned to each variable's measurement from rows 2-12, which are variables included in predictive model.  Assigned points for all variables are then summed and total can be located on line 13 (total points).  Once total points are located, draw a vertical line down to the bottom line to obtain the predicted probability of matching.  For non-linear variables (count of oral presentations, etc.) values should be erad from left to right.   
+#Annotation:  Manuscript Figure 1:  The first row called points assigned to each variable's measurement from rows 2-12, which are variables included in predictive model.  Assigned points for all variables are then summed and total can be located on line 13 (total points).  Once total points are located, draw a vertical line down to the bottom line to obtain the predicted probability of matching.  For non-linear variables (count of oral presentations, etc.) values should be erad from left to right.
 
 
-# Step 10: Calibration of the model based on the test data.  
+# Step 10: Calibration of the model based on the test data.
 The ticks across the x-axis represent the frequency distribution (may be called a rug plot) of the predicted probabilities. This is a way to see where there is sparsity in your predictions and where there is a relative abundance of predictions in a given area of predicted probabilities.
 
 The "Apparent" line is essentially the in-sample calibration.
@@ -2056,7 +2099,7 @@ When either of the two lines is above the "Ideal" line, this tells us the model 
 
 Applying to your specific plot, it appears most of the predicted probabilities are in the higher end (per rug plot). The model overall appears to be reasonably well calibrated based on the Bias-Corrected line closely following the Ideal line; there is some underprediction at lower predicted probabilities because the Bias-Corrected line is above the Ideal line around < 0.3 predicted probability.
 
-The mean absolute error is the "average" absolute difference (disregard a positive or negative error) between predicted probability and actual probability. Ideally, we want this to be small (0 would be perfect indicating no error). This seems small in this plot, but may be situation dependent on how small is small. 
+The mean absolute error is the "average" absolute difference (disregard a positive or negative error) between predicted probability and actual probability. Ideally, we want this to be small (0 would be perfect indicating no error). This seems small in this plot, but may be situation dependent on how small is small.
 
 ```{r,  fig.width=7, fig.asp=1}
 calib <- rms::calibrate(train.lrm.with.lasso.variables, method = "boot", boot=1000, data = test, rule = "aic", estimates = TRUE)  #Plot test data set
@@ -2085,30 +2128,30 @@ create_plot_cross_plot(all_data)
 # Appendix, Exploratory Data Analysis
 The funModeling package will first give distributions for numerical data and finally creates cross-plots.  This also saves the output of the distributions to the results folder.
 
-# Appendix, Supplemental Table:  Descriptive analysis of all variables considered in the training set along with their association to matching.  
+# Appendix, Supplemental Table:  Descriptive analysis of all variables considered in the training set along with their association to matching.
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 table1_all_data <- arsenal::tableby(Match_Status ~
-                                      white_non_white + 
-                                      Age + 
-                                      Gender + 
-                                      Couples_Match + 
-                                      #Expected_Visa_Status_Dichotomized + 
-                                      US_or_Canadian_Applicant + 
-                                      #Medical_School_Type + 
-                                      Medical_Education_Interrupted + 
-                                      #Misdemeanor_Conviction + 
-                                      Alpha_Omega_Alpha + 
-                                      #Gold_Humanism_Honor_Society + 
-                                      Military_Service_Obligation + 
-                                      USMLE_Step_1_Score + 
-                                      Military_Service_Obligation + 
-                                      Count_of_Poster_Presentation + 
-                                      Count_of_Oral_Presentation + 
-                                      Count_of_Peer_Reviewed_Articles_Abstracts + 
-                                      Count_of_Peer_Reviewed_Book_Chapter + 
-                                      Count_of_Peer_Reviewed_Other_than_Published + 
-                                      Count_of_Online_Publications + 
+                                      white_non_white +
+                                      Age +
+                                      Gender +
+                                      Couples_Match +
+                                      #Expected_Visa_Status_Dichotomized +
+                                      US_or_Canadian_Applicant +
+                                      #Medical_School_Type +
+                                      Medical_Education_Interrupted +
+                                      #Misdemeanor_Conviction +
+                                      Alpha_Omega_Alpha +
+                                      #Gold_Humanism_Honor_Society +
+                                      Military_Service_Obligation +
+                                      USMLE_Step_1_Score +
+                                      Military_Service_Obligation +
+                                      Count_of_Poster_Presentation +
+                                      Count_of_Oral_Presentation +
+                                      Count_of_Peer_Reviewed_Articles_Abstracts +
+                                      Count_of_Peer_Reviewed_Book_Chapter +
+                                      Count_of_Peer_Reviewed_Other_than_Published +
+                                      Count_of_Online_Publications +
                                       Visa_Sponsorship_Needed +
                                       Medical_Degree,
                                     data=train, control = arsenal::tableby.control(test = TRUE, total = TRUE, digits = 1L, digits.p = 2L, digits.count = 0L, numeric.simplify = F, numeric.stats = c("median", "q1q3"), cat.stats = c("Nmiss","countpct"), stats.labels = list(Nmiss = "N Missing", Nmiss2 ="N Missing", meansd = "Mean (SD)", medianrange = "Median (Range)", median ="Median", medianq1q3 = "Median (Q1, Q3)", q1q3 = "Q1, Q3", iqr = "IQR",range = "Range", countpct = "Count (Pct)", Nevents = "Events", medSurv ="Median Survival", medTime = "Median Follow-Up")))
@@ -2143,50 +2186,50 @@ Results:  A total of `r nrow(all_data)` applied to obstetrics and gynecology res
 The unadjusted comparison of the `r ncol(all_data)` candidate predictors in the training cohort are presented in Supplemental Table 1.  To identify predictors from the candidates we employed least absolute shrinkage and selection operator (LASSO).  Regularisation techniques change how the model is fit by adding a penalty for every additional parameter you have in the model.
 `r length(variables)` variables were included within the final model.  Applicants from the United States or Canada, high USMLE Step 1 scores, female gender, White race, no visa sponsorship needed, membership in Alpha Omega Alpha, no interruption of medical training, couples matching, and allopathic medical training increased the chances of matching into OBGYN.  In contrast, more oral presentations, increasing age, a higher number of peer-reviewed online publications, an increased number of authored book chapters, and a higher count of poster presentations all decreased the probability of matching into OBGYN (table 2).  The nomogram illustrates the strength of association of the predictors to the outcome as well as the nonlinear associations between age, count of Oral Presentations, count of peer−reviewed book chapters and the chances of matching (Figure 1).
 # Appendix, DynNom Model for Shiny Upload
-I WOULD LIKE HELP UPLOADING THIS MODEL TO SHINY SERVER AS WELL PLEASE.  
-```{r DynNom}  
+I WOULD LIKE HELP UPLOADING THIS MODEL TO SHINY SERVER AS WELL PLEASE.
+```{r DynNom}
 #DynNom
 library(dplR)
-DynNom.model.lrm  <- 
-  rms::lrm(Match_Status ~ 
-             dplR::rcs(Age, 5) + 
-             Gender + 
-             US_or_Canadian_Applicant +  
-             rcs(USMLE_Step_1_Score, 4) + 
-             white_non_white + 
-             Alpha_Omega_Alpha + 
-             Count_of_Oral_Presentation + 
-             Count_of_Peer_Reviewed_Book_Chapter + 
-             Couples_Match +  
-             Medical_Degree + 
-             Military_Service_Obligation +  
+DynNom.model.lrm  <-
+  rms::lrm(Match_Status ~
+             dplR::rcs(Age, 5) +
+             Gender +
+             US_or_Canadian_Applicant +
+             dplR::rcs(USMLE_Step_1_Score, 4) +
+             white_non_white +
+             Alpha_Omega_Alpha +
+             Count_of_Oral_Presentation +
+             Count_of_Peer_Reviewed_Book_Chapter +
+             Couples_Match +
+             Medical_Degree +
+             Military_Service_Obligation +
              Visa_Sponsorship_Needed,
-                   data = test, 
-           x = TRUE, 
+                   data = test,
+           x = TRUE,
            y= TRUE)
 
-DynNom::DynNom.lrm(model = DynNom.model.lrm, data = test,  clevel = 0.95)  
+DynNom::DynNom.lrm(model = DynNom.model.lrm, data = test,  clevel = 0.95)
 ```
 # Publish to shiny
 # getwd()
 
 ```{r}
-# DynNom.model.glm  <- 
-glm(Match_Status ~ 
-      Age + 
-      Alpha_Omega_Alpha + 
-      Count_of_Oral_Presentation + 
-      Count_of_Peer_Reviewed_Book_Chapter + 
-      Couples_Match + 
-      Gender + 
-      Medical_Degree + 
-      Military_Service_Obligation + 
-      US_or_Canadian_Applicant +  
-      USMLE_Step_1_Score + 
-      Visa_Sponsorship_Needed + 
-      white_non_white, 
+# DynNom.model.glm  <-
+glm(Match_Status ~
+      Age +
+      Alpha_Omega_Alpha +
+      Count_of_Oral_Presentation +
+      Count_of_Peer_Reviewed_Book_Chapter +
+      Couples_Match +
+      Gender +
+      Medical_Degree +
+      Military_Service_Obligation +
+      US_or_Canadian_Applicant +
+      USMLE_Step_1_Score +
+      Visa_Sponsorship_Needed +
+      white_non_white,
     family = "binomial",  #Removed the relax cubic splines for age and USMLE step 1
-    data = test, x = TRUE, y= TRUE)  
+    data = test, x = TRUE, y= TRUE)
 DynNom::DNbuilder(model = DynNom.model.glm, data = train)
 ```
 ```{r sessionInfo}
