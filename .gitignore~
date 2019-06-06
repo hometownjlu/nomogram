@@ -1,0 +1,15 @@
+.gitignore
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+packrat/lib*/
+Presentations/*
+Tyler-2_cache/*
+Tyler-2_files/*
+Tyler-2.html
+best.LASSO.rds
+.DS_Store
+Code/.DS_Store
+question.txt
+
