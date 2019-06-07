@@ -27,6 +27,8 @@ The data set of years 2015, 2016, 2017, and 2018 at University of Colorado. Appl
 
 ## Install and Load packages.  See Session information at the end.
 ```{r global_options, include=FALSE}
+# uncomment the following line to restore packrat libraries
+# packrat::restore()
 knitr::opts_chunk$set(fig.width=8, fig.height=6, include=FALSE,echo=FALSE, warning=FALSE, message=FALSE, tidy = TRUE, comment="")
 options(tinytex.verbose = TRUE)
 r = getOption("repos")
@@ -1763,7 +1765,7 @@ Georg:Should be working now
 
 ```{r SVM model one, eval=FALSE, include=FALSE}
 # Fit the SVM using C value of 1
-require(e1071)
+
 train.df.binned <- train.df.binned %>%
   mutate(Match_Status = as.factor(Match_Status))
 
@@ -1781,7 +1783,7 @@ plot(x = svm.model.one,
 ```
 
 
-```{r Plot SVM, eval=FALSE, include=FALSE}
+```{r Plot SVM, eval=FALSE, include=TRUE}
 # Plot SVM model
 plot(svm.model.one, train.df.binned, woe.Age.binned ~ woe.USMLE_Step_1_Score.binned,
      svSymbol = 1, dataSymbol = 2, symbolPalette = rainbow(4),
