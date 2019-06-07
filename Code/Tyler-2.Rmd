@@ -3,19 +3,21 @@ title: "DRAFT:  A model to predict chances of matching into Obstetrics and Gynec
 author: "Tyler M. Muffly, MD"
 date: '`r format(Sys.time(), "%d %B, %Y")`'
 output:
+  pdf_document:
+    latex_engine: xelatex
+    df_print: kable
+    toc: true
+    fig_caption: yes
+    #pandoc_args: ["--wrap=none", "--top-level-division=chapter"]
+  word_document: default
   html_document:
     toc: true
     toc_depth: 2
     dev: 'svg'
     code_folding: show
-  word_document: default
-  pdf_document:
-    latex_engine: xelatex
-    df_print: kable
-    toc: true
-    #pandoc_args: ["--wrap=none", "--top-level-division=chapter"]
 fontsize: 12pt
 geometry: margin=1in
+always_allow_html: yes
 ---
 Objective:  We sought to construct and validate a model that predict a medical student's chances of matching into an obstetrics and gynecology residency.
 
@@ -43,7 +45,7 @@ results_folder <- paste0(getwd(), "/Results/")
 
 # install.packages("anonymizer", type="source")
 # if(!require(pacman))install.packages("pacman")
-pacman::p_load('caret', 'readxl', 'XML', 'reshape2', 'devtools', 'purrr', 'readr', 'ggplot2', 'dplyr', 'magick', 'janitor', 'lubridate', 'hms', 'tidyr', 'stringr', 'openxlsx', 'forcats', 'RcppRoll', 'tibble', 'bit64', 'munsell', 'scales', 'rgdal', 'tidyverse', "foreach", "PASWR", "rms", "pROC", "ROCR", "nnet", "packrat", "DynNom", "export", "caTools", "mlbench", "randomForest", "ipred", "xgboost", "Metrics", "RANN", "AppliedPredictiveModeling", "nomogramEx", "shiny", "earth", "fastAdaboost", "Boruta", "glmnet", "ggforce", "tidylog", "InformationValue", "pscl", "scoring", "DescTools", "gbm", "Hmisc", "arsenal", "pander", "moments", "leaps", "MatchIt", "car", "mice", "rpart", "beepr", "fansi", "utf8", "zoom", "lmtest", "ResourceSelection", "rmarkdown", "rattle", "rmda", "funModeling", "tinytex", "caretEnsemble", "broom", "Rmisc", "corrplot", "GGally", "alluvial", "progress", "perturb", "vctrs", "highr", "labeling", "DataExplorer", "rsconnect", "inspectdf", "ggpubr", "esquisse", "stargazer", "tableone", "knitr", "drake", "visNetwork", "woeBinning", "OneR", "rpart.plot", "RColorBrewer", "kableExtra", "kernlab", "naivebayes", "dplR")
+pacman::p_load('caret', 'readxl', 'XML', 'reshape2', 'devtools', 'purrr', 'readr', 'ggplot2', 'dplyr', 'magick', 'janitor', 'lubridate', 'hms', 'tidyr', 'stringr', 'openxlsx', 'forcats', 'RcppRoll', 'tibble', 'bit64', 'munsell', 'scales', 'rgdal', 'tidyverse', "foreach", "PASWR", "rms", "pROC", "ROCR", "nnet", "packrat", "DynNom", "export", "caTools", "mlbench", "randomForest", "ipred", "xgboost", "Metrics", "RANN", "AppliedPredictiveModeling", "nomogramEx", "shiny", "earth", "fastAdaboost", "Boruta", "glmnet", "ggforce", "tidylog", "InformationValue", "pscl", "scoring", "DescTools", "gbm", "Hmisc", "arsenal", "pander", "moments", "leaps", "MatchIt", "car", "mice", "rpart", "beepr", "fansi", "utf8", "zoom", "lmtest", "ResourceSelection", "rmarkdown", "rattle", "rmda", "funModeling", "tinytex", "caretEnsemble", "broom", "Rmisc", "corrplot", "GGally", "alluvial", "progress", "perturb", "vctrs", "highr", "labeling", "DataExplorer", "rsconnect", "inspectdf", "ggpubr", "esquisse", "stargazer", "tableone", "knitr", "drake", "visNetwork", "woeBinning", "OneR", "rpart.plot", "RColorBrewer", "kableExtra", "kernlab", "naivebayes", "dplR", "e1071")
 opts_knit$set(root.dir = results_folder)
 library(dplR)
 ```
@@ -214,7 +216,7 @@ inspectdf::inspect_num(all_data) %>% show_plot() #Breaks the Rmarkdown compiling
 
 
 IS THERE SOMETHING BETTER THAN THESE GGPAIRS PLOTS?
-  ```{r, warning=F, message=FALSE, include=TRUE, echo=FALSE}
+```{r, warning=F, message=FALSE, include=TRUE, echo=FALSE}
 all_data_ggally <- 
   as.data.frame(all_data) 
 
@@ -508,7 +510,7 @@ This allowed for measuring the associations between continuous predictors using 
   
   In this kind of plot we want to look for the bright, large circles which immediately show the strong correlations (size and shading depends on the absolute values of the coefficients; color depends on direction).  This shows whether two features are connected so that one changes with a predictable trend if you change the other. The closer this coefficient is to zero the weaker is the correlation. Anything that you would have to squint to see is usually not worth seeing!  CAN ONLY CORRELATE CONTINOUS VARIABLES?  SHOULD I RUN CORRELATION ON THE TRAIN DATA OR ON THE ALL_DATA SET?
   
-  ```{r, warning= FALSE, message=FALSE, echo=FALSE}
+```{r, warning= FALSE, message=FALSE, echo=FALSE}
 set.seed(0)
 train_corrleation <- 
   train %>% 
@@ -542,7 +544,24 @@ p-value associated with the null hypothesis of 0 correlation, small values indic
 inspect_cor(all_data, show_plot = FALSE, alpha = 0.05)
 ```
 
-I'M NOT SURE WHY THE PROPORTION OF MATCHED VS UNMATCHED DATA IS DIFFERENT BETWEEN THE TRAIN VS TEST DATA SETS?  I THOUGHT ABOUT REMAKING THE TRAINING SET TO BE 2015 AND 2016 WITH THE TEST SET OF 2017 AND 2018 IF WE CAN'T FIGURE IT OUT.  
+I'M NOT SURE WHY THE PROPORTION OF MATCHED VS UNMATCHED DATA IS DIFFERENT BETWEEN THE TRAIN VS TEST DATA SETS?  I THOUGHT ABOUT REMAKING THE TRAINING SET TO BE 2015 AND 2016 WITH THE TEST SET OF 2017 AND 2018 IF WE CAN'T FIGURE IT OUT.
+```{r Match proportion vs year, align = 'center', include=TRUE}
+all_data %>% 
+  dplyr::count(Year, Match_Status) %>% 
+  spread(key=Match_Status, value = n) %>% 
+  mutate(sum = `0` + `1`) %>% 
+  mutate(`0` = `0`/sum, `1` = `1`/sum) %>% 
+  select(-sum) %>% 
+  tidyr::gather(value=proportion, key=Match_Status, `0`, `1`) %>% 
+  ggplot(aes(x = Year, y = proportion, fill = Match_Status, label = paste(round(proportion * 100,1),"%"))) +
+  # geom_col(col="black", position="fill") +
+  geom_bar(col = "black", stat = "identity") +
+  labs(x="Year", fill = "Match Status", y = "Proportion matched/unmatched in %") +
+  theme_minimal() +
+  geom_text(position = "stack", size = 3,  vjust=1.15) +
+  scale_y_continuous(breaks = seq(0, 1, 0.25),  labels = seq(0, 100, 25))
+
+```
 
 Check Proportions of Matched
 
@@ -645,7 +664,12 @@ lm.fit3 <-
 ```
 
 ```{r, echo=FALSE}
-lm.fit3
+lm.fit3 %>% 
+  mutate(variable_name = row.names(lm.fit3)) %>% 
+  mutate(adjusted_P = p.adjust(`Pr(>F)`, n = nrow(lm.fit3))) %>% 
+  filter(str_detect(variable_name, ":") & adjusted_P<0.05) %>% 
+  select(variable_name,`Pr(>F)`, adjusted_P) %>% 
+  arrange(`Pr(>F)`)
 ```
 
 ```{r, warning=FALSE, echo=FALSE}
@@ -1458,11 +1482,12 @@ plot(model.8)
 par(mfrow = c(1,1))
 ```
 
+
 A simple decision tree model was used for exploration. The variable importance summary from the simple tree was used to explore important relationships. The variables a, b, c, and d  were the top four variables in importance.
 
 CAN WE USE ONLY FACTORS IN THIS TREE MODEL?
   
-  ```{r rpart EDA}
+```{r rpart EDA}
 t.model <-
   rpart(as.factor(Match_Status) ~.,
         data = train.df.binned)
@@ -1472,10 +1497,11 @@ t.model$variable.importance
 
 The simple tree was plotted below. The a, b and c variables were near the roots of the tree demonstrating importance. DO ALL THE VARIABLES NEED TO BE BINNED AS FACTORS TO RUN A TREE PLOT?
   
-  ```{r fancyR plot rpart EDA, include=TRUE}
+```{r fancyR plot rpart EDA, include=TRUE}
 # plot
-fancyRpartPlot(t.model, caption = NULL)
+fancyRpartPlot(t.model, caption = "")
 ```
+
 
 Exploratory random forest was also performed. The variable importance for the random forest model was summarized in the figure below. The variables capital_run_length_longest, capital_run_length_total, char_freq_dollar.binned, word_freq_free and word_freq_your were the top five using accuracy and the Gini index.
 
@@ -1496,6 +1522,7 @@ rf.eda = randomForest(X,Y,sampsize=25,ntree=5000,mtry=4,
                       importance = TRUE)
 varImpPlot(rf.eda, main = "Random Forest EDA Variable Importance", cex = 0.75)
 ```
+
 
 ## 3) The Model Build
 
@@ -1529,8 +1556,11 @@ backwards_results = backwards$coefficients
 ```
 
 ```{r,Stargazer backwards LR, include=TRUE,results='asis', warning=FALSE}
-stargazer::stargazer(backwards_results, title="Backwards Logistic Regression Model Results", no.space=TRUE, header=FALSE, type='latex',  ci=TRUE, ci.level=0.95, single.row=TRUE)
+stargazer::stargazer(backwards, title="Backwards Logistic Regression Model Results", no.space=TRUE, header=FALSE, type='latex',  ci=TRUE, ci.level=0.95, single.row=TRUE)
+# stargazer::stargazer(backwards, title="Backwards Logistic Regression Model Results")
 ```
+
+
 
 ```{r train backwards, align= 'center'}
 train.backwards <-
@@ -1560,7 +1590,6 @@ row.totals <-
 dt <-
   t/row.totals
 
-library(kableExtra)
 
 kable(dt, "latex", booktabs = T, caption = "Confusion matrix of Backwards LR on train set") %>% kable_styling(latex_options = "striped")
 ```
@@ -1593,7 +1622,6 @@ t <- table(as.factor(test.df.with.binned.vars.added$Match_Status),test.backwards
 row.totals <- apply(t,MAR=1,FUN=sum)
 #t/row.totals
 dt <- t/row.totals
-library(kableExtra)
 kable(dt, "latex", booktabs = T, caption = "Confusion matrix of Backwards LR on test set") %>% kable_styling(latex_options = "striped")
 ```
 
@@ -1607,7 +1635,7 @@ The in-sample accuracy was `r lr.accuracy[1]` and the out-of-sample accuracy was
 
 ```{r cart model, cache=TRUE}
 #CART
-library(caret)
+
 # Timer on
 ptm = proc.time()
 set.seed(12345)
@@ -1651,7 +1679,7 @@ t <- table(as.factor(train.df.binned$Match_Status),train.cart)
 row.totals <- apply(t,MAR=1,FUN=sum)
 #t/row.totals
 dt <- t/row.totals
-library(kableExtra)
+
 kable(dt, "latex", booktabs = T, caption = "Confusion matrix of CART on train set") %>% kable_styling(latex_options = "striped")
 ```
 
@@ -1659,6 +1687,8 @@ kable(dt, "latex", booktabs = T, caption = "Confusion matrix of CART on train se
 NOT WORKING, BECAUSE TEST HAS NOT BEEN WOE BINNED???
   
   It is not working because the training model had a different amount of columns then the test data you're feeding into it. Just ensure that they have the correct columns that match. I am commenting this out as it's not something I should fix.
+  
+Georg: Should work now
 
 ```{r cart test accuracy}
 
@@ -1684,7 +1714,7 @@ cart.accuracy.test[1]
 row.totals <- apply(t,MAR=1,FUN=sum)
 #t/row.totals
 dt <- t/row.totals
-library(kableExtra)
+library()
 kable(dt, "latex", booktabs = T, caption = "Confusion matrix of CART on test set") %>% kable_styling(latex_options = "striped")
 ```
 
@@ -1699,7 +1729,7 @@ For the CART model, the in-sample accuracy was `r cart.accuracy[1]` and out-of-s
 
 ```{r SVM model, cache=TRUE}
 #SVM
-library(caret)
+
 # Timer on
 ptm = proc.time()
 set.seed(12345)
@@ -1729,7 +1759,7 @@ all.means <- colMeans(data.numcols)
 ```
 
 I DO NOT KNOW HOW TO MAKE THIS WORK.
-Georg: I am working on this
+Georg:Should be working now
 
 ```{r SVM model one, eval=FALSE, include=FALSE}
 # Fit the SVM using C value of 1
@@ -1774,7 +1804,7 @@ t <- table(as.factor(train.df.binned$Match_Status),train.svm)
 row.totals <- apply(t,MAR=1,FUN=sum)
 #t/row.totals
 dt <- t/row.totals
-library(kableExtra)
+
 kable(dt, "latex", booktabs = T, caption = "Confusion matrix of SVM model on train set") %>% kable_styling(latex_options = "striped")
 ```
 
@@ -1798,7 +1828,7 @@ svm.accuracy.test[1]
 #row.totals <- apply(t,MAR=1,FUN=sum)
 #t/row.totals
 dt <- t/row.totals
-library(kableExtra)
+
 kable(dt, "latex", booktabs = T, caption = "Confusion matrix of SVM model on test set") %>% kable_styling(latex_options = "striped")
 ```
 
@@ -1811,7 +1841,7 @@ For the SVM model, the in-sample accuracy was `r svm.accuracy[1]` and out-of-sam
 
 ```{r RF model, cache=TRUE}
 #RF
-library(caret)
+
 # Timer on
 ptm = proc.time()
 set.seed(12345)
@@ -1829,7 +1859,7 @@ proc.time() - ptm
 ```
 
 ```{r var imp plot rf model, align = 'center', include=TRUE}
-library(caret)
+
 plot(varImp(rf.model), top = 10)
 ```
 
@@ -1849,7 +1879,7 @@ rf.accuracy[1]
 #row.totals <- apply(t,MAR=1,FUN=sum)
 #t/row.totals
 #dt <- t/row.totals
-#library(kableExtra)
+
 #kable(dt, "latex", booktabs = T, caption = "Confusion matrix of Random Forest model on train set") %>% kable_styling(latex_options = "striped")
 ```
 
@@ -1869,7 +1899,7 @@ rf.accuracy.test[1]
 #row.totals <- apply(t,MAR=1,FUN=sum)
 #t/row.totals
 #dt <- t/row.totals
-#library(kableExtra)
+
 #kable(dt, "latex", booktabs = T, caption = "Confusion matrix of Random Forest model on test set") %>% kable_styling(latex_options = "striped")
 ```
 
@@ -1885,7 +1915,7 @@ Finally, a Naïve Bayes model was fit. Similar to the previous models, the top 5
 
 ```{r NB model, cache=TRUE}
 #Naive Bayes with WOE Binning
-library(caret)
+
 # Timer on
 ptm = proc.time()
 set.seed(12345)
@@ -1920,7 +1950,7 @@ t <- table(as.factor(train.df.binned$Match_Status),train.nbwoe)
 row.totals <- apply(t,MAR=1,FUN=sum)
 #t/row.totals
 dt <- t/row.totals
-library(kableExtra)
+
 kable(dt, "latex", booktabs = T, caption = "Confusion matrix of Naive Bayes model on train set") %>% kable_styling(latex_options = "striped")
 ```
 
@@ -1940,7 +1970,7 @@ nb.accuracy.test[1]
 #row.totals <- apply(t,MAR=1,FUN=sum)
 #t/row.totals
 #dt <- t/row.totals
-#library(kableExtra)
+
 #kable(dt, "latex", booktabs = T, caption = "Confusion matrix of Naive Bayes model on test set") %>% kable_styling(latex_options = "striped")
 ```
 
@@ -2161,9 +2191,9 @@ DynNom::DNbuilder(model = DynNom.model.glm, data = train)
 ```{r}
 # put credentials here to upload file to shinyapps.io
 # Tutorial: https://docs.rstudio.com/shinyapps.io/getting-started.html#CreateAccount
-rsconnect::setAccountInfo(name='',
-                          token='',
-                          secret='')
+rsconnect::setAccountInfo(name='georgkropat',
+                          token='F4ECA8D490AB629FB79416DF01048F3F',
+                          secret='TriCqLW2h1XRf12m7bPMZbIh7ZZgSjVg8nHUVbTZ')
 
 
 
