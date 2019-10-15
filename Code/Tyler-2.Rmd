@@ -3,18 +3,18 @@ title: "DRAFT:  A model to predict chances of matching into Obstetrics and Gynec
 author: "Tyler M. Muffly, MD"
 date: '`r format(Sys.time(), "%d %B, %Y")`'
 output:
+  html_document:
+    toc: true
+    toc_depth: 2
+    dev: 'svg'
+    code_folding: show
+  word_document: default
   pdf_document:
     latex_engine: xelatex
     df_print: kable
     toc: true
     fig_caption: yes
     #pandoc_args: ["--wrap=none", "--top-level-division=chapter"]
-  word_document: default
-  html_document:
-    toc: true
-    toc_depth: 2
-    dev: 'svg'
-    code_folding: show
 fontsize: 12pt
 geometry: margin=1in
 always_allow_html: yes
@@ -34,10 +34,10 @@ options(tinytex.verbose = TRUE)
 r = getOption("repos")
 r["CRAN"] = "http://cran.us.r-project.org"
 options(repos = r)
-# data_folder <- paste0("~/Dropbox/Nomogram/nomogram/data/")
-data_folder <- paste0(getwd(), "/Data/")
-# results_folder <- paste0("~/Dropbox/Nomogram/nomogram/results")
-results_folder <- paste0(getwd(), "/Results/")
+data_folder <- paste0("~/Dropbox/Nomogram/nomogram/data/")
+#data_folder <- paste0(getwd(), "/Data/")
+results_folder <- paste0("~/Dropbox/Nomogram/nomogram/results")
+#results_folder <- paste0(getwd(), "/Results/")
 # packrat::set_opts(local.repos = c("packrat/lib/x86_64-apple-darwin15.6.0/3.6.0/"))
 ```
 
@@ -51,7 +51,6 @@ pacman::p_load('caret', 'readxl', 'XML', 'reshape2', 'devtools', 'purrr', 'readr
 opts_knit$set(root.dir = results_folder)
 library(dplR)
 ```
-
 
 ## Create a dataframe of independent and dependent variables.  Download cleaned data from Dropbox. 
 ```{r, echo=FALSE, include=FALSE}
@@ -144,24 +143,24 @@ create_profiling_num <-
     funModeling::profiling_num(all_data)
   }
 
-plan <- drake_plan(
-  # raw_data = read_rds("~/Dropbox/Nomogram/nomogram/data/all_years_reorder_cols_84.rds"),
-  raw_data = read_rds(paste0(data_folder, "all_years_reorder_cols_84.rds")),
-  data = raw_data %>%
-    select(-"Gold_Humanism_Honor_Society", -"Sigma_Sigma_Phi", -"Misdemeanor_Conviction", -"Malpractice_Cases_Pending", -"Match_Status_Dichot", -"Citizenship", -"BLS", -"Positions_offered"),
-  function(data) {funModeling::plot_num(data, path_out = "~/Dropbox/Nomogram/nomogram/results")},
-  function(data) {funModeling::cross_plot(data, target="Match_Status", path_out = "~/Dropbox/Nomogram/nomogram/results")},
-  
-  quiet = TRUE)
-
-plan
-
-config <- 
-  drake_config(plan)
-
-vis_drake_graph(config)
-
-drake::make(plan)
+# plan <- drake_plan(
+#   # raw_data = read_rds("~/Dropbox/Nomogram/nomogram/data/all_years_reorder_cols_84.rds"),
+#   raw_data = read_rds(paste0(data_folder, "all_years_reorder_cols_84.rds")),
+#   data = raw_data %>%
+#     select(-"Gold_Humanism_Honor_Society", -"Sigma_Sigma_Phi", -"Misdemeanor_Conviction", -"Malpractice_Cases_Pending", -"Match_Status_Dichot", -"Citizenship", -"BLS", -"Positions_offered"),
+#   function(data) {funModeling::plot_num(data, path_out = "~/Dropbox/Nomogram/nomogram/results")},
+#   function(data) {funModeling::cross_plot(data, target="Match_Status", path_out = "~/Dropbox/Nomogram/nomogram/results")},
+#   
+#   quiet = TRUE)
+# 
+# plan
+# 
+# config <- 
+#   drake_config(plan)
+# 
+# vis_drake_graph(config)
+# 
+# drake::make(plan)
 ```
 
 ## Data Quality Check of `all_data`
@@ -2193,13 +2192,13 @@ DynNom::DNbuilder(model = DynNom.model.glm, data = train)
 ```{r}
 # put credentials here to upload file to shinyapps.io
 # Tutorial: https://docs.rstudio.com/shinyapps.io/getting-started.html#CreateAccount
-rsconnect::setAccountInfo(name='georgkropat',
-                          token='F4ECA8D490AB629FB79416DF01048F3F',
-                          secret='TriCqLW2h1XRf12m7bPMZbIh7ZZgSjVg8nHUVbTZ')
-
-
-
-rsconnect::deployApp('DynNomapp/')
+# rsconnect::setAccountInfo(name='georgkropat',
+#                           token='F4ECA8D490AB629FB79416DF01048F3F',
+#                           secret='TriCqLW2h1XRf12m7bPMZbIh7ZZgSjVg8nHUVbTZ')
+# 
+# 
+# 
+# rsconnect::deployApp('DynNomapp/')
 ```
 
 ```{r sessionInfo}
