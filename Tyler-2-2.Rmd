@@ -1,35 +1,70 @@
 ---
-title: "DRAFT:  A model to predict chances of matching into Obstetrics and Gynecology Residency"
-author: "Tyler M. Muffly, MD"
-date: '`r format(Sys.time(), "%d %B, %Y")`'
+title: "A Model to Predict Chances of Matching into Obstetrics and Gynecology Residency"
+author: "Tyler Muffly, MD"  
+date: Department of Obstetrics and Gynecology, Denver Health, Denver, CO
+spacing: double
 output:
   pdf_document:
    latex_engine: xelatex
-    # df_print: kable
-    # toc: true
-    # fig_caption: yes
-    #pandoc_args: ["--wrap=none", "--top-level-division=chapter"]
-#   word_document: default
-#   html_document:
-#     toc: true
-#     toc_depth: 2
-#     dev: 'svg'
-#     code_folding: show
-# fontsize: 12pt
-# geometry: margin=1in
-#always_allow_html: yes
+   df_print: kable
+   keep_tex: true
+   #toc: true
+   fig_caption: yes
+   pandoc_args: ["--wrap=none", "--top-level-division=chapter"]
+   #template: ~/Dropbox/Nomogram/nomogram/svm-latex-ms.tex
+word_document: 
+html_document:
+     #toc: true
+     toc_depth: 2
+     dev: 'svg'
+     code_folding: show
+fontsize: 12pt
+fontfamily: mathpazo
+geometry: margin=1in
+always_allow_html: yes
+header-includes:
+- \usepackage{fancyhdr}
+- \pagestyle{fancy}
+- \fancyhead[R]{Muffly et al.}
+- \usepackage{lineno}
+- \linenumbers
+linestretch: 2
+Keywords:  "Obstetrics and Gynecology, residency"
+#https://github.com/StirlingCodingClub/Manuscripts_in_Rmarkdown/blob/master/ms.Rmd
+#http://svmiller.com/blog/2016/02/svm-r-markdown-manuscript/
 ---
+*Tyler M. Muffly, Merdith Alston, Jill Liss, Georg Kropat, Janet Corral, Christine Raffaelli, Eric Jelovsek*
+- name: Tyler M. Muffly, MD
+  affiliation: Denver Health
+- name: Meredith Alston, MD
+  affiliation: Denver Health
+- name: Jill Liss
+  affiliation: University of Colorado
+- name: Georg Kropat, PhD
+  affiliation: R & D Services
+- name: Janet Corall, PhD
+  affiliation: University of Colorado
+- name: Christine Raffaelli
+  affiliation: University of Colorado
+- name: Eric Jelovsek
+  affiliation: Duke University
+
 Objective:  We sought to construct and validate a model that predict a medical student's chances of matching into an obstetrics and gynecology residency.
 
-# Introduction
+The data set of years 2015, 2016, 2017, and 2018 applicants to the University of Colorado OBGYN residency. Applicants who were in the SOAP and applied to the preliminary spot were determined to be unmatched.  The data is contained in a data frame called 'all_data'.
 
-The data set of years 2015, 2016, 2017, and 2018 at University of Colorado. Applicants who were in the SOAP and applied to the preliminary spot were determined to be unmatched.  The data is contained in a data frame called all_data.
-
-## Install and Load packages.  See Session information at the end.
-```{r global_options, include=FALSE}
+```{r global_options and defining paths based on working director, include=FALSE}
 # uncomment the following line to restore packrat libraries
 # packrat::restore()
-knitr::opts_chunk$set(fig.width=8, fig.height=6, include=FALSE,echo=FALSE, warning=FALSE, message=FALSE, tidy = TRUE, comment="")
+knitr::opts_chunk$set(fig.width=8, 
+                      fig.height=5, 
+                      include=FALSE,
+                      echo=FALSE, 
+                      warning=FALSE, 
+                      message=FALSE, 
+                      tidy = TRUE, 
+                      comment="",
+                      align = 'left')
 library(stargazer)
 # data_folder <- paste0("~/Dropbox/Nomogram/nomogram/data/")
 data_folder <- paste0(getwd(), "/Data/")
@@ -38,27 +73,28 @@ results_folder <- paste0(getwd(), "/Results/")
 # packrat::set_opts(local.repos = c("packrat/lib/x86_64-apple-darwin15.6.0/3.6.0/"))
 ```
 
-```{r, results = "asis", include=TRUE}
-library(stargazer)
-stargazer(attitude, type = 'latex')
-```
-
-
-```{r, include=FALSE, echo=FALSE}
+```{r Install and load needed R packages, include=FALSE, echo=FALSE}
+#Install and Load needed R packages.
 # library(packrat)
 # packrat::packrat_mode(on = TRUE)
 
-# install.packages("anonymizer", type="source")
-# if(!require(pacman))install.packages("pacman")
+install.packages("anonymizer", type="source")
+if(!require(pacman))install.packages("pacman")
 pacman::p_load('caret', 'readxl', 'XML', 'reshape2', 'devtools', 'purrr', 'readr', 'ggplot2', 'dplyr', 'magick', 'janitor', 'lubridate', 'hms', 'tidyr', 'stringr', 'openxlsx', 'forcats', 'RcppRoll', 'tibble', 'bit64', 'munsell', 'scales', 'rgdal', 'tidyverse', "foreach", "PASWR", "rms", "pROC", "ROCR", "nnet", "packrat", "DynNom", "export", "caTools", "mlbench", "randomForest", "ipred", "xgboost", "Metrics", "RANN", "AppliedPredictiveModeling", "nomogramEx", "shiny", "earth", "fastAdaboost", "Boruta", "glmnet", "ggforce", "tidylog", "InformationValue", "pscl", "scoring", "DescTools", "gbm", "Hmisc", "arsenal", "pander", "moments", "leaps", "MatchIt", "car", "mice", "rpart", "beepr", "fansi", "utf8", "zoom", "lmtest", "ResourceSelection", "rmarkdown", "rattle", "rmda", "funModeling", "tinytex", "caretEnsemble", "broom", "Rmisc", "corrplot", "GGally", "alluvial", "progress", "perturb", "vctrs", "highr", "labeling", "DataExplorer", "rsconnect", "inspectdf", "ggpubr", "esquisse", "stargazer", "tableone", "knitr", "drake", "visNetwork", "woeBinning", "OneR", "rpart.plot", "RColorBrewer", "kableExtra", "kernlab", "naivebayes", "dplR", "e1071")
 opts_knit$set(root.dir = results_folder)
 library(dplR)
+#devtools::install_github("crsh/papaja")  #Would be good for reference management in the future.
 ```
 
-## Create a dataframe of independent and dependent variables.  Download cleaned data from Dropbox. 
-```{r, echo=FALSE, include=FALSE}
-# read in dat
+## Create a dataframe of independent and dependent variables. 
+```{r Download cleaned data from Dropbox, echo=FALSE, include=FALSE}
+## Here are the data
+URL <- "https://www.dropbox.com/s/qbykb8sl2c8z3me/all_years_filter_111.rds?raw=1"
 
+## NB this takes some time, the zip is about 170mb and the uncompressed file is about 700mb.
+download.file(url = URL, destfile = "all_years_filter_111.rds", method = "curl")
+
+# read in data
 all_data <- 
   read_rds(paste0(data_folder,"all_years_filter_111.rds")) %>%
   select(-"Gold_Humanism_Honor_Society", 
@@ -117,9 +153,8 @@ all_data<-
 dim(all_data)
 ```
 
-#Potential code with Drake.  I'm not sure if using drake is necessary or if it is overkill.  
-```{r, echo=FALSE}
-# file.exists("~/Dropbox/Nomogram/nomogram/data/all_years_reorder_cols_84.rds")
+```{r Using the Drake package here for efficiency, echo=FALSE}
+# Using the Drake package here for efficiency.  
 file.exists(paste0(data_folder, "all_years_filter_111.rds"))
 
 create_plot_num <- 
@@ -162,15 +197,15 @@ vis_drake_graph(config)
 drake::make(plan)
 ```
 
-## Data Quality Check of `all_data`
+#Data Quality Check of `all_data`
 
 A summary of the 19 variables are listed below:
   
-  1. Eleven of the variables were a factor.  All factors had two levels except for Alpha_Omega_Alpha had three levels.  The target variable is `all_data$Match_Status`.  
+1. Eleven of the variables were a factor.  All factors had two levels except for Alpha_Omega_Alpha had three levels.  The target variable is `all_data$Match_Status`.  
 
 2. Seven of the variables were integers. 
 
-3.  One of the variables was a number.  Age was calculated as a number.  
+3.One of the variables was a number.  Age was calculated as a number.  
 
 ```{r structure of data}
 cat("\n","----- Initial Structure of data frame -----","\n")
@@ -179,7 +214,6 @@ inspectdf::inspect_types(all_data, show_plot = TRUE)
 print(str(all_data))
 ```
 
-#cleanup.import is not working.  
 ```{r structure data 2}
 all_data <- Hmisc::upData(all_data)
 #all_data <- Hmisc::cleanup.import(all_data) #Not working
@@ -190,33 +224,28 @@ str(all_data)
 describe(all_data)
 ```
 
-Data size and structure
-```{r, EDA, results="asis", echo=FALSE}
+```{r, Data size and structure EDA, results="asis", echo=FALSE}
 #plot_str(all_data) #COOL BUT USELESS HERE
 plot_intro(all_data)
 DataExplorer::plot_missing(all_data)
 ```
 
-```{r spam data check, include=FALSE}
+```{r data check, include=FALSE}
 describe(as.factor(all_data$Match_Status))
 ```
 
-## Univariate Analysis
-```{r, results='asis', echo=FALSE}
-#DataExplorer::plot_bar(all_data)
-#DataExplorer::plot_boxplot(all_data, by = "Match_Status")
-# #DataExplorer::plot_histogram(all_data)
-# inspectdf::inspect_cat(all_data) %>% show_plot()  #Please use `cols = c(data)`
-# inspectdf::inspect_cat(all_data) %>% show_plot()
-# inspectdf::inspect_imb(all_data) %>% show_plot()
-# imb <- inspectdf::inspect_imb(all_data) %>% show_plot()
-# knitr::kable(imb)
+#Univariate Analysis
+```{r DataExplorer EDA, results='asis', echo=FALSE, include=TRUE}
+DataExplorer::plot_bar(all_data)
+DataExplorer::plot_boxplot(all_data, by = "Match_Status")
+DataExplorer::plot_histogram(all_data)
+inspectdf::inspect_cat(all_data) %>% show_plot()  #Please use `cols = c(data)`
+inspectdf::inspect_cat(all_data) %>% show_plot()
 #inspectdf::inspect_num(all_data) %>% show_plot() #Breaks the Rmarkdown compiling for some reason.  Ugh.  
 ```
 
 
-IS THERE SOMETHING BETTER THAN THESE GGPAIRS PLOTS?
-```{r, warning=F, message=FALSE, include=TRUE, echo=FALSE}
+```{r ggpairs, warning=F, message=FALSE, include=TRUE, echo=FALSE}
 all_data_ggally <- 
   as.data.frame(all_data) 
 
@@ -251,13 +280,12 @@ ggpairs(data = all_data_ggally,
             "Visa_Sponsorship_Needed", 
             "Count_of_Poster_Presentation"))
 ```
-Univariate analysis of the data.  
+
 
 IS THERE A WAY TO SET THE CUTPOINTS BASED ON A STATISTICAL REASONING?
-  
-  I set the cutpoints based on nothing really. I like this better than the base summary command.  See the Appendix at the end of the document for univariate distributions.  
+I set the cutpoints based on nothing really. I like this better than the base summary command.  See the Appendix at the end of the document for univariate distributions.  
 
-```{r, echo=FALSE, include=FALSE, warning=FALSE}
+```{r View the data using Hmisc, echo=FALSE, include=FALSE, warning=FALSE}
 dd <- 
   rms::datadist(all_data)
 
@@ -284,8 +312,7 @@ s
 
 ## Relaxed Cubic Splines For Continuous Variables
 HOW DO YOU DECIDE HOW MANY KNOTS TO USE ON CONTINUOUS VARIABLES WITH RELAXED SPLINES?
-  
-```{r, echo=TRUE, include=FALSE, warning = FALSE, fig.width=7, fig.asp=1}
+```{r, echo=TRUE, include=FALSE, warning = FALSE, fig.width=7, fig.asp=1, fig.cap="Figure: Relaxing Cubic Splines for Continuous Variables."}
 #Age Splines
 Hmisc::rcspline.eval(x=all_data$Age, 
                      nk=5, type="logistic", 
@@ -476,7 +503,7 @@ test <- test %>% select(-"Year")
 train <- train %>% select(-"Year")
 ```
 
-```{r, include = TRUE, fig.width=8, fig.height=3}
+```{r, include = TRUE, fig.width=8, fig.height=3, fig.cap="Figure: Train dataset looking at continuous variables for normality."}
 plot_histogram(train[, 2]) #age
 plot_histogram(train[, 10:12])
 plot_histogram(train[, 13:15])
@@ -544,7 +571,7 @@ inspect_cor(all_data, show_plot = FALSE, alpha = 0.05)
 ```
 
 I'M NOT SURE WHY THE PROPORTION OF MATCHED VS UNMATCHED DATA IS DIFFERENT BETWEEN THE TRAIN VS TEST DATA SETS?  I THOUGHT ABOUT REMAKING THE TRAINING SET TO BE 2015 AND 2016 WITH THE TEST SET OF 2017 AND 2018 IF WE CAN'T FIGURE IT OUT.
-```{r Match proportion vs year, align = 'center', include=TRUE}
+```{r Match proportion vs year, align = 'left', include=TRUE}
 all_data %>% 
   dplyr::count(Year, Match_Status) %>% 
   spread(key=Match_Status, value = n) %>% 
@@ -691,7 +718,7 @@ car::vif(kitchen.sink, echo=FALSE)
 
 According to the ANOVA: USMLE_Step_1_Score, Age, and US_or_Canadian_Applicants are predictors.  The anova() function for the model object allows to see the null and residuals deviances. The difference between these two deviances shows how well the model is performing against the null deviance. The residuals deviance column allows to see the drop of deviance value by additional respective predictor term added.
 
-```{r, echo=TRUE, message=FALSE,fig.width=7, fig.asp=1}
+```{r, echo=TRUE, message=FALSE,fig.width=7, fig.asp=1, fig.cap="Figure: Variance-inflation factors for matching into OBGYN."}
 plot(anova(kitchen.sink, test = 'Chisq'), cex=0.9, cex.lab=0.9, cex.axis = 0.7)
 ```
 
@@ -767,7 +794,7 @@ coef(best, s=lasso.mod$bestTune$lambda) ###Look for the largest coefficient
 
 Plot the results of the lasso.mod so we can see if this is more ridge or more lasso.  0 = ridge regression and 1 = LASSO regression, here ridge is better
 
-```{r, fig.width=7, fig.asp=1}
+```{r, fig.width=7, fig.asp=1, fig.cap="Figure: Plotting the results of ridge or lasso in regression.}
 plot(lasso.mod)
 ```
 
@@ -796,7 +823,7 @@ predict(lasso.mod, newx = x[1:5,], type = "prob", s = c(0.05, 0.01))
 GLMNet to do factor selection with the previously made LASSO model
 And we use the glmnet library to determine the optimal penalization parameter. Note that this must be assigned through cross validation; here, we use 50-fold cross validation (only suitable in small datasets).  GLMnet accepts data in a matrix format so the data format was changed before giving it to glmnet.cv. 
 
-```{r, echo=TRUE, message=FALSE, include=TRUE}
+```{r, echo=TRUE, message=FALSE, include=TRUE, fig.cap="Figure: Determining optimal penalization parameters for factor selection with the least absolute shrinkage and selection operator (LASSO) model.}
 `%ni%`<-Negate(`%in%`)
 # save the outcome for the glmnet model, could use dummyVars with fullRan=FALSE can remove collinearity by removing male.gender so you are either male or female
 
@@ -846,7 +873,7 @@ I DON'T REALLY UNDERSTAND WHAT THIS GRAPH MEANS?
   
   I plotted everything on a bar graph so we can easily compare the strongest predictors and the direction they affect the model:
   
-```{r}
+```{r, fig.cap="Figure: Plot of the strongest predictors and the direction that the predictors affect matching.}
 #https://amunategui.github.io/supervised-summarizer/index.html
 GetSummaryPlot <- function(objdfscaled0, objdfscaled1, predictorName, plotit=TRUE) {
   require(ggplot2)
@@ -1003,7 +1030,7 @@ lrm.with.lasso.variables$stats[[6]] #C-statistic
 
 AUC of this pared down model is `r (lrm.with.lasso.variables$stats[[6]])`.
 
-```{r, echo=FALSE,  fig.width=7, fig.asp=1}
+```{r, echo=FALSE,  fig.width=7, fig.asp=1, fig.cap="Figure: Charting the strength of the variables chosen using LASSO.}
 lrm.with.lasso.variables
 #dev.off()
 plot(anova(lrm.with.lasso.variables), cex=0.5, cex.lab=0.4, cex.axis = 0.4)
@@ -1016,7 +1043,7 @@ summary(lrm.with.lasso.variables)
 ## Odds ratios of the `train` dataset
 
 #Table 2 of odds ratios in graph form in the train dataset.  
-```{r, echo=TRUE,  fig.width=7, fig.asp=1}
+```{r, echo=TRUE,  fig.width=7, fig.asp=1, fig.cap="Figure: Odds ratios of the training data set to predict matching into OBGYN residency."}
 plot(summary(lrm.with.lasso.variables), cex=0.5, cex.lab=0.7, cex.axis = 0.7)
 ```
 
@@ -1217,10 +1244,7 @@ plot(perf2, colorize = TRUE, text.adj = c(-0.2,1.7), main="Precision and Recall 
 ```
 
 
-
-I DO NOT UNDERSTAND WOE BINNING AT ALL.  
-
-```{r, include = TRUE, fig.width=8, fig.height=4}
+```{r, include = TRUE, fig.width=8, fig.height=4, fig.cap="Figure: Evaluation of the variable interactions in the train data set".}
 train.df <- 
   train
 
@@ -2182,7 +2206,8 @@ Medical student #1 is a `r all_data$Age[1]`year old `r all_data$white_non_white[
 https://denverhealth.az1.qualtrics.com/WRQualtricsControlPanel/?Section=SV_3QmslHJJmin4xBX&SubSection=&SubSubSection=&PageActionOptions=&TransactionID=1&Repeatable=0&restrictToBrand=1&criteria=&ContextSection=EditSection
 
 
-# Abstract DRAFT
+Abstract
+===========================================================================================
 Background:  A model that predicts a medical student's chances of matching into an obstetrics and gynecology residency may facilitate improved counseling and fewer unmatched medical students.
 
 Objective:  We sought to construct and validate a model that predicts a medical student's chance of matching into obstetrics and gynecology residency.
@@ -2191,16 +2216,36 @@ Study Design:  In all, `r nrow(all_data)` medical students applied to a residenc
 
 Results:  The match rate in the training cohort was `r round((prop.table(table(train$Match_Status))[[2]]*100),1)`% (I need help getting 95% CI).  The model had excellent discrimination and calibration during internal validation (bias-corrected concordance index,`r round((lrm.with.lasso.variables$stats[6]),2)`) and maintained accuracy during temportal validation using the separate validation cohort (concordance index,`r round((train.lrm.with.lasso.variables$stats[6]),2)`).
 
-# Prose of the paper DRAFT
-Materials and Methods:  This was an institutional review board exempt retrospective cohort analysis of medical students who applied to Obstetrics and Gynecology (OBGYN) residency from 2015 to 2018.  Guidelines for transparent reporting of a multivariable prediction model for individual outcomes were used in this study.(https://www.equator-network.org/reporting-guidelines/tripod-statement/).  Eligible students were identified if they applied to OBGYN residency during the study period.  The outcome of the model was defined as matching or not matching into residency for the specific application year.  Individual predictors of successfully* matching were compiled from a literature review, expert opinion, and judgment then collected from the Electronic Residency Application Service materials.
+Introduction
+===========================================================================================
+To add in.  
+
+Materials and Methods
+===========================================================================================
+This was an institutional review board exempt retrospective cohort analysis of medical students who applied to Obstetrics and Gynecology (OBGYN) residency from 2015 to 2018.  Guidelines for transparent reporting of a multivariable prediction model for individual outcomes were used in this study.(https://www.equator-network.org/reporting-guidelines/tripod-statement/).  Eligible students were identified if they applied to OBGYN residency during the study period.  The outcome of the model was defined as matching or not matching into residency for the specific application year.  Individual predictors of successfully* matching were compiled from a literature review, expert opinion, and judgment then collected from the Electronic Residency Application Service materials.
 
 Once the data set was complete it was divided into a model training and test set.  *When an external validation data set is unavailable to test a new model but an existing modeling data set is sufficiently large, as in this case, it is recommended to split by time and develop the model using data from one period and evaluate its performance from data from a future period.  We arbitrarily chose to divide the cohort into a training set of 2015 to 2017 data and a training set of 2018 data.
+
 In all, ?? candidate risk factors were considered for fitting on the training data set (supplmental table).  Variable selection was done using a peenalized logistic regression called least absolute shrinkage and selection operator (LASSO).  The LASSO model is a regression analysis method that performs both variable selection and regularization in order to enhance the prediction accuracy and interpretability of the statistical model it produces.  We elected to use LASSO to choose which covariates to include over stepwise selection because the latter only improves prediction accuracy in certain cases, such as when only a few covariates have a strong relationship with the outcome.
+
 The logistic model’s discriminative ability was measured by the area under the curve (AUC) for the receiver operating characteristic curve based on the sensitivity and specificity of the model.  An AUC value closer to 1 indicates a better prediction of the outcome and an AUC value of 0.5 indicates that the model predicts no better than chance. The AUC is also a representation of the concordance index and measures the model’s ability to generate a higher predicted probability of a successful match* occurring in a medical student who has a ????.   For example, if we have a pair of medical students, in which one medical student matches and the other does not, the concordance index measures the model’s ability to assign a higher risk of not matching to the medical student who successfully matches. All concordance indices and receiver operating characteristic curves were internally validated using a 1,000 bootstrap resample to correct for bias and overfitting within the model. The bootstrapping method of validation has been shown to be superior to other approaches to estimate internal validity. Calibration curves were also plotted to depict the relationship between the model’s predicted outcomes against the cohort’s observed outcome, where a perfectly calibrated model follows a 45° line.
+
 After the best model was selected and internally validated, the model was compared with the best currently available method of estimating risk, that is, an expert medical educator’s predictions. To perform these comparisons, a subset of 50 participants was randomly selected for comparing the probability of matching between the model and the panel of experts. These ?? participants were used to compare predictions of the models with experts’ predictions and not as a true independent validation subset. The model was rebuilt using the remaining participants in the data set excluding the 50 randomly selected participants. The candidate risk factors of these 50 participants were given to 20 “expert” medical educators with representation from each of the *** for review resulting in 1,000 expert predictions and 50 model predictions for each outcome. All medical educators were considered to be experienced in counseling medical students regarding OBGYN matching. Each of the 20 experts were asked to consider each medical student’s data from all ??? variables among the 50 randomly selected students and provide their best estimated outcome by answering the following question: “Out of 100 medical students with these exact characteristics, estimate the number of medical students who would not matching into OBGYN during the 2019 application year.” Individual medical educators’ predictions were not averaged to yield a single value because incorporating each medical educator’s predictions substantially increased statistical power. The model’s predictions were compared with the experts’ predictions, which included all risk factors, to determine which was most accurate. The difference in accuracy was determined by using a bootstrap method from their respective receiver operating characteristic curves. All analyses were performed using R 3.5.
-Results:  A total of `r nrow(all_data)` applied to obstetrics and gynecology residency at the University of Colorado from 2015 to 2018.  The overall mean rate of matching in the training cohort was `r table(train$Match_Status)[[2]]` of `r nrow(train)` was (`r round((prop.table(table(train$Match_Status))[[2]]*100),1)`%).
+
+Results
+===========================================================================================
+A total of `r nrow(all_data)` applied to obstetrics and gynecology residency at the University of Colorado from 2015 to 2018.  The overall mean rate of matching in the training cohort was `r table(train$Match_Status)[[2]]` of `r nrow(train)` was (`r round((prop.table(table(train$Match_Status))[[2]]*100),1)`%).
 The unadjusted comparison of the `r ncol(all_data)` candidate predictors in the training cohort are presented in Supplemental Table 1.  To identify predictors from the candidates we employed least absolute shrinkage and selection operator (LASSO).  Regularisation techniques change how the model is fit by adding a penalty for every additional parameter you have in the model.
 `r length(variables)` variables were included within the final model.  Applicants from the United States or Canada, high USMLE Step 1 scores, female gender, White race, no visa sponsorship needed, membership in Alpha Omega Alpha, no interruption of medical training, couples matching, and allopathic medical training increased the chances of matching into OBGYN.  In contrast, more oral presentations, increasing age, a higher number of peer-reviewed online publications, an increased number of authored book chapters, and a higher count of poster presentations all decreased the probability of matching into OBGYN (table 2).  The nomogram illustrates the strength of association of the predictors to the outcome as well as the nonlinear associations between age, count of Oral Presentations, count of peer−reviewed book chapters and the chances of matching (Figure 1).
+
+Discussion
+===========================================================================================
+Needed
+
+
+References
+===============================================================================
+
 # Appendix, DynNom Model for Shiny Upload
 I WOULD LIKE HELP UPLOADING THIS MODEL TO SHINY SERVER AS WELL PLEASE.
 ```{r DynNom}
@@ -2226,8 +2271,7 @@ DynNom.model.lrm  <-
 
 # DynNom::DynNom.lrm(model = DynNom.model.lrm, data = test,  clevel = 0.95)
 ```
-# Publish to shiny
-# getwd()
+
 
 ```{r}
 DynNom.model.glm  <-
