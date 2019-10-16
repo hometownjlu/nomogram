@@ -1,37 +1,36 @@
 ---
-title: "A Model to Predict Chances of Matching into Obstetrics and Gynecology Residency"
-author: "Tyler Muffly, MD"  
-date: Department of Obstetrics and Gynecology, Denver Health, Denver, CO
-spacing: double
-output:
-  pdf_document:
-   latex_engine: xelatex
-   df_print: kable
-   keep_tex: true
-   #toc: true
-   fig_caption: yes
-   pandoc_args: ["--wrap=none", "--top-level-division=chapter"]
-   #template: ~/Dropbox/Nomogram/nomogram/svm-latex-ms.tex
-word_document: 
 html_document:
-     #toc: true
-     toc_depth: 2
-     dev: 'svg'
-     code_folding: show
-fontsize: 12pt
+  code_folding: show
+  dev: svg
+  toc_depth: 2
+author: "Tyler Muffly, MD"
+date: "Department of Obstetrics and Gynecology, Denver Health, Denver, CO"
+output:
+  html_document:
+    df_print: paged
+  pdf_document:
+    df_print: kable
+    fig_caption: yes
+    keep_tex: yes
+    latex_engine: xelatex
+    pandoc_args:
+    - --wrap=none
+    - --top-level-division=chapter
 fontfamily: mathpazo
+fontsize: 12pt
 geometry: margin=1in
-always_allow_html: yes
 header-includes:
 - \usepackage{fancyhdr}
 - \pagestyle{fancy}
 - \fancyhead[R]{Muffly et al.}
 - \usepackage{lineno}
 - \linenumbers
+title: "A Model to Predict Chances of Matching into Obstetrics and Gynecology Residency"
 linestretch: 2
-Keywords:  "Obstetrics and Gynecology, residency"
-#https://github.com/StirlingCodingClub/Manuscripts_in_Rmarkdown/blob/master/ms.Rmd
-#http://svmiller.com/blog/2016/02/svm-r-markdown-manuscript/
+always_allow_html: yes
+spacing: double
+Keywords: Obstetrics and Gynecology, residency
+word_document: null
 ---
 *Tyler M. Muffly, Merdith Alston, Jill Liss, Georg Kropat, Janet Corral, Christine Raffaelli, Eric Jelovsek*
 - name: Tyler M. Muffly, MD
@@ -153,7 +152,7 @@ all_data<-
 dim(all_data)
 ```
 
-```{r Using the Drake package here for efficiency, echo=FALSE}
+```{r Using the Drake package here for efficiency, echo=FALSE, include=FALSE}
 # Using the Drake package here for efficiency.  
 file.exists(paste0(data_folder, "all_years_filter_111.rds"))
 
@@ -197,8 +196,6 @@ vis_drake_graph(config)
 drake::make(plan)
 ```
 
-#Data Quality Check of `all_data`
-
 A summary of the 19 variables are listed below:
   
 1. Eleven of the variables were a factor.  All factors had two levels except for Alpha_Omega_Alpha had three levels.  The target variable is `all_data$Match_Status`.  
@@ -207,11 +204,10 @@ A summary of the 19 variables are listed below:
 
 3.One of the variables was a number.  Age was calculated as a number.  
 
-```{r structure of data}
-cat("\n","----- Initial Structure of data frame -----","\n")
+
+```{r structure of data, include=TRUE, echo=FALSE}
 # examine the structure of the initial data frame
-inspectdf::inspect_types(all_data, show_plot = TRUE)
-print(str(all_data))
+inspectdf::inspect_types(all_data) %>% show_plot()
 ```
 
 ```{r structure data 2}
@@ -224,7 +220,7 @@ str(all_data)
 describe(all_data)
 ```
 
-```{r, Data size and structure EDA, results="asis", echo=FALSE}
+```{r,EDA, results="asis", echo=FALSE, include=TRUE}
 #plot_str(all_data) #COOL BUT USELESS HERE
 plot_intro(all_data)
 DataExplorer::plot_missing(all_data)
@@ -234,18 +230,17 @@ DataExplorer::plot_missing(all_data)
 describe(as.factor(all_data$Match_Status))
 ```
 
+```{r DataExplorer, results='asis', echo=FALSE, include=TRUE, align = 'left'}
 #Univariate Analysis
-```{r DataExplorer EDA, results='asis', echo=FALSE, include=TRUE}
-DataExplorer::plot_bar(all_data)
 DataExplorer::plot_boxplot(all_data, by = "Match_Status")
 DataExplorer::plot_histogram(all_data)
+DataExplorer::plot_bar(all_data)
 inspectdf::inspect_cat(all_data) %>% show_plot()  #Please use `cols = c(data)`
-inspectdf::inspect_cat(all_data) %>% show_plot()
 #inspectdf::inspect_num(all_data) %>% show_plot() #Breaks the Rmarkdown compiling for some reason.  Ugh.  
 ```
 
 
-```{r ggpairs, warning=F, message=FALSE, include=TRUE, echo=FALSE}
+```{r ggpairs, warning=F, message=FALSE, include=TRUE, echo=FALSE, align = 'left'}
 all_data_ggally <- 
   as.data.frame(all_data) 
 
@@ -413,11 +408,8 @@ all_data$Match_Status <-
 all_data$Match_Status #Outcome must be numeric
 ```
 
-## Table 1
-
 Table 1: Applicant Descriptive Variables by Matching Success (1) or Failure (0)
-
-```{r, echo=FALSE, warning=FALSE, message=FALSE}
+```{r, echo=FALSE, warning=FALSE, message=FALSE, include=FALSE}
 table1_all_data <- arsenal::tableby(Match_Status ~
                                       white_non_white + 
                                       Age + 
@@ -468,15 +460,13 @@ table1_all_data <- arsenal::tableby(Match_Status ~
                                                                                   medSurv ="Median Survival", 
                                                                                   medTime = "Median Follow-Up")))
 
-summary(table1_all_data, 
+print(summary(table1_all_data, 
         text=T, 
         title = 'Table 1:  Applicant Descriptive Variables by Matching Success or Failure from 2015 to 2018',
-        pfootnote=TRUE)
+        pfootnote=TRUE))
 ```
 
-  
-Descriptive summaries of all variables in the dataset are provided in the table.
-```{r, results = "asis", include=TRUE}
+```{r Descriptive summaries of all variables in the dataset are provided in the table, results = "asis", include=TRUE}
 stargazer::stargazer(all_data, 
                      header=FALSE, 
                      title = "Descriptive Statistics of Match Status Data", 
@@ -794,7 +784,7 @@ coef(best, s=lasso.mod$bestTune$lambda) ###Look for the largest coefficient
 
 Plot the results of the lasso.mod so we can see if this is more ridge or more lasso.  0 = ridge regression and 1 = LASSO regression, here ridge is better
 
-```{r, fig.width=7, fig.asp=1, fig.cap="Figure: Plotting the results of ridge or lasso in regression.}
+```{r, fig.width=7, fig.asp=1, fig.cap="Figure: Plotting the results of ridge or lasso in regression."}
 plot(lasso.mod)
 ```
 
@@ -823,7 +813,7 @@ predict(lasso.mod, newx = x[1:5,], type = "prob", s = c(0.05, 0.01))
 GLMNet to do factor selection with the previously made LASSO model
 And we use the glmnet library to determine the optimal penalization parameter. Note that this must be assigned through cross validation; here, we use 50-fold cross validation (only suitable in small datasets).  GLMnet accepts data in a matrix format so the data format was changed before giving it to glmnet.cv. 
 
-```{r, echo=TRUE, message=FALSE, include=TRUE, fig.cap="Figure: Determining optimal penalization parameters for factor selection with the least absolute shrinkage and selection operator (LASSO) model.}
+```{r, echo=TRUE, message=FALSE, include=TRUE, fig.cap="Figure: Determining optimal penalization parameters for factor selection with the least absolute shrinkage and selection operator (LASSO) model."}
 `%ni%`<-Negate(`%in%`)
 # save the outcome for the glmnet model, could use dummyVars with fullRan=FALSE can remove collinearity by removing male.gender so you are either male or female
 
@@ -873,7 +863,7 @@ I DON'T REALLY UNDERSTAND WHAT THIS GRAPH MEANS?
   
   I plotted everything on a bar graph so we can easily compare the strongest predictors and the direction they affect the model:
   
-```{r, fig.cap="Figure: Plot of the strongest predictors and the direction that the predictors affect matching.}
+```{r, fig.cap="Figure: Plot of the strongest predictors and the direction that the predictors affect matching."}
 #https://amunategui.github.io/supervised-summarizer/index.html
 GetSummaryPlot <- function(objdfscaled0, objdfscaled1, predictorName, plotit=TRUE) {
   require(ggplot2)
@@ -1030,7 +1020,7 @@ lrm.with.lasso.variables$stats[[6]] #C-statistic
 
 AUC of this pared down model is `r (lrm.with.lasso.variables$stats[[6]])`.
 
-```{r, echo=FALSE,  fig.width=7, fig.asp=1, fig.cap="Figure: Charting the strength of the variables chosen using LASSO.}
+```{r, echo=FALSE,  fig.width=7, fig.asp=1, fig.cap="Figure: Charting the strength of the variables chosen using LASSO."}
 lrm.with.lasso.variables
 #dev.off()
 plot(anova(lrm.with.lasso.variables), cex=0.5, cex.lab=0.4, cex.axis = 0.4)
@@ -1048,7 +1038,6 @@ plot(summary(lrm.with.lasso.variables), cex=0.5, cex.lab=0.7, cex.axis = 0.7)
 ```
 
 Odds ratios for train data
-
 #https://rstudio-pubs-static.s3.amazonaws.com/283447_fd922429e1f0415c89b93b6da6dc1ccc.html
 
 ```{r, results="asis"}
@@ -1244,7 +1233,7 @@ plot(perf2, colorize = TRUE, text.adj = c(-0.2,1.7), main="Precision and Recall 
 ```
 
 
-```{r, include = TRUE, fig.width=8, fig.height=4, fig.cap="Figure: Evaluation of the variable interactions in the train data set".}
+```{r, include = TRUE, fig.width=8, fig.height=4, fig.cap="Figure: Evaluation of the variable interactions in the train data set."}
 train.df <- 
   train
 
@@ -1529,7 +1518,7 @@ model.8 <-
        verbose=TRUE);
 ```
 
-```{r OneR diagnostic plots, fig.height=4, fig.width=8, align='center', include=TRUE}
+```{r OneR diagnostic plots, fig.height=4, fig.width=8, align='center', include=TRUE, fig.cap="Figure: Diagnostic plots to visualize classifier accuracy."}
 # Commonly used to visualize classifier accuracy;
 par(mfrow=c(1,2))
 plot(model.1)
@@ -1560,7 +1549,7 @@ The simple tree was plotted below. The a, b and c variables were near the roots 
   
 ```{r fancyR plot rpart EDA, include=TRUE}
 # plot
-fancyRpartPlot(t.model, caption = "")
+fancyRpartPlot(t.model)
 ```
 
 
@@ -2059,10 +2048,7 @@ kable(dt, "latex", booktabs = T, caption = "Confusion matrix of Naive Bayes mode
 \pagebreak
 
 
-## 5) Model Comparison
-
-
-
+# Model Comparison
 ```{r model comparison, align = 'center', include=TRUE}
 #Table 14 summarizes the overall in-sample and out-of-sample accuracy of each model. The best performing models (highest accuracy) was the random forest model with a test set accuracy of `r rf.accuracy.test[1]`. The Logistic regression model using backwards elimination was second with a test set accuracy of `r lr.accuracy.test[1]`. The Naive Bayes model did not perform as well as the other models. In summary, if accuracy is the most important aspect of the model and interpretion is not a priority then the best model was the random forest model. If interpretability of the model is paramount, then the logistic regression model is recommended.
 
@@ -2090,11 +2076,9 @@ kable(dt, "latex", booktabs = T, caption = "Confusion matrix of Naive Bayes mode
 #df <- round(matrix, 3)
 #kable(df, "latex", booktabs = T, caption = "In-sample and out-of-sample accuracy of all models") %>% kable_styling(latex_options = "striped")
 ```
-
-
 \pagebreak
 
-```{r,  fig.width=7, fig.asp=1}
+```{r NOMOGRAM,  fig.width=7, fig.asp=1}
 ###NOMOGRAM
 #fun.at - Demarcations on the function axis: "Matching into obgyn"
 #lp=FALSE so we don't have the logistic progression
@@ -2125,7 +2109,7 @@ nomo_final <- plot(nomo.from.lrm.with.lasso.variables, lplabel="Linear Predictor
 #Annotation:  Manuscript Figure 1:  The first row called points assigned to each variable's measurement from rows 2-12, which are variables included in predictive model.  Assigned points for all variables are then summed and total can be located on line 13 (total points).  Once total points are located, draw a vertical line down to the bottom line to obtain the predicted probability of matching.  For non-linear variables (count of oral presentations, etc.) values should be erad from left to right.
 
 
-# Step 10: Calibration of the model based on the test data.
+#Calibration of the model based on the test data.
 The ticks across the x-axis represent the frequency distribution (may be called a rug plot) of the predicted probabilities. This is a way to see where there is sparsity in your predictions and where there is a relative abundance of predictions in a given area of predicted probabilities.
 
 The "Apparent" line is essentially the in-sample calibration.
@@ -2140,7 +2124,7 @@ Applying to your specific plot, it appears most of the predicted probabilities a
 
 The mean absolute error is the "average" absolute difference (disregard a positive or negative error) between predicted probability and actual probability. Ideally, we want this to be small (0 would be perfect indicating no error). This seems small in this plot, but may be situation dependent on how small is small.
 
-```{r,  fig.width=7, fig.asp=1}
+```{r calibration,  fig.width=7, fig.asp=1}
 calib <- rms::calibrate(train.lrm.with.lasso.variables, method = "boot", boot=1000, data = test, rule = "aic", estimates = TRUE)  #Plot test data set
 plot(calib, legend = TRUE, subtitles = TRUE, xlab = "Predicted probability according to model", ylab = "Observation Proportion of Matching")
 ```
@@ -2151,17 +2135,15 @@ plot(calib, legend = TRUE, subtitles = TRUE, xlab = "Predicted probability accor
 Lorrie Faith Cranor and Brian A. LaMacchia. Match_Status! Communications of the ACM. Vol. 41, No. 8 (Aug. 1998), Pages 74-83. Definitive version: http://www.acm.org/pubs/citations/journals/cacm/1998-41-8/p74-cranor/
   
   \pagebreak
-#Appendix
-```{r echo=FALSE, message=FALSE, warning=FALSE}
+```{r Appendix, echo=FALSE, message=FALSE, warning=FALSE}
 #funModeling::df_status(all_data)
 create_plot_num(all_data)
-#funModeling::plot_num(all_data, path_out = "~/Dropbox/Nomogram/nomogram/results") #Export results
 #Summary stats of the numerical data showing means, medians, skew
 create_profiling_num(all_data)
-#funModeling::profiling_num(all_data)
+funModeling::profiling_num(all_data)
 #Shows the variable frequency charted by matching status
 create_plot_cross_plot(all_data)
-#funModeling::cross_plot(data=all_data, input=(colnames(all_data)), target="Match_Status", path_out = "~/Dropbox/Nomogram/nomogram/results") #, auto_binning = FALSE, #Export results
+funModeling::cross_plot(data=all_data, input=(colnames(all_data)), target="Match_Status", path_out = "~/Dropbox/Nomogram/nomogram/results", auto_binning = FALSE) #Export results
 ```
 
 # Appendix, Exploratory Data Analysis
@@ -2197,13 +2179,7 @@ table1_all_data <- arsenal::tableby(Match_Status ~
 summary(table1_all_data, text=T, title='Supplemental Table: Descriptive analysis of all variables considered in the training set along with their association to matching', pfootnote=TRUE)
 ```
 
-#Appendix, Data in a private repository to be shared with the journal
-http://dx.doi.org/10.17632/3rtg46skbd.1
-
-
 Medical student #1 is a `r all_data$Age[1]`year old `r all_data$white_non_white[1]` `r all_data$Gender[1]` who is a US Senior medical graduate
-
-https://denverhealth.az1.qualtrics.com/WRQualtricsControlPanel/?Section=SV_3QmslHJJmin4xBX&SubSection=&SubSubSection=&PageActionOptions=&TransactionID=1&Repeatable=0&restrictToBrand=1&criteria=&ContextSection=EditSection
 
 
 Abstract
@@ -2247,8 +2223,7 @@ References
 ===============================================================================
 
 # Appendix, DynNom Model for Shiny Upload
-I WOULD LIKE HELP UPLOADING THIS MODEL TO SHINY SERVER AS WELL PLEASE.
-```{r DynNom}
+```{r DynNom logistic regression model}
 DynNom
 library(dplR)
 DynNom.model.lrm  <-
@@ -2273,7 +2248,7 @@ DynNom.model.lrm  <-
 ```
 
 
-```{r}
+```{r generalized logistic regression}
 DynNom.model.glm  <-
 DynNom.model.glm <- glm(Match_Status ~
                           Age +
@@ -2295,7 +2270,7 @@ DynNom::DNbuilder(model = DynNom.model.glm, data = train)
 
 
 
-```{r}
+```{r rsconnect for uploading shinyapps}
 # put credentials here to upload file to shinyapps.io
 # Tutorial: https://docs.rstudio.com/shinyapps.io/getting-started.html#CreateAccount
 # rsconnect::setAccountInfo(name='georgkropat',
