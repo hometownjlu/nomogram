@@ -4,20 +4,20 @@ author: "Tyler M. Muffly, MD"
 date: '`r format(Sys.time(), "%d %B, %Y")`'
 output:
   pdf_document:
-    latex_engine: xelatex
-    df_print: kable
-    toc: true
-    fig_caption: yes
+   latex_engine: xelatex
+    # df_print: kable
+    # toc: true
+    # fig_caption: yes
     #pandoc_args: ["--wrap=none", "--top-level-division=chapter"]
-  word_document: default
-  html_document:
-    toc: true
-    toc_depth: 2
-    dev: 'svg'
-    code_folding: show
-fontsize: 12pt
-geometry: margin=1in
-always_allow_html: yes
+#   word_document: default
+#   html_document:
+#     toc: true
+#     toc_depth: 2
+#     dev: 'svg'
+#     code_folding: show
+# fontsize: 12pt
+# geometry: margin=1in
+#always_allow_html: yes
 ---
 Objective:  We sought to construct and validate a model that predict a medical student's chances of matching into an obstetrics and gynecology residency.
 
@@ -30,16 +30,19 @@ The data set of years 2015, 2016, 2017, and 2018 at University of Colorado. Appl
 # uncomment the following line to restore packrat libraries
 # packrat::restore()
 knitr::opts_chunk$set(fig.width=8, fig.height=6, include=FALSE,echo=FALSE, warning=FALSE, message=FALSE, tidy = TRUE, comment="")
-options(tinytex.verbose = TRUE)
-r = getOption("repos")
-# r["CRAN"] = "http://cran.us.r-project.org"
-# options(repos = r)
+library(stargazer)
 # data_folder <- paste0("~/Dropbox/Nomogram/nomogram/data/")
 data_folder <- paste0(getwd(), "/Data/")
 # results_folder <- paste0("~/Dropbox/Nomogram/nomogram/results")
 results_folder <- paste0(getwd(), "/Results/")
 # packrat::set_opts(local.repos = c("packrat/lib/x86_64-apple-darwin15.6.0/3.6.0/"))
 ```
+
+```{r, results = "asis", include=TRUE}
+library(stargazer)
+stargazer(attitude, type = 'latex')
+```
+
 
 ```{r, include=FALSE, echo=FALSE}
 # library(packrat)
@@ -54,9 +57,7 @@ library(dplR)
 
 ## Create a dataframe of independent and dependent variables.  Download cleaned data from Dropbox. 
 ```{r, echo=FALSE, include=FALSE}
-# read in data
-#download.file("https://www.dropbox.com/s/hxkxdmmbd5927j3/all_years_reorder_cols_84.rds?raw=1",destfile=paste0(data_folder, "all_years_mutate_83.rds"), method = "auto", cacheOK = TRUE)
-#download.file("https://www.dropbox.com/s/hxkxdmmbd5927j3/all_years_reorder_cols_84.rds?raw=1",destfile=paste0(data_folder, "all_years_mutate_83.rds"), method = "auto", cacheOK = TRUE)
+# read in dat
 
 all_data <- 
   read_rds(paste0(data_folder,"all_years_filter_111.rds")) %>%
@@ -112,6 +113,8 @@ all_data$US_or_Canadian_Applicant <-
 
 all_data<- 
   Hmisc::upData(all_data)
+
+dim(all_data)
 ```
 
 #Potential code with Drake.  I'm not sure if using drake is necessary or if it is overkill.  
@@ -202,13 +205,13 @@ describe(as.factor(all_data$Match_Status))
 ```{r, results='asis', echo=FALSE}
 #DataExplorer::plot_bar(all_data)
 #DataExplorer::plot_boxplot(all_data, by = "Match_Status")
-#DataExplorer::plot_histogram(all_data)
-inspectdf::inspect_cat(all_data) %>% show_plot()  #Please use `cols = c(data)`
-inspectdf::inspect_cat(all_data) %>% show_plot()
-inspectdf::inspect_imb(all_data) %>% show_plot()
-imb <- inspectdf::inspect_imb(all_data) %>% show_plot()
-knitr::kable(imb)
-inspectdf::inspect_num(all_data) %>% show_plot() #Breaks the Rmarkdown compiling for some reason.  Ugh.  
+# #DataExplorer::plot_histogram(all_data)
+# inspectdf::inspect_cat(all_data) %>% show_plot()  #Please use `cols = c(data)`
+# inspectdf::inspect_cat(all_data) %>% show_plot()
+# inspectdf::inspect_imb(all_data) %>% show_plot()
+# imb <- inspectdf::inspect_imb(all_data) %>% show_plot()
+# knitr::kable(imb)
+#inspectdf::inspect_num(all_data) %>% show_plot() #Breaks the Rmarkdown compiling for some reason.  Ugh.  
 ```
 
 
@@ -444,14 +447,13 @@ summary(table1_all_data,
         pfootnote=TRUE)
 ```
 
-ARSENAL VS. STARGAZER TO CREATE A TABLE 1 OF DESCRIPTIVE STATISTICS?
   
-  Descriptive summaries of all variables in the dataset are provided in the table.
-```{r, include = TRUE, results='asis'}
+Descriptive summaries of all variables in the dataset are provided in the table.
+```{r, results = "asis", include=TRUE}
 stargazer::stargazer(all_data, 
                      header=FALSE, 
-                     title = "Descriptive Statistics of Match_Status Data", 
-                     type='latex', 
+                     title = "Descriptive Statistics of Match Status Data", 
+                     type = 'latex',
                      nobs = TRUE, 
                      mean.sd = TRUE, 
                      median = TRUE, 
@@ -1240,6 +1242,15 @@ train <-
 
 # Bin all variables of the data frame (apart from the target variable)
 # with default parameter settings
+train$USMLE_Step_1_Score <- as.numeric(train$USMLE_Step_1_Score)
+train$Count_of_Poster_Presentation <- as.numeric(train$Count_of_Poster_Presentation)
+train$Count_of_Oral_Presentation <- as.numeric(train$Count_of_Oral_Presentation)
+train$Count_of_Articles_Abstracts <- as.numeric(train$Count_of_Articles_Abstracts)
+train$Count_of_Peer_Reviewed_Book_Chapter <- as.numeric(train$Count_of_Peer_Reviewed_Book_Chapter)
+train$Count_of_Other_than_Published <- as.numeric(train$Count_of_Other_than_Published)
+train$Count_of_Online_Publications <- as.numeric(train$Count_of_Online_Publications)
+
+
 binning <- 
   woe.binning(train, 
               'Match_Status', 
@@ -1253,7 +1264,7 @@ binning <-
                 "Count_of_Online_Publications"))
 
 woe.binning.plot(binning, "1:5")
-#woe.binning.plot(binning)
+woe.binning.plot(binning)
 bin.top.five <- binning[1:5,c(1,3)]
 pander::pander(bin.top.five, style = "simple", justify = c('left', 'center'))
 ```
@@ -1300,12 +1311,21 @@ train.df.binned <-
 train.df.binned <-
   dplyr::select(train.df.binned, -Count_of_Online_Publications)
 
-# str(train.df.binned)
+str(train.df.binned)
 ```
 
 
-```{r stargazer train, eval=FALSE, include=FALSE}
-stargazer::stargazer(train.df.binned, header=FALSE, title = "Descriptive Statistics of Binned Training Match_Status Data", type='latex', nobs = TRUE, mean.sd = TRUE, median = TRUE, iqr = TRUE, digits = 1, font.size = "small", flip = FALSE)
+```{r stargazer train, include=TRUE, results = "asis"}
+stargazer::stargazer(train.df.binned, header=FALSE, 
+                     title = "Descriptive Statistics of Binned Training Match_Status Data", 
+                     type='latex', 
+                     nobs = TRUE, 
+                     mean.sd = TRUE, 
+                     median = TRUE, 
+                     iqr = TRUE, 
+                     digits = 1, 
+                     font.size = "small", 
+                     flip = FALSE)
 ```
 
 ```{r, include = TRUE, align = 'center', echo=FALSE}
@@ -1317,26 +1337,34 @@ test$Match_Status <-
 table(test$Match_Status)
 
 test <- as.data.frame(test)
-# 
-# # Bin all variables of the data frame (apart from the target variable)
-# # with default parameter settings
-# binning <-
-#   woe.binning(test,
-#               'Match_Status',
-#               c(
-#                 'Age',
-#                 'USMLE_Step_1_Score',
-#                 "Count_of_Poster_Presentation",
-#                 "Count_of_Oral_Presentation",
-#                 "Count_of_Articles_Abstracts",
-#                 "Count_of_Peer_Reviewed_Book_Chapter",
-#                 "Count_of_Other_than_Published",
-#                 "Count_of_Online_Publications"))
-# 
-# woe.binning.plot(binning, "1:5")
-# #woe.binning.plot(binning)
-# bin.top.five <- binning[1:5,c(1,3)]
-# pander::pander(bin.top.five, style = "simple", justify = c('left', 'center'))
+
+test$USMLE_Step_1_Score <- as.numeric(test$USMLE_Step_1_Score)
+test$Count_of_Poster_Presentation <- as.numeric(test$Count_of_Poster_Presentation)
+test$Count_of_Oral_Presentation <- as.numeric(test$Count_of_Oral_Presentation)
+test$Count_of_Articles_Abstracts <- as.numeric(test$Count_of_Articles_Abstracts)
+test$Count_of_Peer_Reviewed_Book_Chapter <- as.numeric(test$Count_of_Peer_Reviewed_Book_Chapter)
+test$Count_of_Other_than_Published <- as.numeric(test$Count_of_Other_than_Published)
+test$Count_of_Online_Publications <- as.numeric(test$Count_of_Online_Publications)
+
+# Bin all variables of the data frame (apart from the target variable)
+# with default parameter settings
+binning <-
+  woe.binning(test,
+              'Match_Status',
+              c(
+                'Age',
+                'USMLE_Step_1_Score',
+                "Count_of_Poster_Presentation",
+                "Count_of_Oral_Presentation",
+                "Count_of_Articles_Abstracts",
+                "Count_of_Peer_Reviewed_Book_Chapter",
+                "Count_of_Other_than_Published",
+                "Count_of_Online_Publications"))
+
+woe.binning.plot(binning, "1:5")
+woe.binning.plot(binning)
+bin.top.five <- binning[1:5,c(1,3)]
+pander::pander(bin.top.five, style = "simple", justify = c('left', 'center'))
 ```
 
 ```{r bin test}
@@ -1365,8 +1393,8 @@ bin.top.five <-
 
 pander::pander(bin.top.five, style = "simple", justify = c('left', 'center'))
 
-# test.df.with.binned.vars.added <-
-#   woe.binning.deploy(test, binning, min.iv.total=0.5,add.woe.or.dum.var='woe')
+test.df.with.binned.vars.added <-
+   woe.binning.deploy(test, binning, min.iv.total=0.5,add.woe.or.dum.var='woe')
 
 test.df.with.binned.vars.added <-
   woe.binning.deploy(test, binning, add.woe.or.dum.var='woe')
@@ -1406,11 +1434,22 @@ test.df.binned <- dplyr::select(test.df.binned, -Count_of_Peer_Reviewed_Book_Cha
 # Removing capital_run_length_average raw variable since binned is present
 test.df.binned <- dplyr::select(test.df.binned, -Count_of_Online_Publications)
 
-# str(test.df.binned)
+str(test.df.binned)
 ```
 
-```{r stargazer test, eval=FALSE, include=FALSE}
-stargazer::stargazer(test.df.binned, header=FALSE, title = "Descriptive Statistics of Binned Training Match_Status Data", type='html', nobs = TRUE, mean.sd = TRUE, median = TRUE, iqr = TRUE, digits = 1, font.size = "small", flip = FALSE)
+```{r stargazer test, include=TRUE, results = "asis"}
+
+stargazer::stargazer(test.df.binned, 
+                     header=FALSE, 
+                     title = "Descriptive Statistics of Binned Training Match_Status Data", 
+                     type='html', 
+                     nobs = TRUE, 
+                     mean.sd = TRUE, 
+                     median = TRUE, 
+                     iqr = TRUE, 
+                     digits = 1, 
+                     font.size = "small", 
+                     flip = FALSE)
 ```
 
 Relationships between binned variables and `Match_Status` were explored using mosaic plots to look for interesting bins that aided in discrimination. An example of several binned variables are shown in the plots below.
@@ -1508,10 +1547,12 @@ Exploratory random forest was also performed. The variable importance for the ra
 set.seed(12345)
 
 Y <-
-  as.factor(train.df.binned$Match_Status)
+  !is.na(as.factor(train.df.binned$Match_Status))
 
 X <-
-  train.df.binned[,-10]
+  !is.na(train.df.binned[,-10])
+
+
 
 #train default model and the most regularized model with same predictive performance
 rf.eda = randomForest(X,Y,sampsize=25,ntree=5000,mtry=4,
@@ -1553,9 +1594,17 @@ backwards_results = backwards$coefficients
 
 ```
 
-```{r,Stargazer backwards LR, include=TRUE,results='asis', warning=FALSE}
-stargazer::stargazer(backwards, title="Backwards Logistic Regression Model Results", no.space=TRUE, header=FALSE, type='latex',  ci=TRUE, ci.level=0.95, single.row=TRUE)
-# stargazer::stargazer(backwards, title="Backwards Logistic Regression Model Results")
+```{r,Stargazer backwards LR, include=TRUE, results='asis'}
+stargazer::stargazer(backwards, 
+                     title="Backwards Logistic Regression Model Results", 
+                     no.space=TRUE, 
+                     header=FALSE, 
+                     type='latex',  
+                     ci=TRUE, 
+                     ci.level=0.95, 
+                     single.row=TRUE)
+
+stargazer::stargazer(backwards, title="Backwards Logistic Regression Model Results")
 ```
 
 
@@ -1682,16 +1731,10 @@ kable(dt, "latex", booktabs = T, caption = "Confusion matrix of CART on train se
 ```
 
 
-NOT WORKING, BECAUSE TEST HAS NOT BEEN WOE BINNED???
-  
-  It is not working because the training model had a different amount of columns then the test data you're feeding into it. Just ensure that they have the correct columns that match. I am commenting this out as it's not something I should fix.
-  
-Georg: Should work now
-
 ```{r cart test accuracy}
 
 
-test.cart <- predict(cart.model, test.df.with.binned.vars.added)
+#test.cart <- predict(cart.model, test.df.with.binned.vars.added)  #ISSUE HERE?????????????????
 
 # Check to ensure the dfs are matching columns
 colnames(train.df.binned)
@@ -1700,8 +1743,8 @@ colnames(test.df.binned)
 
 
 cat("\n","----- Performance of cart on test set -----","\n")
-cart.accuracy.test <- caret::postResample(pred = test.cart, obs = as.factor(test.df.with.binned.vars.added$Match_Status))
-cart.accuracy.test[1]
+# cart.accuracy.test <- caret::postResample(pred = test.cart, obs = as.factor(test.df.with.binned.vars.added$Match_Status))
+# cart.accuracy.test[1]
 ```
 
 ```{r CART test conf matrix, align = 'center', include=TRUE}
@@ -1714,9 +1757,11 @@ row.totals <- apply(t,MAR=1,FUN=sum)
 dt <- t/row.totals
 library()
 kable(dt, "latex", booktabs = T, caption = "Confusion matrix of CART on test set") %>% kable_styling(latex_options = "striped")
+
+##For the CART model, the in-sample accuracy was `r cart.accuracy[1]` and out-of-sample accuracy was `r cart.accuracy.test[1]`.
+
 ```
 
-For the CART model, the in-sample accuracy was `r cart.accuracy[1]` and out-of-sample accuracy was `r cart.accuracy.test[1]`.
 
 
 \pagebreak
@@ -1756,8 +1801,6 @@ all.medians <- apply(data.numcols, 2, median)
 all.means <- colMeans(data.numcols)
 ```
 
-I DO NOT KNOW HOW TO MAKE THIS WORK.
-Georg:Should be working now
 
 ```{r SVM model one, eval=FALSE, include=FALSE}
 # Fit the SVM using C value of 1
@@ -1771,6 +1814,7 @@ train.df.binned <- train.df.binned %>%
 svm.model.one <- svm(Match_Status ~ .,
                      data=train.df.binned)
 
+###?????????????????????????????????????????????????
 plot(x = svm.model.one,
      woe.Age.binned ~ woe.USMLE_Step_1_Score.binned,
      data=train.df.binned)
@@ -1808,17 +1852,21 @@ kable(dt, "latex", booktabs = T, caption = "Confusion matrix of SVM model on tra
 
 
 ```{r SVM test accuracy, align = 'center'}
-test.svm <- predict(svm.model, test.df.binned)
+#####commented out because this does not work
 
-colnames(test.df.binned)
-
-
-cat("\n","----- Performance of svm on test set -----","\n")
-svm.accuracy.test <- caret::postResample(pred = test.svm, obs = as.factor(test.df.binned$Match_Status))
-svm.accuracy.test[1]
+# test.svm <- predict(svm.model, test.df.binned)
+# 
+# colnames(test.df.binned)
+# 
+# 
+# cat("\n","----- Performance of svm on test set -----","\n")
+# svm.accuracy.test <- caret::postResample(pred = test.svm, obs = as.factor(test.df.binned$Match_Status))
+# svm.accuracy.test[1]
 ```
 
 ```{r SVM test conf matrix, align = 'center', include=TRUE}
+#####commented out because this does not work
+
 # Scale the confusion matrix to accuracy rates by normalizing
 # by the row totals; row totals are used because true values are rows and predicted values are columns.
 #cat("\n","----- Confusion matrix of SVM model on test set -----","\n")
@@ -1828,9 +1876,11 @@ svm.accuracy.test[1]
 dt <- t/row.totals
 
 kable(dt, "latex", booktabs = T, caption = "Confusion matrix of SVM model on test set") %>% kable_styling(latex_options = "striped")
+
+#For the SVM model, the in-sample accuracy was `r svm.accuracy[1]` and out-of-sample accuracy was `r svm.accuracy.test[1]`. The in-sample confusion matrix for the SVM model is shown in Table 8 and the out-of-sample confusion matrix for the SVM model is shown in Table 9.
 ```
 
-For the SVM model, the in-sample accuracy was `r svm.accuracy[1]` and out-of-sample accuracy was `r svm.accuracy.test[1]`. The in-sample confusion matrix for the SVM model is shown in Table 8 and the out-of-sample confusion matrix for the SVM model is shown in Table 9.
+
 
 
 **(4) Random Forest model**
@@ -1853,7 +1903,7 @@ rf.model <- train(as.factor(Match_Status) ~ .,
                   metric = "Accuracy")
 # Timer off
 proc.time() - ptm
-#rf.model
+rf.model
 ```
 
 ```{r var imp plot rf model, align = 'center', include=TRUE}
@@ -1883,10 +1933,11 @@ rf.accuracy[1]
 
 
 ```{r RF test accuracy, align = 'center'}
-test.rf <- predict(rf.model, test.df.binned)
-cat("\n","----- Performance of rf on test set -----","\n")
-rf.accuracy.test <- caret::postResample(pred = test.rf, obs = as.factor(test.df.binned$Match_Status))
-rf.accuracy.test[1]
+#########?????????Not working ??????????/
+# test.rf <- predict(rf.model, test.df.binned)
+# cat("\n","----- Performance of rf on test set -----","\n")
+# rf.accuracy.test <- caret::postResample(pred = test.rf, obs = as.factor(test.df.binned$Match_Status))
+# rf.accuracy.test[1]
 ```
 
 ```{r RF test conf matrix, align = 'center', include=TRUE}
@@ -1899,9 +1950,11 @@ rf.accuracy.test[1]
 #dt <- t/row.totals
 
 #kable(dt, "latex", booktabs = T, caption = "Confusion matrix of Random Forest model on test set") %>% kable_styling(latex_options = "striped")
-```
 
-For the random forest model, the in-sample accuracy was `r rf.accuracy[1]` and out-of-sample accuracy was `r rf.accuracy.test[1]`. The in-sample confusion matrix for the RF model is shown in Table 10 and the out-of-sample confusion matrix for the RF model is shown in Table 11.
+#For the random forest model, the in-sample accuracy was `r rf.accuracy[1]` and out-of-sample accuracy was `r rf.accuracy.test[1]`. The in-sample confusion matrix for the RF model is shown in Table 10 and the out-of-sample confusion matrix for the RF model is shown in Table 11.
+
+
+```
 
 
 \pagebreak
@@ -1954,10 +2007,12 @@ kable(dt, "latex", booktabs = T, caption = "Confusion matrix of Naive Bayes mode
 
 
 ```{r NB test accuracy, align = 'center'}
-test.nbwoe <- predict(nbwoe, test.df.binned)
-cat("\n","----- Performance of nbwoe on test set -----","\n")
-nb.accuracy.test <- postResample(pred = test.nbwoe, obs = as.factor(test.df.binned$Match_Status))
-nb.accuracy.test[1]
+###  Not working, commented out  ???????????? #########################
+
+# test.nbwoe <- predict(nbwoe, test.df.binned)
+# cat("\n","----- Performance of nbwoe on test set -----","\n")
+# nb.accuracy.test <- postResample(pred = test.nbwoe, obs = as.factor(test.df.binned$Match_Status))
+# nb.accuracy.test[1]
 ```
 
 ```{r NB test conf matrix, align = 'center', include=TRUE}
@@ -1970,9 +2025,11 @@ nb.accuracy.test[1]
 #dt <- t/row.totals
 
 #kable(dt, "latex", booktabs = T, caption = "Confusion matrix of Naive Bayes model on test set") %>% kable_styling(latex_options = "striped")
-```
 
-For the naive Bayes model, the in-sample accuracy was `r nb.accuracy[1]` and out-of-sample accuracy was `r nb.accuracy.test[1]`. The in-sample confusion matrix for the naive Bayes model is shown in Table 12 and the out-of-sample confusion matrix for the naive Bayes model is shown in Table 13.
+#For the naive Bayes model, the in-sample accuracy was `r nb.accuracy[1]` and out-of-sample accuracy was `r nb.accuracy.test[1]`. The in-sample confusion matrix for the naive Bayes model is shown in Table 12 and the out-of-sample confusion matrix for the naive Bayes model is shown in Table 13.
+
+
+```
 
 
 \pagebreak
@@ -1980,19 +2037,27 @@ For the naive Bayes model, the in-sample accuracy was `r nb.accuracy[1]` and out
 
 ## 5) Model Comparison
 
-Table 14 summarizes the overall in-sample and out-of-sample accuracy of each model. The best performing models (highest accuracy) was the random forest model with a test set accuracy of `r rf.accuracy.test[1]`. The Logistic regression model using backwards elimination was second with a test set accuracy of `r lr.accuracy.test[1]`. The Naive Bayes model did not perform as well as the other models. In summary, if accuracy is the most important aspect of the model and interpretion is not a priority then the best model was the random forest model. If interpretability of the model is paramount, then the logistic regression model is recommended.
+
 
 ```{r model comparison, align = 'center', include=TRUE}
+#Table 14 summarizes the overall in-sample and out-of-sample accuracy of each model. The best performing models (highest accuracy) was the random forest model with a test set accuracy of `r rf.accuracy.test[1]`. The Logistic regression model using backwards elimination was second with a test set accuracy of `r lr.accuracy.test[1]`. The Naive Bayes model did not perform as well as the other models. In summary, if accuracy is the most important aspect of the model and interpretion is not a priority then the best model was the random forest model. If interpretability of the model is paramount, then the logistic regression model is recommended.
+
 # Training set performance summary
-x <- postResample(pred = train.backwards, obs = as.factor(train.df$Match_Status))
-a <- postResample(pred = train.cart, obs = as.factor(train.df.binned$Match_Status))
-c <- postResample(pred = train.svm, obs = as.factor(train.df.binned$Match_Status))
+
+###???????Commented OUT #########
+##x <- postResample(pred = train.backwards, obs = as.factor(train.df$Match_Status))
+##a <- postResample(pred = train.cart, obs = as.factor(train.df.binned$Match_Status))
+##c <- postResample(pred = train.svm, obs = as.factor(train.df.binned$Match_Status))
 #e <- postResample(pred = train.rf, obs = as.factor(train.df.binned$Match_Status))
-g <- postResample(pred = train.nbwoe, obs = as.factor(train.df.binned$Match_Status))
+
+##g commented out
+##g <- postResample(pred = train.nbwoe, obs = as.factor(train.df.binned$Match_Status))
 # Test set performance summary
 #xt <- postResample(pred = test.backwards, obs = as.factor(test.df$Match_Status))
 #at <- postResample(pred = test.cart, obs = as.factor(test.df.binned$Match_Status))
-ct <- postResample(pred = test.svm, obs = as.factor(test.df.binned$Match_Status))
+
+##ct commented out
+##ct <- postResample(pred = test.svm, obs = as.factor(test.df.binned$Match_Status))
 #et  <- postResample(pred = test.rf, obs = as.factor(test.df.binned$Match_Status))
 #gt <- postResample(pred = test.nbwoe, obs = as.factor(test.df.binned$Match_Status))
 #matrix <- matrix(data = c(x[1], a[1], c[1], e[1], g[1], xt[1], at[1], ct[1], et[1], gt[1]), nrow = 5, ncol = 2, byrow = FALSE)
@@ -2189,13 +2254,13 @@ DynNom::DNbuilder(model = DynNom.model.glm, data = train)
 ```{r}
 # put credentials here to upload file to shinyapps.io
 # Tutorial: https://docs.rstudio.com/shinyapps.io/getting-started.html#CreateAccount
-rsconnect::setAccountInfo(name='georgkropat',
-                          token='F4ECA8D490AB629FB79416DF01048F3F',
-                          secret='TriCqLW2h1XRf12m7bPMZbIh7ZZgSjVg8nHUVbTZ')
+# rsconnect::setAccountInfo(name='georgkropat',
+#                           token='F4ECA8D490AB629FB79416DF01048F3F',
+#                           secret='TriCqLW2h1XRf12m7bPMZbIh7ZZgSjVg8nHUVbTZ')
 
 
-
-rsconnect::deployApp('DynNomapp/')
+# 
+# rsconnect::deployApp('DynNomapp/')
 ```
 
 ```{r sessionInfo}
