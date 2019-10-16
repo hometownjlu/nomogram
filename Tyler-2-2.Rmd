@@ -32,8 +32,8 @@ The data set of years 2015, 2016, 2017, and 2018 at University of Colorado. Appl
 knitr::opts_chunk$set(fig.width=8, fig.height=6, include=FALSE,echo=FALSE, warning=FALSE, message=FALSE, tidy = TRUE, comment="")
 options(tinytex.verbose = TRUE)
 r = getOption("repos")
-r["CRAN"] = "http://cran.us.r-project.org"
-options(repos = r)
+# r["CRAN"] = "http://cran.us.r-project.org"
+# options(repos = r)
 # data_folder <- paste0("~/Dropbox/Nomogram/nomogram/data/")
 data_folder <- paste0(getwd(), "/Data/")
 # results_folder <- paste0("~/Dropbox/Nomogram/nomogram/results")
@@ -52,24 +52,21 @@ opts_knit$set(root.dir = results_folder)
 library(dplR)
 ```
 
-
 ## Create a dataframe of independent and dependent variables.  Download cleaned data from Dropbox. 
 ```{r, echo=FALSE, include=FALSE}
 # read in data
-download.file("https://www.dropbox.com/s/hxkxdmmbd5927j3/all_years_reorder_cols_84.rds?raw=1",destfile=paste0(data_folder, "all_years_mutate_83.rds"), method = "auto", cacheOK = TRUE)
-download.file("https://www.dropbox.com/s/hxkxdmmbd5927j3/all_years_reorder_cols_84.rds?raw=1",destfile=paste0(data_folder, "all_years_mutate_83.rds"), method = "auto", cacheOK = TRUE)
+#download.file("https://www.dropbox.com/s/hxkxdmmbd5927j3/all_years_reorder_cols_84.rds?raw=1",destfile=paste0(data_folder, "all_years_mutate_83.rds"), method = "auto", cacheOK = TRUE)
+#download.file("https://www.dropbox.com/s/hxkxdmmbd5927j3/all_years_reorder_cols_84.rds?raw=1",destfile=paste0(data_folder, "all_years_mutate_83.rds"), method = "auto", cacheOK = TRUE)
 
 all_data <- 
-  # read_rds("~/Downloads/all_years_mutate_83.rds") %>%
-  read_rds(paste0(data_folder,"all_years_mutate_83.rds")) %>%
+  read_rds(paste0(data_folder,"all_years_filter_111.rds")) %>%
   select(-"Gold_Humanism_Honor_Society", 
          -"Sigma_Sigma_Phi", 
          -"Misdemeanor_Conviction", 
          -"Malpractice_Cases_Pending", 
-         -"Match_Status_Dichot", 
+         #-"Match_Status_Dichot", 
          -"Citizenship", 
          -"BLS", 
-         #Bring in years 2015, 2016, 2017, and 2018 data
          -"Positions_offered") 
 
 all_data <- 
@@ -115,14 +112,12 @@ all_data$US_or_Canadian_Applicant <-
 
 all_data<- 
   Hmisc::upData(all_data)
-
-colnames(all_data)
 ```
 
 #Potential code with Drake.  I'm not sure if using drake is necessary or if it is overkill.  
 ```{r, echo=FALSE}
 # file.exists("~/Dropbox/Nomogram/nomogram/data/all_years_reorder_cols_84.rds")
-file.exists(paste0(data_folder, "all_years_reorder_cols_84.rds"))
+file.exists(paste0(data_folder, "all_years_filter_111.rds"))
 
 create_plot_num <- 
   function(data) {
@@ -205,10 +200,10 @@ describe(as.factor(all_data$Match_Status))
 
 ## Univariate Analysis
 ```{r, results='asis', echo=FALSE}
-DataExplorer::plot_bar(all_data)
+#DataExplorer::plot_bar(all_data)
 #DataExplorer::plot_boxplot(all_data, by = "Match_Status")
 #DataExplorer::plot_histogram(all_data)
-inspectdf::inspect_cat(all_data) %>% show_plot()
+inspectdf::inspect_cat(all_data) %>% show_plot()  #Please use `cols = c(data)`
 inspectdf::inspect_cat(all_data) %>% show_plot()
 inspectdf::inspect_imb(all_data) %>% show_plot()
 imb <- inspectdf::inspect_imb(all_data) %>% show_plot()
@@ -754,7 +749,7 @@ lasso.mod <-
 IS THERE A COEFFICIENT CUTOFF THAT YOU WOULD USE TO CHOSE THE FINAL PREDICTORS OR NO?
 ```{r, echo=TRUE, include=FALSE}
 # Print model to console
-(lasso.mod)
+print(lasso.mod)
 
 #summary(lasso.mod)
 
@@ -1143,9 +1138,10 @@ The Receiver Operating Characteristic (ROC) curve is plotted below for false pos
 #Use Model to predict match Status for Test Data
 prob <- 
   predict(train.glm.with.lasso.variables, newdata = test, type="response")
+dim(test)
 
 pred <- 
-  prediction(prob, na.omit(test)$Match_Status)
+  prediction(prob, test$Match_Status)  #removed na.omit
 ```
 
 #ROC: Type 1 using ggplot with nice controls
