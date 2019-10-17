@@ -1,21 +1,20 @@
 ---
 html_document:
-  code_folding: show
+  code_folding: hide
   dev: svg
   toc_depth: 2
 author: "Tyler Muffly, MD"
 date: "Department of Obstetrics and Gynecology, Denver Health, Denver, CO"
 output:
-  html_document:
+  pdf_document: 
     df_print: paged
-  pdf_document:
-    df_print: kable
     fig_caption: yes
     keep_tex: yes
     latex_engine: xelatex
-    pandoc_args:
-    - --wrap=none
-    - --top-level-division=chapter
+    
+  html_document:
+    df_print: paged
+    theme: "united"
 fontfamily: mathpazo
 fontsize: 12pt
 geometry: margin=1in
@@ -31,6 +30,8 @@ always_allow_html: yes
 spacing: double
 Keywords: Obstetrics and Gynecology, residency
 word_document: null
+editor_options: 
+  chunk_output_type: console
 ---
 *Tyler M. Muffly, Merdith Alston, Jill Liss, Georg Kropat, Janet Corral, Christine Raffaelli, Eric Jelovsek*
 - name: Tyler M. Muffly, MD
@@ -56,14 +57,18 @@ The data set of years 2015, 2016, 2017, and 2018 applicants to the University of
 # uncomment the following line to restore packrat libraries
 # packrat::restore()
 knitr::opts_chunk$set(fig.width=8, 
-                      fig.height=5, 
+                      fig.height=5,
+                      fig.align="center",
                       include=FALSE,
                       echo=FALSE, 
                       warning=FALSE, 
                       message=FALSE, 
                       tidy = TRUE, 
                       comment="",
-                      align = 'left')
+                      align = 'left',
+                      cache = TRUE,
+                      dev = "png",
+                      dpi = 96)
 library(stargazer)
 # data_folder <- paste0("~/Dropbox/Nomogram/nomogram/data/")
 data_folder <- paste0(getwd(), "/Data/")
@@ -77,9 +82,9 @@ results_folder <- paste0(getwd(), "/Results/")
 # library(packrat)
 # packrat::packrat_mode(on = TRUE)
 
-install.packages("anonymizer", type="source")
+#install.packages("anonymizer", type="source")
 if(!require(pacman))install.packages("pacman")
-pacman::p_load('caret', 'readxl', 'XML', 'reshape2', 'devtools', 'purrr', 'readr', 'ggplot2', 'dplyr', 'magick', 'janitor', 'lubridate', 'hms', 'tidyr', 'stringr', 'openxlsx', 'forcats', 'RcppRoll', 'tibble', 'bit64', 'munsell', 'scales', 'rgdal', 'tidyverse', "foreach", "PASWR", "rms", "pROC", "ROCR", "nnet", "packrat", "DynNom", "export", "caTools", "mlbench", "randomForest", "ipred", "xgboost", "Metrics", "RANN", "AppliedPredictiveModeling", "nomogramEx", "shiny", "earth", "fastAdaboost", "Boruta", "glmnet", "ggforce", "tidylog", "InformationValue", "pscl", "scoring", "DescTools", "gbm", "Hmisc", "arsenal", "pander", "moments", "leaps", "MatchIt", "car", "mice", "rpart", "beepr", "fansi", "utf8", "zoom", "lmtest", "ResourceSelection", "rmarkdown", "rattle", "rmda", "funModeling", "tinytex", "caretEnsemble", "broom", "Rmisc", "corrplot", "GGally", "alluvial", "progress", "perturb", "vctrs", "highr", "labeling", "DataExplorer", "rsconnect", "inspectdf", "ggpubr", "esquisse", "stargazer", "tableone", "knitr", "drake", "visNetwork", "woeBinning", "OneR", "rpart.plot", "RColorBrewer", "kableExtra", "kernlab", "naivebayes", "dplR", "e1071")
+pacman::p_load('caret', 'readxl', 'XML', 'reshape2', 'devtools', 'purrr', 'readr', 'ggplot2', 'dplyr', 'magick', 'janitor', 'lubridate', 'hms', 'tidyr', 'stringr', 'openxlsx', 'forcats', 'RcppRoll', 'tibble', 'bit64', 'munsell', 'scales', 'rgdal', 'tidyverse', "foreach", "PASWR", "rms", "pROC", "ROCR", "nnet", "packrat", "DynNom", "export", "caTools", "mlbench", "randomForest", "ipred", "xgboost", "Metrics", "RANN", "AppliedPredictiveModeling", "nomogramEx", "shiny", "earth", "fastAdaboost", "Boruta", "glmnet", "ggforce", "tidylog", "InformationValue", "pscl", "scoring", "DescTools", "gbm", "Hmisc", "arsenal", "pander", "moments", "leaps", "MatchIt", "car", "mice", "rpart", "beepr", "fansi", "utf8", "zoom", "lmtest", "ResourceSelection", "rmarkdown", "rattle", "rmda", "funModeling", "tinytex", "caretEnsemble", "broom", "Rmisc", "corrplot", "GGally", "alluvial", "progress", "perturb", "vctrs", "highr", "labeling", "DataExplorer", "rsconnect", "inspectdf", "ggpubr", "esquisse", "stargazer", "tableone", "knitr", "drake", "visNetwork", "woeBinning", "OneR", "rpart.plot", "RColorBrewer", "kableExtra", "kernlab", "naivebayes", "dplR", "e1071", "data.table")
 opts_knit$set(root.dir = results_folder)
 library(dplR)
 #devtools::install_github("crsh/papaja")  #Would be good for reference management in the future.
@@ -150,6 +155,8 @@ all_data<-
   Hmisc::upData(all_data)
 
 dim(all_data)
+
+data.table(all_data)
 ```
 
 ```{r Using the Drake package here for efficiency, echo=FALSE, include=FALSE}
@@ -410,60 +417,60 @@ all_data$Match_Status #Outcome must be numeric
 
 Table 1: Applicant Descriptive Variables by Matching Success (1) or Failure (0)
 ```{r, echo=FALSE, warning=FALSE, message=FALSE, include=FALSE}
-table1_all_data <- arsenal::tableby(Match_Status ~
-                                      white_non_white + 
-                                      Age + 
-                                      Gender + 
-                                      Couples_Match + 
-                                      #Expected_Visa_Status_Dichotomized + 
-                                      US_or_Canadian_Applicant + 
-                                      #Medical_School_Type + 
-                                      Medical_Education_Interrupted + 
-                                      #Misdemeanor_Conviction + 
-                                      Alpha_Omega_Alpha + 
-                                      #Gold_Humanism_Honor_Society + 
-                                      Military_Service_Obligation + 
-                                      USMLE_Step_1_Score + 
-                                      Military_Service_Obligation + 
-                                      Count_of_Poster_Presentation + 
-                                      Count_of_Oral_Presentation + 
-                                      Count_of_Articles_Abstracts + 
-                                      Count_of_Peer_Reviewed_Book_Chapter + 
-                                      Count_of_Other_than_Published+ 
-                                      Count_of_Online_Publications + 
-                                      Visa_Sponsorship_Needed +
-                                      Medical_Degree,
-                                    data=all_data, 
-                                    control = tableby.control(test = TRUE, 
-                                                              total = F, 
-                                                              digits = 1L, 
-                                                              digits.p = 2L, 
-                                                              digits.count = 0L, 
-                                                              numeric.simplify = F, 
-                                                              numeric.stats = 
-                                                                c("median", 
-                                                                  "q1q3"), 
-                                                              cat.stats = 
-                                                                c("Nmiss",
-                                                                  "countpct"), 
-                                                              stats.labels = list(Nmiss = "N Missing", 
-                                                                                  Nmiss2 ="N Missing",
-                                                                                  meansd = "Mean (SD)", 
-                                                                                  medianrange = "Median (Range)", 
-                                                                                  median ="Median", 
-                                                                                  medianq1q3 = "Median (Q1, Q3)", 
-                                                                                  q1q3 = "Q1, Q3", 
-                                                                                  iqr = "IQR",
-                                                                                  range = "Range", 
-                                                                                  countpct = "Count (Pct)", 
-                                                                                  Nevents = "Events", 
-                                                                                  medSurv ="Median Survival", 
-                                                                                  medTime = "Median Follow-Up")))
-
-print(summary(table1_all_data, 
-        text=T, 
-        title = 'Table 1:  Applicant Descriptive Variables by Matching Success or Failure from 2015 to 2018',
-        pfootnote=TRUE))
+# table1_all_data <- arsenal::tableby(Match_Status ~
+#                                       white_non_white + 
+#                                       Age + 
+#                                       Gender + 
+#                                       Couples_Match + 
+#                                       #Expected_Visa_Status_Dichotomized + 
+#                                       US_or_Canadian_Applicant + 
+#                                       #Medical_School_Type + 
+#                                       Medical_Education_Interrupted + 
+#                                       #Misdemeanor_Conviction + 
+#                                       Alpha_Omega_Alpha + 
+#                                       #Gold_Humanism_Honor_Society + 
+#                                       Military_Service_Obligation + 
+#                                       USMLE_Step_1_Score + 
+#                                       Military_Service_Obligation + 
+#                                       Count_of_Poster_Presentation + 
+#                                       Count_of_Oral_Presentation + 
+#                                       Count_of_Articles_Abstracts + 
+#                                       Count_of_Peer_Reviewed_Book_Chapter + 
+#                                       Count_of_Other_than_Published+ 
+#                                       Count_of_Online_Publications + 
+#                                       Visa_Sponsorship_Needed +
+#                                       Medical_Degree,
+#                                     data=all_data, 
+#                                     control = tableby.control(test = TRUE, 
+#                                                               total = F, 
+#                                                               digits = 1L, 
+#                                                               digits.p = 2L, 
+#                                                               digits.count = 0L, 
+#                                                               numeric.simplify = F, 
+#                                                               numeric.stats = 
+#                                                                 c("median", 
+#                                                                   "q1q3"), 
+#                                                               cat.stats = 
+#                                                                 c("Nmiss",
+#                                                                   "countpct"), 
+#                                                               stats.labels = list(Nmiss = "N Missing", 
+#                                                                                   Nmiss2 ="N Missing",
+#                                                                                   meansd = "Mean (SD)", 
+#                                                                                   medianrange = "Median (Range)", 
+#                                                                                   median ="Median", 
+#                                                                                   medianq1q3 = "Median (Q1, Q3)", 
+#                                                                                   q1q3 = "Q1, Q3", 
+#                                                                                   iqr = "IQR",
+#                                                                                   range = "Range", 
+#                                                                                   countpct = "Count (Pct)", 
+#                                                                                   Nevents = "Events", 
+#                                                                                   medSurv ="Median Survival", 
+#                                                                                   medTime = "Median Follow-Up")))
+# 
+# print(summary(table1_all_data, 
+#         text=T, 
+#         title = 'Table 1:  Applicant Descriptive Variables by Matching Success or Failure from 2015 to 2018',
+#         pfootnote=TRUE))
 ```
 
 ```{r Descriptive summaries of all variables in the dataset are provided in the table, results = "asis", include=TRUE}
@@ -576,7 +583,6 @@ all_data %>%
   theme_minimal() +
   geom_text(position = "stack", size = 3,  vjust=1.15) +
   scale_y_continuous(breaks = seq(0, 1, 0.25),  labels = seq(0, 100, 25))
-
 ```
 
 Check Proportions of Matched
