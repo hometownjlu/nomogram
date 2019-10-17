@@ -1,20 +1,19 @@
 ---
-html_document:
-  code_folding: hide
-  dev: svg
-  toc_depth: 2
-author: "Tyler Muffly, MD"
-date: "Department of Obstetrics and Gynecology, Denver Health, Denver, CO"
 output:
-  pdf_document: 
-    df_print: paged
-    fig_caption: yes
-    keep_tex: yes
-    latex_engine: xelatex
-    
   html_document:
     df_print: paged
     theme: "united"
+    code_folding: hide
+    dev: svg
+    toc_depth: 2
+  pdf_document: 
+    df_print: paged
+    keep_tex: yes
+    fig_caption: yes
+    latex_engine: xelatex
+    pandoc_args:
+     - --wrap=none
+     - --top-level-division=chapter
 fontfamily: mathpazo
 fontsize: 12pt
 geometry: margin=1in
@@ -25,14 +24,13 @@ header-includes:
 - \usepackage{lineno}
 - \linenumbers
 title: "A Model to Predict Chances of Matching into Obstetrics and Gynecology Residency"
+author: "Tyler Muffly, MD"
+date: "Department of Obstetrics and Gynecology, Denver Health, Denver, CO"
 linestretch: 2
 always_allow_html: yes
 spacing: double
-Keywords: Obstetrics and Gynecology, residency
-word_document: null
-editor_options: 
-  chunk_output_type: console
 ---
+
 *Tyler M. Muffly, Merdith Alston, Jill Liss, Georg Kropat, Janet Corral, Christine Raffaelli, Eric Jelovsek*
 - name: Tyler M. Muffly, MD
   affiliation: Denver Health
@@ -53,9 +51,21 @@ Objective:  We sought to construct and validate a model that predict a medical s
 
 The data set of years 2015, 2016, 2017, and 2018 applicants to the University of Colorado OBGYN residency. Applicants who were in the SOAP and applied to the preliminary spot were determined to be unmatched.  The data is contained in a data frame called 'all_data'.
 
-```{r global_options and defining paths based on working director, include=FALSE}
+```{r directory paths and packrat settings, include=FALSE}
+data_folder <- paste0(getwd(), "/Data/")
+results_folder <- paste0(getwd(), "/Results/")
+data_file <- "all_years_filter_112.rds"
+
 # uncomment the following line to restore packrat libraries
+# library(packrat)
+# packrat::packrat_mode(on = TRUE)
 # packrat::restore()
+# packrat::set_opts(local.repos = c("packrat/lib/x86_64-apple-darwin15.6.0/3.6.0/"))
+```
+
+
+```{r global_options, include=FALSE}
+# https://stirlingcodingclub.github.io/Manuscripts_in_Rmarkdown/Rmarkdown_notes.html
 knitr::opts_chunk$set(fig.width=8, 
                       fig.height=5,
                       fig.align="center",
@@ -67,45 +77,40 @@ knitr::opts_chunk$set(fig.width=8,
                       comment="",
                       align = 'left',
                       cache = TRUE,
-                      dev = "png",
-                      dpi = 96)
-library(stargazer)
-# data_folder <- paste0("~/Dropbox/Nomogram/nomogram/data/")
-data_folder <- paste0(getwd(), "/Data/")
-# results_folder <- paste0("~/Dropbox/Nomogram/nomogram/results")
-results_folder <- paste0(getwd(), "/Results/")
-# packrat::set_opts(local.repos = c("packrat/lib/x86_64-apple-darwin15.6.0/3.6.0/"))
+                      dev = "png",   #Will need to change for manuscript
+                      dpi = 200)   #Will need to change for manuscript
 ```
 
 ```{r Install and load needed R packages, include=FALSE, echo=FALSE}
 #Install and Load needed R packages.
-# library(packrat)
-# packrat::packrat_mode(on = TRUE)
 
 #install.packages("anonymizer", type="source")
 if(!require(pacman))install.packages("pacman")
 pacman::p_load('caret', 'readxl', 'XML', 'reshape2', 'devtools', 'purrr', 'readr', 'ggplot2', 'dplyr', 'magick', 'janitor', 'lubridate', 'hms', 'tidyr', 'stringr', 'openxlsx', 'forcats', 'RcppRoll', 'tibble', 'bit64', 'munsell', 'scales', 'rgdal', 'tidyverse', "foreach", "PASWR", "rms", "pROC", "ROCR", "nnet", "packrat", "DynNom", "export", "caTools", "mlbench", "randomForest", "ipred", "xgboost", "Metrics", "RANN", "AppliedPredictiveModeling", "nomogramEx", "shiny", "earth", "fastAdaboost", "Boruta", "glmnet", "ggforce", "tidylog", "InformationValue", "pscl", "scoring", "DescTools", "gbm", "Hmisc", "arsenal", "pander", "moments", "leaps", "MatchIt", "car", "mice", "rpart", "beepr", "fansi", "utf8", "zoom", "lmtest", "ResourceSelection", "rmarkdown", "rattle", "rmda", "funModeling", "tinytex", "caretEnsemble", "broom", "Rmisc", "corrplot", "GGally", "alluvial", "progress", "perturb", "vctrs", "highr", "labeling", "DataExplorer", "rsconnect", "inspectdf", "ggpubr", "esquisse", "stargazer", "tableone", "knitr", "drake", "visNetwork", "woeBinning", "OneR", "rpart.plot", "RColorBrewer", "kableExtra", "kernlab", "naivebayes", "dplR", "e1071", "data.table")
-opts_knit$set(root.dir = results_folder)
+
 library(dplR)
+p_install_gh("cran/doMC")
+library("doMC")
+registerDoMC(cores = detectCores()-1) #Use multiple cores for processing
+
 #devtools::install_github("crsh/papaja")  #Would be good for reference management in the future.
 ```
 
-## Create a dataframe of independent and dependent variables. 
-```{r Download cleaned data from Dropbox, echo=FALSE, include=FALSE}
-## Here are the data
-URL <- "https://www.dropbox.com/s/qbykb8sl2c8z3me/all_years_filter_111.rds?raw=1"
+#Below is a dataframe of the independent and the dependent variables for review. 
+```{r Download cleaned data from Dropbox, echo=FALSE, include=TRUE, cache=TRUE}
+#Create a dataframe of independent and dependent variables. 
+## Here are the data for download
 
-## NB this takes some time, the zip is about 170mb and the uncompressed file is about 700mb.
-download.file(url = URL, destfile = "all_years_filter_111.rds", method = "curl")
+URL<- paste0("https://www.dropbox.com/s/qbykb8sl2c8z3me/", (data_file), "?raw=1")
+download.file(url = URL, destfile = paste0(data_file), method = "curl")
 
 # read in data
 all_data <- 
-  read_rds(paste0(data_folder,"all_years_filter_111.rds")) %>%
+  read_rds(paste0(data_folder, "/", data_file)) %>%
   select(-"Gold_Humanism_Honor_Society", 
          -"Sigma_Sigma_Phi", 
          -"Misdemeanor_Conviction", 
          -"Malpractice_Cases_Pending", 
-         #-"Match_Status_Dichot", 
          -"Citizenship", 
          -"BLS", 
          -"Positions_offered") 
@@ -132,6 +137,7 @@ all_data <-
     "Medical_Degree", 
     'Match_Status')]
 
+#Rename columns with more human readable names
 colnames(all_data)[colnames(all_data)=="Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published"] <- "Count_of_Other_than_Published"
 
 colnames(all_data)[colnames(all_data)=="Count_of_Peer_Reviewed_Journal_Articles_Abstracts"] <- "Count_of_Articles_Abstracts"
@@ -142,40 +148,45 @@ colnames(all_data)[colnames(all_data)=="Medical_Education_or_Training_Interrupte
 colnames(all_data)[colnames(all_data)=="Count_of_Peer_Reviewed_Online_Publication"] <- 
   "Count_of_Online_Publications"
 
-all_data$Year <- 
-  as.factor(all_data$Year)
+colnames(all_data)[colnames(all_data)=="Match_Status_Dichot"] <- 
+  "Match_Status"
 
-all_data$Gender <- 
-  as.factor(all_data$Gender)
+factor_columns <- all_data %>%  select_if(is.factor) %>% colnames()
+#factor_columns
 
-all_data$US_or_Canadian_Applicant <- 
-  as.factor(all_data$US_or_Canadian_Applicant)
+all_data$white_non_white <- forcats::fct_explicit_na(all_data$white_non_white, na_level="(Missing)")
+all_data$Year <- forcats::fct_explicit_na(all_data$Year, na_level="(Missing)")
+all_data$Gender <- forcats::fct_explicit_na(all_data$Gender, na_level="(Missing)")
+all_data$Couples_Match <- forcats::fct_explicit_na(all_data$Couples_Match, na_level="(Missing)")
+all_data$US_or_Canadian_Applicant <- forcats::fct_explicit_na(all_data$US_or_Canadian_Applicant, na_level="(Missing)")
+all_data$Medical_Education_Interrupted <- forcats::fct_explicit_na(all_data$Medical_Education_Interrupted, na_level="(Missing)")
+all_data$Alpha_Omega_Alpha <- forcats::fct_explicit_na(all_data$Alpha_Omega_Alpha, na_level="(Missing)")
+all_data$Military_Service_Obligation <- forcats::fct_explicit_na(all_data$Military_Service_Obligation, na_level="(Missing)")
+all_data$Visa_Sponsorship_Needed <- forcats::fct_explicit_na(all_data$Visa_Sponsorship_Needed, na_level="(Missing)")
+all_data$Visa_Sponsorship_Needed <- forcats::fct_explicit_na(all_data$Visa_Sponsorship_Needed, na_level="(Missing)")
+all_data$Medical_Degree <- forcats::fct_explicit_na(all_data$Medical_Degree, na_level="(Missing)")
+all_data$Match_Status <- forcats::fct_explicit_na(all_data$Match_Status, na_level="(Missing)")
+
+data.table(all_data)
 
 all_data<- 
   Hmisc::upData(all_data)
-
-dim(all_data)
-
-data.table(all_data)
 ```
 
 ```{r Using the Drake package here for efficiency, echo=FALSE, include=FALSE}
 # Using the Drake package here for efficiency.  
-file.exists(paste0(data_folder, "all_years_filter_111.rds"))
-
 create_plot_num <- 
   function(data) {
-    # funModeling::plot_num(data, path_out = "~/Dropbox/Nomogram/nomogram/results")
     funModeling::plot_num(data, path_out = results_folder)
-  } #Export results
+  } 
 
 create_plot_cross_plot <- 
   function(data) {
     funModeling::cross_plot(data, 
                             input=(colnames(data)), 
                             target="Match_Status", 
-                            path_out = results_folder)
-    # path_out = "~/Dropbox/Nomogram/nomogram/results")
+                            path_out = results_folder,
+                            auto_binning = TRUE)
   } #, auto_binning = FALSE, #Export results
 
 create_profiling_num <- 
@@ -184,13 +195,11 @@ create_profiling_num <-
   }
 
 plan <- drake_plan(
-  # raw_data = read_rds("~/Dropbox/Nomogram/nomogram/data/all_years_reorder_cols_84.rds"),
-  raw_data = read_rds(paste0(data_folder, "all_years_reorder_cols_84.rds")),
+  raw_data = read_rds(paste0(data_folder,"/", data_file)),
   data = raw_data %>%
-    select(-"Gold_Humanism_Honor_Society", -"Sigma_Sigma_Phi", -"Misdemeanor_Conviction", -"Malpractice_Cases_Pending", -"Match_Status_Dichot", -"Citizenship", -"BLS", -"Positions_offered"),
-  function(data) {funModeling::plot_num(data, path_out = "~/Dropbox/Nomogram/nomogram/results")},
-  function(data) {funModeling::cross_plot(data, target="Match_Status", path_out = "~/Dropbox/Nomogram/nomogram/results")},
-  
+    select(-"Gold_Humanism_Honor_Society", -"Sigma_Sigma_Phi", -"Misdemeanor_Conviction", -"Malpractice_Cases_Pending", -"Match_Status", -"Citizenship", -"BLS", -"Positions_offered"),
+  function(data) {funModeling::plot_num(data, path_out = results_folder)},
+  function(data) {funModeling::cross_plot(data, target="Match_Status", path_out = results_folder)},
   quiet = TRUE)
 
 plan
@@ -202,6 +211,7 @@ vis_drake_graph(config)
 
 drake::make(plan)
 ```
+#Description of the Data
 
 A summary of the 19 variables are listed below:
   
@@ -211,13 +221,12 @@ A summary of the 19 variables are listed below:
 
 3.One of the variables was a number.  Age was calculated as a number.  
 
-
 ```{r structure of data, include=TRUE, echo=FALSE}
 # examine the structure of the initial data frame
 inspectdf::inspect_types(all_data) %>% show_plot()
 ```
 
-```{r structure data 2}
+```{r structure data 2, include=FALSE}
 all_data <- Hmisc::upData(all_data)
 #all_data <- Hmisc::cleanup.import(all_data) #Not working
 str(all_data)
@@ -227,17 +236,18 @@ str(all_data)
 describe(all_data)
 ```
 
+#Evaluate missing data
 ```{r,EDA, results="asis", echo=FALSE, include=TRUE}
 #plot_str(all_data) #COOL BUT USELESS HERE
-plot_intro(all_data)
 DataExplorer::plot_missing(all_data)
+plot_intro(all_data)
 ```
 
 ```{r data check, include=FALSE}
 describe(as.factor(all_data$Match_Status))
 ```
 
-```{r DataExplorer, results='asis', echo=FALSE, include=TRUE, align = 'left'}
+```{r DataExplorer, results='asis', echo=FALSE, include=TRUE, align = 'left', cache=TRUE}
 #Univariate Analysis
 DataExplorer::plot_boxplot(all_data, by = "Match_Status")
 DataExplorer::plot_histogram(all_data)
@@ -247,7 +257,7 @@ inspectdf::inspect_cat(all_data) %>% show_plot()  #Please use `cols = c(data)`
 ```
 
 
-```{r ggpairs, warning=F, message=FALSE, include=TRUE, echo=FALSE, align = 'left'}
+```{r ggpairs, warning=F, message=FALSE, include=TRUE, echo=FALSE, align = 'center', cache=TRUE}
 all_data_ggally <- 
   as.data.frame(all_data) 
 
@@ -257,7 +267,8 @@ ggpairs(data = all_data_ggally,
           c("Match_Status" , 
             "Age", 
             "white_non_white", 
-            "Gender"))
+            "Gender"),
+        bins = 30)
 
 ggpairs(data = all_data_ggally, progress = TRUE, 
         columns = 
@@ -283,9 +294,20 @@ ggpairs(data = all_data_ggally,
             "Count_of_Poster_Presentation"))
 ```
 
+```{r funModeling, echo=FALSE, message=FALSE, warning=TRUE, include=TRUE}
+funModeling::df_status(all_data)
+create_plot_num(all_data)  #Uses custom function so it can be run in Drake
+
+#Summary stats of the numerical data showing means, medians, skew
+create_profiling_num(all_data)   #Uses custom function so it can be run in Drake
+
+#Shows the variable frequency charted by matching status
+create_plot_cross_plot(all_data)   #Uses custom function so it can be run in Drake
+ #Export results
+```
 
 IS THERE A WAY TO SET THE CUTPOINTS BASED ON A STATISTICAL REASONING?
-I set the cutpoints based on nothing really. I like this better than the base summary command.  See the Appendix at the end of the document for univariate distributions.  
+I set the cutpoints based on nothing really. I like this better than the base summary command.  
 
 ```{r View the data using Hmisc, echo=FALSE, include=FALSE, warning=FALSE}
 dd <- 
@@ -533,7 +555,7 @@ This allowed for measuring the associations between continuous predictors using 
   
   In this kind of plot we want to look for the bright, large circles which immediately show the strong correlations (size and shading depends on the absolute values of the coefficients; color depends on direction).  This shows whether two features are connected so that one changes with a predictable trend if you change the other. The closer this coefficient is to zero the weaker is the correlation. Anything that you would have to squint to see is usually not worth seeing!  CAN ONLY CORRELATE CONTINOUS VARIABLES?  SHOULD I RUN CORRELATION ON THE TRAIN DATA OR ON THE ALL_DATA SET?
   
-```{r, warning= FALSE, message=FALSE, echo=FALSE}
+```{r, warning= FALSE, message=FALSE, echo=FALSE, include=TRUE}
 set.seed(0)
 train_corrleation <- 
   train %>% 
@@ -790,7 +812,7 @@ coef(best, s=lasso.mod$bestTune$lambda) ###Look for the largest coefficient
 
 Plot the results of the lasso.mod so we can see if this is more ridge or more lasso.  0 = ridge regression and 1 = LASSO regression, here ridge is better
 
-```{r, fig.width=7, fig.asp=1, fig.cap="Figure: Plotting the results of ridge or lasso in regression."}
+```{r, fig.width=7, fig.asp=1, fig.cap="Figure: Plotting the results of ridge or lasso in regression"}
 plot(lasso.mod)
 ```
 
@@ -2141,17 +2163,6 @@ plot(calib, legend = TRUE, subtitles = TRUE, xlab = "Predicted probability accor
 Lorrie Faith Cranor and Brian A. LaMacchia. Match_Status! Communications of the ACM. Vol. 41, No. 8 (Aug. 1998), Pages 74-83. Definitive version: http://www.acm.org/pubs/citations/journals/cacm/1998-41-8/p74-cranor/
   
   \pagebreak
-```{r Appendix, echo=FALSE, message=FALSE, warning=FALSE}
-#funModeling::df_status(all_data)
-create_plot_num(all_data)
-#Summary stats of the numerical data showing means, medians, skew
-create_profiling_num(all_data)
-funModeling::profiling_num(all_data)
-#Shows the variable frequency charted by matching status
-create_plot_cross_plot(all_data)
-funModeling::cross_plot(data=all_data, input=(colnames(all_data)), target="Match_Status", path_out = "~/Dropbox/Nomogram/nomogram/results", auto_binning = FALSE) #Export results
-```
-
 # Appendix, Exploratory Data Analysis
 The funModeling package will first give distributions for numerical data and finally creates cross-plots.  This also saves the output of the distributions to the results folder.
 
