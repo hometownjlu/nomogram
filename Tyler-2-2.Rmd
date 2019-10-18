@@ -31,7 +31,7 @@ always_allow_html: yes
 spacing: double
 ---
 
-*Tyler M. Muffly, Merdith Alston, Jill Liss, Georg Kropat, Janet Corral, Christine Raffaelli, Eric Jelovsek*
+*Tyler M. Muffly, Merdith Alston, Jill Liss, Georg Kropat, Janet Corral, Christine Raffaelli, J. Eric Jelovsek*
 - name: Tyler M. Muffly, MD
   affiliation: Denver Health
 - name: Meredith Alston, MD
@@ -44,12 +44,13 @@ spacing: double
   affiliation: University of Colorado
 - name: Christine Raffaelli
   affiliation: University of Colorado
-- name: Eric Jelovsek
+- name: J. Eric Jelovsek
   affiliation: Duke University
 
-Objective:  We sought to construct and validate a model that predict a medical student's chances of matching into an obstetrics and gynecology residency.
+# Objective:  We sought to construct and validate a model that predict a medical student's chances of matching into an obstetrics and gynecology residency.
 
-The data set of years 2015, 2016, 2017, and 2018 applicants to the University of Colorado OBGYN residency. Applicants who were in the SOAP and applied to the preliminary spot were determined to be unmatched.  The data is contained in a data frame called 'all_data'.
+# Data Source
+The data source to be used for the project is the Electronic Residency Application Service (ERAS). The data is collected by the University of Colorado OBGYN residency that has both a categorical and a preliminary position.  Students who applied to the preliminary position were considered to be unmatched. The data set of years 2015, 2016, 2017, and 2018 applicants to the University of Colorado OBGYN residency. The data is contained in a data frame called 'all_data'.
 
 ```{r directory paths and packrat settings, include=FALSE}
 data_folder <- paste0(getwd(), "/Data/")
@@ -96,8 +97,9 @@ registerDoMC(cores = detectCores()-1) #Use multiple cores for processing
 #devtools::install_github("crsh/papaja")  #Would be good for reference management in the future.
 ```
 
-#Below is a dataframe of the independent and the dependent variables for review. 
-```{r Download cleaned data from Dropbox, echo=FALSE, include=TRUE, cache=TRUE}
+# Load and Tidy the Data
+## Below is a dataframe of the independent and the dependent variables for review. 
+```{r Download cleaned data from Dropbox, echo=FALSE, include=FALSE, cache=TRUE}
 #Create a dataframe of independent and dependent variables. 
 ## Here are the data for download
 
@@ -167,10 +169,12 @@ all_data$Visa_Sponsorship_Needed <- forcats::fct_explicit_na(all_data$Visa_Spons
 all_data$Medical_Degree <- forcats::fct_explicit_na(all_data$Medical_Degree, na_level="(Missing)")
 all_data$Match_Status <- forcats::fct_explicit_na(all_data$Match_Status, na_level="(Missing)")
 
-data.table(all_data)
-
 all_data<- 
   Hmisc::upData(all_data)
+```
+
+```{r data.table chunk, include=TRUE}
+data.table(all_data)
 ```
 
 ```{r Using the Drake package here for efficiency, echo=FALSE, include=FALSE}
@@ -211,7 +215,7 @@ vis_drake_graph(config)
 
 drake::make(plan)
 ```
-#Description of the Data
+# Description of the Data
 
 A summary of the 19 variables are listed below:
   
@@ -219,7 +223,7 @@ A summary of the 19 variables are listed below:
 
 2. Seven of the variables were integers. 
 
-3.One of the variables was a number.  Age was calculated as a number.  
+3. One of the variables was a number.  Age was calculated as a number.  
 
 ```{r structure of data, include=TRUE, echo=FALSE}
 # examine the structure of the initial data frame
@@ -243,21 +247,25 @@ DataExplorer::plot_missing(all_data)
 plot_intro(all_data)
 ```
 
-```{r data check, include=FALSE}
+#Description of Match_Status variable.  
+```{r data check, include=TRUE}
 describe(as.factor(all_data$Match_Status))
 ```
 
+# General Data Description and Univariate analysis of boxplots for variables. 
 ```{r DataExplorer, results='asis', echo=FALSE, include=TRUE, align = 'left', cache=TRUE}
-#Univariate Analysis
-DataExplorer::plot_boxplot(all_data, by = "Match_Status")
+#General Data Description
+inspectdf::inspect_cat(all_data) %>% show_plot()  #Please use `cols = c(data)`
 DataExplorer::plot_histogram(all_data)
 DataExplorer::plot_bar(all_data)
-inspectdf::inspect_cat(all_data) %>% show_plot()  #Please use `cols = c(data)`
+
+#Univariate of boxplots
+DataExplorer::plot_boxplot(all_data, by = "Match_Status")
 #inspectdf::inspect_num(all_data) %>% show_plot() #Breaks the Rmarkdown compiling for some reason.  Ugh.  
 ```
 
 
-```{r ggpairs, warning=F, message=FALSE, include=TRUE, echo=FALSE, align = 'center', cache=TRUE}
+```{r ggpairs, warning=F, message=FALSE, include=FALSE, echo=FALSE, align = 'center', cache=TRUE}
 all_data_ggally <- 
   as.data.frame(all_data) 
 
@@ -288,28 +296,39 @@ ggpairs(data = all_data_ggally,
 ggpairs(data = all_data_ggally, 
         progress = TRUE, 
         columns = 
-          c("US_or_Canadian_Applicant" , 
+          c("Match_Status" , 
+            "US_or_Canadian_Applicant" , 
             "Couples_Match", 
-            "Visa_Sponsorship_Needed", 
             "Count_of_Poster_Presentation"))
 ```
 
-```{r funModeling, echo=FALSE, message=FALSE, warning=TRUE, include=TRUE}
+# Numerical Summary Table of Variables
+```{r funModeling1, echo=FALSE, message=FALSE, warning=TRUE, include=TRUE}
 funModeling::df_status(all_data)
-create_plot_num(all_data)  #Uses custom function so it can be run in Drake
+```
 
+# Graphical Summary of Numerical Variables
+```{r funModeling2, echo=FALSE, message=FALSE, warning=TRUE, include=TRUE}
+create_plot_num(all_data)  #Uses custom function so it can be run in Drake
+```
+
+# Profile of Numerical Data
+```{r funModeling3, echo=FALSE, message=FALSE, warning=TRUE, include=TRUE}
 #Summary stats of the numerical data showing means, medians, skew
 create_profiling_num(all_data)   #Uses custom function so it can be run in Drake
+```
 
+# Cross plots
+```{r funModeling4, echo=FALSE, message=FALSE, warning=TRUE, include=TRUE}
 #Shows the variable frequency charted by matching status
 create_plot_cross_plot(all_data)   #Uses custom function so it can be run in Drake
- #Export results
 ```
+
 
 IS THERE A WAY TO SET THE CUTPOINTS BASED ON A STATISTICAL REASONING?
 I set the cutpoints based on nothing really. I like this better than the base summary command.  
 
-```{r View the data using Hmisc, echo=FALSE, include=FALSE, warning=FALSE}
+```{r View the data using Hmisc, echo=FALSE, include=TRUE, warning=FALSE}
 dd <- 
   rms::datadist(all_data)
 
@@ -423,8 +442,6 @@ Hmisc::rcspline.plot(x = all_data$Count_of_Oral_Presentation,
                      m = 1000) #In the model Count of Oral Presentations should have rcs(Count of Oral Presentations, 3)
 ```
 
-Set the Match_Status variable to be a number and a factor.  
-
 ```{r, echo=FALSE, include=FALSE}
 all_data$Match_Status <- 
   as.numeric(all_data$Match_Status)
@@ -437,65 +454,66 @@ all_data$Match_Status <-
 all_data$Match_Status #Outcome must be numeric
 ```
 
-Table 1: Applicant Descriptive Variables by Matching Success (1) or Failure (0)
-```{r, echo=FALSE, warning=FALSE, message=FALSE, include=FALSE}
-# table1_all_data <- arsenal::tableby(Match_Status ~
-#                                       white_non_white + 
-#                                       Age + 
-#                                       Gender + 
-#                                       Couples_Match + 
-#                                       #Expected_Visa_Status_Dichotomized + 
-#                                       US_or_Canadian_Applicant + 
-#                                       #Medical_School_Type + 
-#                                       Medical_Education_Interrupted + 
-#                                       #Misdemeanor_Conviction + 
-#                                       Alpha_Omega_Alpha + 
-#                                       #Gold_Humanism_Honor_Society + 
-#                                       Military_Service_Obligation + 
-#                                       USMLE_Step_1_Score + 
-#                                       Military_Service_Obligation + 
-#                                       Count_of_Poster_Presentation + 
-#                                       Count_of_Oral_Presentation + 
-#                                       Count_of_Articles_Abstracts + 
-#                                       Count_of_Peer_Reviewed_Book_Chapter + 
-#                                       Count_of_Other_than_Published+ 
-#                                       Count_of_Online_Publications + 
-#                                       Visa_Sponsorship_Needed +
-#                                       Medical_Degree,
-#                                     data=all_data, 
-#                                     control = tableby.control(test = TRUE, 
-#                                                               total = F, 
-#                                                               digits = 1L, 
-#                                                               digits.p = 2L, 
-#                                                               digits.count = 0L, 
-#                                                               numeric.simplify = F, 
-#                                                               numeric.stats = 
-#                                                                 c("median", 
-#                                                                   "q1q3"), 
-#                                                               cat.stats = 
-#                                                                 c("Nmiss",
-#                                                                   "countpct"), 
-#                                                               stats.labels = list(Nmiss = "N Missing", 
-#                                                                                   Nmiss2 ="N Missing",
-#                                                                                   meansd = "Mean (SD)", 
-#                                                                                   medianrange = "Median (Range)", 
-#                                                                                   median ="Median", 
-#                                                                                   medianq1q3 = "Median (Q1, Q3)", 
-#                                                                                   q1q3 = "Q1, Q3", 
-#                                                                                   iqr = "IQR",
-#                                                                                   range = "Range", 
-#                                                                                   countpct = "Count (Pct)", 
-#                                                                                   Nevents = "Events", 
-#                                                                                   medSurv ="Median Survival", 
-#                                                                                   medTime = "Median Follow-Up")))
-# 
-# print(summary(table1_all_data, 
-#         text=T, 
-#         title = 'Table 1:  Applicant Descriptive Variables by Matching Success or Failure from 2015 to 2018',
-#         pfootnote=TRUE))
+# Table 1: Applicant Descriptive Variables by Matching Success (1) or Failure (0)
+```{r, echo=FALSE, warning=FALSE, message=FALSE, include=TRUE}
+table1_all_data <- arsenal::tableby(Match_Status ~
+                                      white_non_white +
+                                      Age +
+                                      Gender +
+                                      Couples_Match +
+                                      #Expected_Visa_Status_Dichotomized +
+                                      US_or_Canadian_Applicant +
+                                      #Medical_School_Type +
+                                      Medical_Education_Interrupted +
+                                      #Misdemeanor_Conviction +
+                                      Alpha_Omega_Alpha +
+                                      #Gold_Humanism_Honor_Society +
+                                      Military_Service_Obligation +
+                                      USMLE_Step_1_Score +
+                                      Military_Service_Obligation +
+                                      Count_of_Poster_Presentation +
+                                      Count_of_Oral_Presentation +
+                                      Count_of_Articles_Abstracts +
+                                      Count_of_Peer_Reviewed_Book_Chapter +
+                                      Count_of_Other_than_Published+
+                                      Count_of_Online_Publications +
+                                      Visa_Sponsorship_Needed +
+                                      Medical_Degree,
+                                    data=all_data,
+                                    control = tableby.control(test = TRUE,
+                                                              total = F,
+                                                              digits = 1L,
+                                                              digits.p = 2L,
+                                                              digits.count = 0L,
+                                                              numeric.simplify = F,
+                                                              numeric.stats =
+                                                                c("median",
+                                                                  "q1q3"),
+                                                              cat.stats =
+                                                                c("Nmiss",
+                                                                  "countpct"),
+                                                              stats.labels = list(Nmiss = "N Missing",
+                                                                                  Nmiss2 ="N Missing",
+                                                                                  meansd = "Mean (SD)",
+                                                                                  medianrange = "Median (Range)",
+                                                                                  median ="Median",
+                                                                                  medianq1q3 = "Median (Q1, Q3)",
+                                                                                  q1q3 = "Q1, Q3",
+                                                                                  iqr = "IQR",
+                                                                                  range = "Range",
+                                                                                  countpct = "Count (Pct)",
+                                                                                  Nevents = "Events",
+                                                                                  medSurv ="Median Survival",
+                                                                                  medTime = "Median Follow-Up")))
+
+print(summary(table1_all_data,
+        text=T,
+        title = 'Applicant Descriptive Variables by Matching Success or Failure from 2015 to 2018',
+        pfootnote=TRUE))
 ```
 
-```{r Descriptive summaries of all variables in the dataset are provided in the table, results = "asis", include=TRUE}
+```{r Descriptive summaries of all variables in the dataset are provided in the table}
+#Not working
 stargazer::stargazer(all_data, 
                      header=FALSE, 
                      title = "Descriptive Statistics of Match Status Data", 
@@ -509,12 +527,13 @@ stargazer::stargazer(all_data,
                      flip = FALSE)
 ```
 
-## 2) Exploratory data analysis
+##Exploratory data analysis
 
-After the data check was completed, an exploratory data analysis (EDA) was conducted to look for interesting relationships among the variables. Histograms were used to visualize distributions among predictors. Since the assignment was a classification problem, relationships between predictors and the dichotomous outcome were also performed. Distributions of all variables were skewed right. Examples of histograms of seven variables: age, Count of articles and abstracts, count of oral presentations, count of poster presentations, Count of online pubications, count of non-published publications, count of peer-reviewed book chapters,  are demonstrated below.
+#After the data check was completed, an exploratory data analysis (EDA) was conducted to look for interesting relationships among the variables. Histograms were used to visualize distributions among predictors. Since the assignment was a classification problem, relationships between predictors and the dichotomous outcome were also performed. Distributions of all variables were skewed right. Examples of histograms of seven variables: age, Count of articles and abstracts, count of oral presentations, count of poster presentations, Count of online pubications, count of non-published publications, count of peer-reviewed book chapters,  are demonstrated below.
 
-```{r, train vs test, warning=FALSE, echo=TRUE, message=FALSE}
-train <- filter(all_data, !Year %in% c("2017", "2018"))  #Train on years 2015, 2016
+#Split into train and test data sets
+```{r, train vs test, warning=FALSE, echo=TRUE, message=FALSE, include=TRUE}
+train <- filter(all_data, Year %in% c("2015", "2016"))  #Train on years 2015, 2016
 nrow(train) 
 test <- filter(all_data, Year %in%  c("2017", "2018")) #Test on 2017, 2018 data
 nrow(test)
@@ -522,6 +541,7 @@ test <- test %>% select(-"Year")
 train <- train %>% select(-"Year")
 ```
 
+#Demographics of train
 ```{r, include = TRUE, fig.width=8, fig.height=3, fig.cap="Figure: Train dataset looking at continuous variables for normality."}
 plot_histogram(train[, 2]) #age
 plot_histogram(train[, 10:12])
@@ -1177,7 +1197,7 @@ knitr::kable(test.model.stats, caption = "Performance statistics of the Testing 
 
 
 
-The Receiver Operating Characteristic (ROC) curve is plotted below for false positive rate (FPR) in the x-axis vs. the true positive rate (TPR) in the y-axis. It shows the detection of true positive while avoiding the false positive. This is the same as measuring the unspecificity (1 - specificity) in x-axis, against the sensitivity in y-axis. This ROC curve in particular shows that its very closed to the perfect classifier meaning that its better at identifying the positive values. 
+#The Receiver Operating Characteristic (ROC) curve is plotted below for false positive rate (FPR) in the x-axis vs. the true positive rate (TPR) in the y-axis. It shows the detection of true positive while avoiding the false positive. This is the same as measuring the unspecificity (1 - specificity) in x-axis, against the sensitivity in y-axis. This ROC curve in particular shows that its very closed to the perfect classifier meaning that its better at identifying the positive values. 
 
 ## Use Model to predict match Status for Test Data
 ```{r}
@@ -1191,7 +1211,7 @@ pred <-
 ```
 
 #ROC: Type 1 using ggplot with nice controls
-```{r}
+```{r, include = TRUE}
 # rest of this doesn't need much adjustment except for titles
 perf <-
   performance(pred, measure = "tpr", x.measure = "fpr")
@@ -1216,7 +1236,7 @@ ggplot(roc.data, aes(x=fpr, ymin=0, ymax=tpr)) +
 
 
 ROC Curve type 2 with nice labels on the x and y
-```{r}
+```{r, include = TRUE}
 pred <- 
   prediction(prob, test$Match_Status)
 
@@ -1235,13 +1255,13 @@ auc
 ```
 
 ROC Curve Type 3 with nice diagnal line but half of the formula printed
-```{r}
+```{r, include = TRUE}
 #library(rJava)
 #Deducer::rocplot(glm.with.lasso.variables, diag = TRUE, prob.label.digits = TRUE, AUC = TRUE)
 ```
 
 ROC Curve Type 4, ROC in color
-```{r}
+```{r, include = TRUE}
 perf <- 
   performance(pred, 'tpr','fpr')
 
