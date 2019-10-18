@@ -509,10 +509,13 @@ table1_all_data <- arsenal::tableby(Match_Status ~
                                   medSurv ="Median Survival",
                                   medTime = "Median Follow-Up")))
 
-print(summary(table1_all_data,
+mylabels <- list(white_non_white = "Race", Age = "Age, years", Gender = "Sex", Couples_Match = "Participating in the Couples Match", US_or_Canadian_Applicant = "US or Canadian Applicant", Medical_Education_Interrupted = "Medical Education Process was Interrupted", Alpha_Omega_Alpha = "Alpha Omega Alpha", Military_Service_Obligation = "Military Service Obligation", USMLE_Step_1_Score = "USMLE Step 1 Score", Military_Service_Obligation = "Military Service Obligations", Count_of_Poster_Presentation = "Count of Poster Presentations", Count_of_Oral_Presentation = "Count of Oral Presentations", Count_of_Articles_Abstracts = "Count of Published Abstracts", Count_of_Peer_Reviewed_Book_Chapter = "Count of Peer Reviewed Book Chapters", Count_of_Other_than_Published = "Count of Other Published Products", Count_of_Online_Publications = "Count of Online Publications", Visa_Sponsorship_Needed = "Visa Sponsorship is Needed", Medical_Degree = "Medical Degree Training")
+
+summary(table1_all_data,
         text=T,
-        title = 'Applicant Descriptive Variables by Matching Success or Failure from 2015 to 2018',
-        pfootnote=TRUE))
+        title = 'Table: Applicant Descriptive Variables by Matching Success or Failure from 2015 to 2018',
+        labelTranslations = mylabels,
+        pfootnote=TRUE)
 ```
 
 ```{r Descriptive summaries of all variables in the dataset are provided in the table}
