@@ -87,7 +87,7 @@ knitr::opts_chunk$set(fig.width=8,
 
 #install.packages("anonymizer", type="source")
 if(!require(pacman))install.packages("pacman")
-pacman::p_load('caret', 'readxl', 'XML', 'reshape2', 'devtools', 'purrr', 'readr', 'ggplot2', 'dplyr', 'magick', 'janitor', 'lubridate', 'hms', 'tidyr', 'stringr', 'openxlsx', 'forcats', 'RcppRoll', 'tibble', 'bit64', 'munsell', 'scales', 'rgdal', 'tidyverse', "foreach", "PASWR", "rms", "pROC", "ROCR", "nnet", "packrat", "DynNom", "export", "caTools", "mlbench", "randomForest", "ipred", "xgboost", "Metrics", "RANN", "AppliedPredictiveModeling", "nomogramEx", "shiny", "earth", "fastAdaboost", "Boruta", "glmnet", "ggforce", "tidylog", "InformationValue", "pscl", "scoring", "DescTools", "gbm", "Hmisc", "arsenal", "pander", "moments", "leaps", "MatchIt", "car", "mice", "rpart", "beepr", "fansi", "utf8", "zoom", "lmtest", "ResourceSelection", "rmarkdown", "rattle", "rmda", "funModeling", "tinytex", "caretEnsemble", "broom", "Rmisc", "corrplot", "GGally", "alluvial", "progress", "perturb", "vctrs", "highr", "labeling", "DataExplorer", "rsconnect", "inspectdf", "ggpubr", "esquisse", "stargazer", "tableone", "knitr", "drake", "visNetwork", "woeBinning", "OneR", "rpart.plot", "RColorBrewer", "kableExtra", "kernlab", "naivebayes", "dplR", "e1071", "data.table")
+pacman::p_load('caret', 'readxl', 'XML', 'reshape2', 'devtools', 'purrr', 'readr', 'ggplot2', 'dplyr', 'magick', 'janitor', 'lubridate', 'hms', 'tidyr', 'stringr', 'openxlsx', 'forcats', 'RcppRoll', 'tibble', 'bit64', 'munsell', 'scales', 'rgdal', 'tidyverse', "foreach", "PASWR", "rms", "pROC", "ROCR", "nnet", "packrat", "DynNom", "export", "caTools", "mlbench", "randomForest", "ipred", "xgboost", "Metrics", "RANN", "AppliedPredictiveModeling", "nomogramEx", "shiny", "earth", "fastAdaboost", "Boruta", "glmnet", "ggforce", "tidylog", "InformationValue", "pscl", "scoring", "DescTools", "gbm", "Hmisc", "arsenal", "pander", "moments", "leaps", "MatchIt", "car", "mice", "rpart", "beepr", "fansi", "utf8", "zoom", "lmtest", "ResourceSelection", "rmarkdown", "rattle", "rmda", "funModeling", "tinytex", "caretEnsemble", "broom", "Rmisc", "corrplot", "GGally", "alluvial", "progress", "perturb", "vctrs", "highr", "labeling", "DataExplorer", "rsconnect", "inspectdf", "ggpubr", "esquisse", "stargazer", "tableone", "knitr", "drake", "visNetwork", "woeBinning", "OneR", "rpart.plot", "RColorBrewer", "kableExtra", "kernlab", "naivebayes", "dplR", "e1071", "data.table", "formattable")
 
 library(dplR)
 p_install_gh("cran/doMC")
@@ -246,6 +246,9 @@ describe(all_data)
 DataExplorer::plot_missing(all_data)
 plot_intro(all_data)
 ```
+## Exploratory data analysis
+
+#After the data check was completed, an exploratory data analysis (EDA) was conducted to look for interesting relationships among the variables. Histograms were used to visualize distributions among predictors. Since the assignment was a classification problem, relationships between predictors and the dichotomous outcome were also performed. Distributions of all variables were skewed right. Examples of histograms of seven variables: age, Count of articles and abstracts, count of oral presentations, count of poster presentations, Count of online pubications, count of non-published publications, count of peer-reviewed book chapters,  are demonstrated below.
 
 #Description of Match_Status variable.  
 ```{r data check, include=TRUE}
@@ -492,19 +495,19 @@ table1_all_data <- arsenal::tableby(Match_Status ~
                                                               cat.stats =
                                                                 c("Nmiss",
                                                                   "countpct"),
-                                                              stats.labels = list(Nmiss = "N Missing",
-                                                                                  Nmiss2 ="N Missing",
-                                                                                  meansd = "Mean (SD)",
-                                                                                  medianrange = "Median (Range)",
-                                                                                  median ="Median",
-                                                                                  medianq1q3 = "Median (Q1, Q3)",
-                                                                                  q1q3 = "Q1, Q3",
-                                                                                  iqr = "IQR",
-                                                                                  range = "Range",
-                                                                                  countpct = "Count (Pct)",
-                                                                                  Nevents = "Events",
-                                                                                  medSurv ="Median Survival",
-                                                                                  medTime = "Median Follow-Up")))
+                                  stats.labels = list(Nmiss = "N Missing",
+                                  Nmiss2 ="N Missing",
+                                  meansd = "Mean (SD)",
+                                  medianrange = "Median (Range)",
+                                  median ="Median",
+                                  medianq1q3 = "Median (Q1, Q3)",
+                                  q1q3 = "Q1, Q3",
+                                  iqr = "IQR",
+                                  range = "Range",
+                                  countpct = "Count (Pct)",
+                                  Nevents = "Events",
+                                  medSurv ="Median Survival",
+                                  medTime = "Median Follow-Up")))
 
 print(summary(table1_all_data,
         text=T,
@@ -527,11 +530,7 @@ stargazer::stargazer(all_data,
                      flip = FALSE)
 ```
 
-##Exploratory data analysis
-
-#After the data check was completed, an exploratory data analysis (EDA) was conducted to look for interesting relationships among the variables. Histograms were used to visualize distributions among predictors. Since the assignment was a classification problem, relationships between predictors and the dichotomous outcome were also performed. Distributions of all variables were skewed right. Examples of histograms of seven variables: age, Count of articles and abstracts, count of oral presentations, count of poster presentations, Count of online pubications, count of non-published publications, count of peer-reviewed book chapters,  are demonstrated below.
-
-#Split into train and test data sets
+# Split into train and test data sets
 ```{r, train vs test, warning=FALSE, echo=TRUE, message=FALSE, include=TRUE}
 train <- filter(all_data, Year %in% c("2015", "2016"))  #Train on years 2015, 2016
 nrow(train) 
