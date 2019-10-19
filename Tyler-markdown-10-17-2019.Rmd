@@ -47,7 +47,7 @@ spacing: double
 - name: J. Eric Jelovsek
   affiliation: Duke University
 
-# Objective:  We sought to construct and validate a model that predict a medical student's chances of matching into an obstetrics and gynecology residency.
+Objective:  We sought to construct and validate a model that predict a medical student's chances of matching into an obstetrics and gynecology residency.
 
 # Data Source
 The data source to be used for the project is the Electronic Residency Application Service (ERAS). The data is collected by the University of Colorado OBGYN residency that has both a categorical and a preliminary position.  Students who applied to the preliminary position were considered to be unmatched. The data set of years 2015, 2016, 2017, and 2018 applicants to the University of Colorado OBGYN residency. The data is contained in a data frame called 'all_data'.
@@ -67,7 +67,7 @@ data_file <- "all_years_filter_112.rds"
 
 ```{r global_options, include=FALSE}
 # https://stirlingcodingclub.github.io/Manuscripts_in_Rmarkdown/Rmarkdown_notes.html
-knitr::opts_chunk$set(fig.width=8, 
+knitr::opts_chunk$set(fig.width=7, 
                       fig.height=5,
                       fig.align="center",
                       include=FALSE,
@@ -87,18 +87,16 @@ knitr::opts_chunk$set(fig.width=8,
 
 #install.packages("anonymizer", type="source")
 if(!require(pacman))install.packages("pacman")
-pacman::p_load('caret', 'readxl', 'XML', 'reshape2', 'devtools', 'purrr', 'readr', 'ggplot2', 'dplyr', 'magick', 'janitor', 'lubridate', 'hms', 'tidyr', 'stringr', 'openxlsx', 'forcats', 'RcppRoll', 'tibble', 'bit64', 'munsell', 'scales', 'rgdal', 'tidyverse', "foreach", "PASWR", "rms", "pROC", "ROCR", "nnet", "packrat", "DynNom", "export", "caTools", "mlbench", "randomForest", "ipred", "xgboost", "Metrics", "RANN", "AppliedPredictiveModeling", "nomogramEx", "shiny", "earth", "fastAdaboost", "Boruta", "glmnet", "ggforce", "tidylog", "InformationValue", "pscl", "scoring", "DescTools", "gbm", "Hmisc", "arsenal", "pander", "moments", "leaps", "MatchIt", "car", "mice", "rpart", "beepr", "fansi", "utf8", "zoom", "lmtest", "ResourceSelection", "rmarkdown", "rattle", "rmda", "funModeling", "tinytex", "caretEnsemble", "broom", "Rmisc", "corrplot", "GGally", "alluvial", "progress", "perturb", "vctrs", "highr", "labeling", "DataExplorer", "rsconnect", "inspectdf", "ggpubr", "esquisse", "stargazer", "tableone", "knitr", "drake", "visNetwork", "woeBinning", "OneR", "rpart.plot", "RColorBrewer", "kableExtra", "kernlab", "naivebayes", "dplR", "e1071", "data.table", "formattable")
+pacman::p_load('caret', 'readxl', 'XML', 'reshape2', 'devtools', 'purrr', 'readr', 'ggplot2', 'dplyr', 'magick', 'janitor', 'lubridate', 'hms', 'tidyr', 'stringr', 'openxlsx', 'forcats', 'RcppRoll', 'tibble', 'bit64', 'munsell', 'scales', 'rgdal', 'tidyverse', "foreach", "PASWR", "rms", "pROC", "ROCR", "nnet", "packrat", "DynNom", "export", "caTools", "mlbench", "randomForest", "ipred", "xgboost", "Metrics", "RANN", "AppliedPredictiveModeling", "nomogramEx", "shiny", "earth", "fastAdaboost", "Boruta", "glmnet", "ggforce", "tidylog", "InformationValue", "pscl", "scoring", "DescTools", "gbm", "Hmisc", "arsenal", "pander", "moments", "leaps", "MatchIt", "car", "mice", "rpart", "beepr", "fansi", "utf8", "zoom", "lmtest", "ResourceSelection", "rmarkdown", "rattle", "rmda", "funModeling", "tinytex", "caretEnsemble", "broom", "Rmisc", "corrplot", "GGally", "alluvial", "progress", "perturb", "vctrs", "highr", "labeling", "DataExplorer", "rsconnect", "inspectdf", "ggpubr", "esquisse", "stargazer", "tableone", "knitr", "drake", "visNetwork", "woeBinning", "OneR", "rpart.plot", "RColorBrewer", "kableExtra", "kernlab", "naivebayes", "dplR", "e1071", "data.table", "skimr")
 
 library(dplR)
 p_install_gh("cran/doMC")
 library("doMC")
 registerDoMC(cores = detectCores()-1) #Use multiple cores for processing
-
-#devtools::install_github("crsh/papaja")  #Would be good for reference management in the future.
 ```
 
 # Load and Tidy the Data
-## Below is a dataframe of the independent and the dependent variables for review. 
+Below is a dataframe of the independent and the dependent variables for review. 
 ```{r Download cleaned data from Dropbox, echo=FALSE, include=FALSE, cache=TRUE}
 #Create a dataframe of independent and dependent variables. 
 ## Here are the data for download
@@ -173,8 +171,11 @@ all_data<-
   Hmisc::upData(all_data)
 ```
 
+# Profile categorical variables
 ```{r data.table chunk, include=TRUE}
 data.table(all_data)
+
+freq(data=all_data, plot = FALSE, na.rm = FALSE)
 ```
 
 ```{r Using the Drake package here for efficiency, echo=FALSE, include=FALSE}
@@ -217,7 +218,7 @@ drake::make(plan)
 ```
 # Description of the Data
 
-A summary of the 19 variables are listed below:
+A summary of the variables are listed below:
   
 1. Eleven of the variables were a factor.  All factors had two levels except for Alpha_Omega_Alpha had three levels.  The target variable is `all_data$Match_Status`.  
 
@@ -240,22 +241,44 @@ str(all_data)
 describe(all_data)
 ```
 
-#Evaluate missing data
+```{r}
+skim_with(numeric = list(hist = NULL), integer = list(hist = NULL))
+skim(all_data)
+```
+
+
+# Evaluate missing data
 ```{r,EDA, results="asis", echo=FALSE, include=TRUE}
 #plot_str(all_data) #COOL BUT USELESS HERE
 DataExplorer::plot_missing(all_data)
 plot_intro(all_data)
 ```
-## Exploratory data analysis
 
-#After the data check was completed, an exploratory data analysis (EDA) was conducted to look for interesting relationships among the variables. Histograms were used to visualize distributions among predictors. Since the assignment was a classification problem, relationships between predictors and the dichotomous outcome were also performed. Distributions of all variables were skewed right. Examples of histograms of seven variables: age, Count of articles and abstracts, count of oral presentations, count of poster presentations, Count of online pubications, count of non-published publications, count of peer-reviewed book chapters,  are demonstrated below.
+The new data set in `all_data`, includes ????? rows and ???? columns, and there are no missing values, as we can see below.  To check in two separate ways.  
+```{r, include=TRUE}
+colSums(is.na(all_data))
+map_df(all_data, ~ sum(is.na(.)))
+all_data_missing %>%
+    filter(rowSums(is.na(.)) > 0)
+all_data_missing
+```
 
-#Description of Match_Status variable.  
+??? applicants are missing nothing.  
+```{r, include=TRUE}
+na.pattern(all_data)
+```
+
+
+# Exploratory data analysis
+
+After the data check was completed, an exploratory data analysis (EDA) was conducted to look for interesting relationships among the variables. Histograms were used to visualize distributions among predictors. Since the assignment was a classification problem, relationships between predictors and the dichotomous outcome were also performed. Distributions of all variables were skewed right. Examples of histograms of seven variables: age, Count of articles and abstracts, count of oral presentations, count of poster presentations, Count of online pubications, count of non-published publications, count of peer-reviewed book chapters,  are demonstrated.
+
+# Description of Match_Status variable.  
 ```{r data check, include=TRUE}
 describe(as.factor(all_data$Match_Status))
 ```
 
-# General Data Description and Univariate analysis of boxplots for variables. 
+# Data Description and Univariate analysis of variables. 
 ```{r DataExplorer, results='asis', echo=FALSE, include=TRUE, align = 'left', cache=TRUE}
 #General Data Description
 inspectdf::inspect_cat(all_data) %>% show_plot()  #Please use `cols = c(data)`
@@ -308,6 +331,9 @@ ggpairs(data = all_data_ggally,
 # Numerical Summary Table of Variables
 ```{r funModeling1, echo=FALSE, message=FALSE, warning=TRUE, include=TRUE}
 funModeling::df_status(all_data)
+desc_groups(data=all_data, group_var="Match_Status")
+all_data$match_status
+
 ```
 
 # Graphical Summary of Numerical Variables
@@ -331,7 +357,7 @@ create_plot_cross_plot(all_data)   #Uses custom function so it can be run in Dra
 IS THERE A WAY TO SET THE CUTPOINTS BASED ON A STATISTICAL REASONING?
 I set the cutpoints based on nothing really. I like this better than the base summary command.  
 
-```{r View the data using Hmisc, echo=FALSE, include=TRUE, warning=FALSE}
+```{r View the data using Hmisc, echo=FALSE, include=FALSE, warning=FALSE}
 dd <- 
   rms::datadist(all_data)
 
@@ -629,7 +655,7 @@ all_data %>%
   scale_y_continuous(breaks = seq(0, 1, 0.25),  labels = seq(0, 100, 25))
 ```
 
-Check Proportions of Matched
+# Check Proportions of Matched
 
 ```{r, results="asis", echo=FALSE}
 train <- train %>% 
@@ -1326,7 +1352,7 @@ binning <-
                 "Count_of_Other_than_Published", 
                 "Count_of_Online_Publications"))
 
-woe.binning.plot(binning, "1:5")
+#woe.binning.plot(binning, "1:5")
 woe.binning.plot(binning)
 bin.top.five <- binning[1:5,c(1,3)]
 pander::pander(bin.top.five, style = "simple", justify = c('left', 'center'))
