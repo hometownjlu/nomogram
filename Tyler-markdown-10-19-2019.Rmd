@@ -3,14 +3,6 @@ title: "A Model to Predict Chances of Matching into Obstetrics and Gynecology Re
 author: "Tyler Muffly, MD"
 date: "Department of Obstetrics and Gynecology, Denver Health, Denver, CO"
 output:
-  word_document:
-    toc_depth: '2'
-  html_document:
-    code_folding: hide
-    dev: svg
-    df_print: paged
-    theme: united
-    toc_depth: 2
   pdf_document:
     df_print: paged
     fig_caption: yes
@@ -19,6 +11,14 @@ output:
     pandoc_args:
     - --wrap=none
     - --top-level-division=chapter
+  word_document:
+    toc_depth: '2'
+  html_document:
+    code_folding: hide
+    dev: svg
+    df_print: paged
+    theme: united
+    toc_depth: 2
 fontsize: 12pt
 geometry: margin=1in
 header-includes:
@@ -842,7 +842,9 @@ False positive is `r confusion[2]`.  These are the people who were predicted to 
 #install.packages("caret")
 library(caret)
 
-caret::confusionMatrix(confusion, positive = "1")
+confusion1 <- caret::confusionMatrix(confusion, positive = "1")
+confusion1
+broom::tidy(confusion1, by_class = TRUE)
 ```
 
 ## Evaluating the signficance of kitchen.sink variables 
@@ -970,7 +972,6 @@ lasso.mod <-
     trControl = myControl)
 ```
 
-IS THERE A COEFFICIENT CUTOFF THAT YOU WOULD USE TO CHOSE THE FINAL PREDICTORS OR NO?
 ```{r, echo=FALSE, include=FALSE}
 lasso.mod[["results"]]
 lasso.mod$bestTune #Final model is more of a ridge and less of a LASSO model
@@ -1126,8 +1127,6 @@ knitr::kable(oddsratios, digits = 2)
 # Build both a glm (train.glm.with.lasso.variables) and a lrm model (train.lrm.with.lasso.variables) here with the same predictor variables.  
 
 ```{r, echo=TRUE, warning=FALSE}
-# test$Match_Status <- 
-#   as.integer(test$Match_Status+2)
 test$Match_Status
 
 train.glm.with.lasso.variables  <- 
@@ -1165,7 +1164,7 @@ train.lrm.with.lasso.variables <-
 ```
 
 ```{r}
-#lrm.with.lasso.variables$stats  #Shows the C-statistic and the Brier score.  
+train.lrm.with.lasso.variables$stats  #Shows the C-statistic and the Brier score.  
 test.model.stats <- as.data.frame(train.lrm.with.lasso.variables$stats)
 knitr::kable(test.model.stats, caption = "Performance statistics of the Testing Model", digits=2)
 ```
@@ -1220,9 +1219,8 @@ prob <-
   predict(train.glm.with.lasso.variables, newdata = test, type="response")
 dim(test)
 
-###### ????????????????
 test$Match_Status
-test$Match_Status <- as.numeric(all_data$Match_Status) -1
+test$Match_Status <- as.numeric(test$Match_Status) -1
 test$Match_Status
 
 pred <- 
@@ -1250,7 +1248,7 @@ ggplot(roc.data, aes(x=fpr, ymin=0, ymax=tpr)) +
   geom_ribbon(alpha=0.2) +
   geom_line(aes(y=tpr)) +
   labs(title = paste0("ROC Curve with area under the curve = ", auc),
-       subtitle = "Model A for test data")
+       subtitle = "Model: train.glm.with.lasso.variables")
 ```
 
 
@@ -1273,13 +1271,7 @@ auc <-
 auc  
 ```
 
-ROC Curve Type 3 with nice diagnal line but half of the formula printed
-```{r, include = TRUE}
-#library(rJava)
-#Deducer::rocplot(glm.with.lasso.variables, diag = TRUE, prob.label.digits = TRUE, AUC = TRUE)
-```
-
-ROC Curve Type 4, ROC in color
+ROC Curve Type 3, ROC in color
 ```{r, include = TRUE}
 perf <- 
   performance(pred, 'tpr','fpr')
@@ -1307,7 +1299,7 @@ train.df <-
 psych::pairs.panels(train.df[, c(9:15, 18)], bg=c("red","blue")[as.factor(train.df$Match_Status)], pch=21, jiggle = TRUE)
 ```
 
-Since the predictors were highly skewed, binning was also explored. This facilitated visualizing associations between binned variables and the outcome using contingency plots. Supervised Weight of Evidence (WOE) binning of numeric variables were explored using the woeBinning package. Fine and coarse classing that merged granular classes and levels step by step was performed. Bins were merged and respectively split based on similar weight of evidence (WOE) values and stop via an information value (IV) based criteria. The figure below demonstrated the top five predictors ranked by information value during binning.
+# Since the predictors were highly skewed, binning was also explored. This facilitated visualizing associations between binned variables and the outcome using contingency plots. Supervised Weight of Evidence (WOE) binning of numeric variables were explored using the woeBinning package. Fine and coarse classing that merged granular classes and levels step by step was performed. Bins were merged and respectively split based on similar weight of evidence (WOE) values and stop via an information value (IV) based criteria. The figure below demonstrated the top five predictors ranked by information value during binning.
 
 ```{r, include = TRUE, align = 'center', echo=FALSE}
 # WOE binning 
@@ -1348,7 +1340,7 @@ woe.binning.plot(binning)
 bin.top.five <- binning[1:5,c(1,3)]
 pander::pander(bin.top.five, style = "simple", justify = c('left', 'center'))
 ```
-These top five binned variables were used for the training and test set.
+## These top five binned variables were used for the training and test set.
 
 ```{r bin train}
 # Deploy the binning solution to the data frame
@@ -1359,35 +1351,35 @@ train.df.with.binned.vars.added <-
 train.df.binned <-
   train.df.with.binned.vars.added
 
-# Removing char_freq_dollar raw variable since binned is present
+# Removing USMLE_Step_1_Score raw variable since binned is present
 train.df.binned <-
   dplyr::select(train.df.binned, -USMLE_Step_1_Score)
 
-# Removing word_freq_remove raw variable since binned is present
+# Removing Age raw variable since binned is present
 train.df.binned <-
   dplyr::select(train.df.binned, -Age)
 
-# Removing char_freq_exclamation raw variable since binned is present
+# Removing Count_of_Poster_Presentation raw variable since binned is present
 train.df.binned <-
   dplyr::select(train.df.binned, -Count_of_Poster_Presentation)
 
-# Removing word_freq_hp raw variable since binned is present
+# Removing Count_of_Articles_Abstracts raw variable since binned is present
 train.df.binned <-
   dplyr::select(train.df.binned, -Count_of_Articles_Abstracts)
 
-# Removing capital_run_length_average raw variable since binned is present
+# Removing Count_of_Oral_Presentation raw variable since binned is present
 train.df.binned <-
   dplyr::select(train.df.binned, -Count_of_Oral_Presentation)
 
-# Removing capital_run_length_average raw variable since binned is present
+# Removing Count_of_Other_than_Published raw variable since binned is present
 train.df.binned <-
   dplyr::select(train.df.binned, -Count_of_Other_than_Published)
 
-# Removing capital_run_length_average raw variable since binned is present
+# Removing Count_of_Peer_Reviewed_Book_Chapter raw variable since binned is present
 train.df.binned <-
   dplyr::select(train.df.binned, -Count_of_Peer_Reviewed_Book_Chapter)
 
-# Removing capital_run_length_average raw variable since binned is present
+# Removing Count_of_Online_Publications raw variable since binned is present
 train.df.binned <-
   dplyr::select(train.df.binned, -Count_of_Online_Publications)
 
@@ -1411,9 +1403,6 @@ str(train.df.binned)
 ```{r, include = TRUE, align = 'center', echo=FALSE}
 # WOE binning
 # Confirming target variable is numeric and 0 or 1
-test$Match_Status <-
-  as.numeric(test$Match_Status) - 1
-
 table(test$Match_Status)
 
 test <- as.data.frame(test)
@@ -1441,7 +1430,7 @@ binning <-
                 "Count_of_Other_than_Published",
                 "Count_of_Online_Publications"))
 
-woe.binning.plot(binning, "1:5")
+woe.binning.plot(binning, "1:8")
 woe.binning.plot(binning)
 bin.top.five <- binning[1:5,c(1,3)]
 pander::pander(bin.top.five, style = "simple", justify = c('left', 'center'))
@@ -1466,8 +1455,7 @@ binning.test <-
                 "Count_of_Other_than_Published",
                 "Count_of_Online_Publications"))
 
-woe.binning.plot(binning.test, "1:5")
-#woe.binning.plot(binning)
+woe.binning.plot(binning.test, "1:8")
 bin.top.five <-
   binning.test[1:5,c(1,3)]
 
@@ -1482,39 +1470,39 @@ test.df.with.binned.vars.added <-
 test.df.binned <-
   test.df.with.binned.vars.added
 
-# test.df.binned <-
-#   test.df.with.binned.vars.added[-18]
+test.df.binned <-
+   test.df.with.binned.vars.added[-18]
 
-# Removing char_freq_dollar raw variable since binned is present
+# Removing USMLE_Step_1_Score raw variable since binned is present
 test.df.binned <-
   dplyr::select(test.df.binned, -"USMLE_Step_1_Score")
 
-# Removing word_freq_remove raw variable since binned is present
+# Removing Age raw variable since binned is present
 test.df.binned <-
   dplyr::select(test.df.binned, -Age)
 
-# Removing char_freq_exclamation raw variable since binned is present
+# Removing Count_of_Poster_Presentation raw variable since binned is present
 test.df.binned <-
   dplyr::select(test.df.binned, -Count_of_Poster_Presentation)
 
-# Removing word_freq_hp raw variable since binned is present
+# Removing Count_of_Articles_Abstracts raw variable since binned is present
 test.df.binned <-
   dplyr::select(test.df.binned, -Count_of_Articles_Abstracts)
 
-# Removing capital_run_length_average raw variable since binned is present
+# Removing Count_of_Oral_Presentation raw variable since binned is present
 test.df.binned <-
   dplyr::select(test.df.binned, -Count_of_Oral_Presentation)
 
-# Removing capital_run_length_average raw variable since binned is present
+# Removing Count_of_Other_than_Published raw variable since binned is present
 test.df.binned <- dplyr::select(test.df.binned, -Count_of_Other_than_Published)
 
-# Removing capital_run_length_average raw variable since binned is present
+# Removing Count_of_Peer_Reviewed_Book_Chapter raw variable since binned is present
 test.df.binned <- dplyr::select(test.df.binned, -Count_of_Peer_Reviewed_Book_Chapter)
 
 # Removing capital_run_length_average raw variable since binned is present
 test.df.binned <- dplyr::select(test.df.binned, -Count_of_Online_Publications)
 
-str(test.df.binned)
+colnames(test.df.binned)
 ```
 
 ```{r stargazer test, include=TRUE, results = "asis"}
@@ -1600,7 +1588,7 @@ par(mfrow = c(1,1))
 ```
 
 
-A simple decision tree model was used for exploration. The variable importance summary from the simple tree was used to explore important relationships. The variables a, b, c, and d  were the top four variables in importance.
+# A simple decision tree model was used for exploration. The variable importance summary from the simple tree was used to explore important relationships. The variables a, b, c, and d  were the top four variables in importance.
 
 CAN WE USE ONLY FACTORS IN THIS TREE MODEL?
   
@@ -1620,7 +1608,7 @@ fancyRpartPlot(t.model)
 ```
 
 
-Exploratory random forest was also performed. The variable importance for the random forest model was summarized in the figure below. The variables capital_run_length_longest, capital_run_length_total, char_freq_dollar.binned, word_freq_free and word_freq_your were the top five using accuracy and the Gini index.
+# Exploratory random forest was also performed. The variable importance for the random forest model was summarized in the figure below. The variables capital_run_length_longest, capital_run_length_total, char_freq_dollar.binned, word_freq_free and word_freq_your were the top five using accuracy and the Gini index.
 
 ```{r RF EDA, cache=TRUE, include=TRUE}
 # Random forest for EDA
@@ -1927,10 +1915,7 @@ row.totals <- apply(t,MAR=1,FUN=sum)
 dt <- t/row.totals
 
 knitr::kable(dt, "latex", booktabs = T, caption = "Confusion matrix of SVM model on train set") %>% kable_styling(latex_options = "striped")
-# ```
 
-
-# ```{r SVM test accuracy, align = 'center'}
 #####commented out because this does not work
 
 test.svm <- predict(svm.model, test.df.binned)
