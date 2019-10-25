@@ -814,14 +814,20 @@ hist(prediction_test)
 
 ```{r}
 # Classify predictions using a cut-off of 0.5
-pred_cutoff_50_test <- ifelse(prediction_test > 0.5, 1, 0)
+prediction_categories <- ifelse(prediction_test > 0.5, 1, 0)
+class(prediction_categories)
 ```
 
 #Create a confusion matrix 
 ```{r}
 ## Creating confusion matrix
-confusion <- table(pred_cutoff_50_test, test$Match_Status)
+test$Match_Status <- as.numeric(test$Match_Status)  - 1
+test$Match_Status
+class(test$Match_Status)
+
+confusion <- table(prediction_categories, test$Match_Status)
 confusion
+class(confusion)
 ```
 True negative is `r confusion[1]`.
 False negative is `r confusion[1,2]`.  These people were predicted not to match but did match.  
@@ -831,31 +837,12 @@ False positive is `r confusion[2]`.  These are the people who were predicted to 
 # Calculate accuracy. 
 ```{r}
 # Load library
+#install.packages("caret")
 library(caret)
 
-# Classify predictions using a cut-off of 0.5
-pred_cutoff_50_test <- ifelse(prediction_test > 0.5, 1, 0)
+caret::confusionMatrix(confusion)
 
-# Construct a confusion matrix
-conf_matrix_50 <- (table(pred_cutoff_50_test, test$Match_Status))
-conf_matrix_50
-
-confusionMatrix(conf_matrix_50)
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 ## Evaluating the signficance of kitchen.sink variables 
 ```{r, echo=TRUE, message=FALSE,fig.width=7, fig.asp=1, fig.cap="Figure: Variance-inflation factors for matching into OBGYN."}
@@ -869,9 +856,8 @@ plot(anova(final.model, test = 'Chisq'), cex=0.9, cex.lab=0.9, cex.axis = 0.7)
 ```
 
 
-
 # Use the Two Models to predict the outcome in the Test Sample
-# How do the Models perform?  How good is the `kitchen.sink` model?  Calculating the Prediction Errors
+## How do the Models perform?  How good is the `kitchen.sink` model?  Calculating the Prediction Errors
 ```{r, include=TRUE}
 #https://rpubs.com/TELOVE/study2-demo-431-2018
 test_ksink <- augment(lm.fit2, newdata = test) %>%   #Use lm.fit2 because it is an lm not a lrm
