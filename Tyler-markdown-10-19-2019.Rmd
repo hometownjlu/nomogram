@@ -593,20 +593,20 @@ The null hypothesis of these tests is that “sample distribution is normal”. 
 
 I'M NOT SURE WHY THE PROPORTION OF MATCHED VS UNMATCHED DATA IS DIFFERENT BETWEEN THE TRAIN VS TEST DATA SETS?  I THOUGHT ABOUT REMAKING THE TRAINING SET TO BE 2015 AND 2016 WITH THE TEST SET OF 2017 AND 2018 IF WE CAN'T FIGURE IT OUT.
 ```{r Match proportion vs year, align = 'left', include=TRUE}
-all_data %>% 
-  dplyr::count(Year, Match_Status) %>% 
-  spread(key=Match_Status, value = n) %>% 
-  mutate(sum = `0` + `1`) %>% 
-  mutate(`0` = `0`/sum, `1` = `1`/sum) %>% 
-  select(-sum) %>% 
-  tidyr::gather(value=proportion, key=Match_Status, `Did not match`, `Matched`) %>% 
-  ggplot(aes(x = Year, y = proportion, fill = Match_Status, label = paste(round(proportion * 100,1),"%"))) +
-  # geom_col(col="black", position="fill") +
-  geom_bar(col = "black", stat = "identity") +
-  labs(x="Year", fill = "Match Status", y = "Proportion matched/unmatched in %") +
-  theme_minimal() +
-  geom_text(position = "stack", size = 3,  vjust=1.15) +
-  scale_y_continuous(breaks = seq(0, 1, 0.25),  labels = seq(0, 100, 25))
+# all_data %>% 
+#   dplyr::count(Year, Match_Status) %>% 
+#   spread(key=Match_Status, value = n) %>% 
+#   mutate(sum = `0` + `1`) %>% 
+#   mutate(`0` = `0`/sum, `1` = `1`/sum) %>% 
+#   select(-sum) %>% 
+#   tidyr::gather(value=proportion, key=Match_Status, `Did not match`, `Matched`) %>% 
+#   ggplot(aes(x = Year, y = proportion, fill = Match_Status, label = paste(round(proportion * 100,1),"%"))) +
+#   # geom_col(col="black", position="fill") +
+#   geom_bar(col = "black", stat = "identity") +
+#   labs(x="Year", fill = "Match Status", y = "Proportion matched/unmatched in %") +
+#   theme_minimal() +
+#   geom_text(position = "stack", size = 3,  vjust=1.15) +
+#   scale_y_continuous(breaks = seq(0, 1, 0.25),  labels = seq(0, 100, 25))
 ```
 
 # Check Proportions of Matched
@@ -628,7 +628,7 @@ prop.table(table(train$Match_Status)) #Train data set proportion
 
 prop.table(table(test$Match_Status))  #Test data set proportion
 
-#kable(crude_summary, caption="2x2 Contingency Table on Matching for all_data", format="markdown") ###????????????????????????????????????????????????????????????????
+knitr::kable(crude_summary, caption="2x2 Contingency Table on Matching for all_data", format="markdown")
 ```
 
 ##Compare the datasets of train and test
@@ -828,6 +828,8 @@ class(test$Match_Status)
 confusion <- table(prediction_categories, test$Match_Status)
 confusion
 class(confusion)
+
+knitr::kable(confusion, caption = "Confusion Matrix of non-colinear Variables", digits=2)
 ```
 True negative is `r confusion[1]`.
 False negative is `r confusion[1,2]`.  These people were predicted not to match but did match.  
@@ -840,8 +842,7 @@ False positive is `r confusion[2]`.  These are the people who were predicted to 
 #install.packages("caret")
 library(caret)
 
-caret::confusionMatrix(confusion)
-
+caret::confusionMatrix(confusion, positive = "1")
 ```
 
 ## Evaluating the signficance of kitchen.sink variables 
@@ -1222,7 +1223,7 @@ dim(test)
 ###### ????????????????
 test$Match_Status
 test$Match_Status <- as.numeric(all_data$Match_Status) -1
-testa$Match_Status
+test$Match_Status
 
 pred <- 
   prediction(prob, test$Match_Status)  #removed na.omit
@@ -1395,16 +1396,16 @@ str(train.df.binned)
 
 
 ```{r stargazer train, include=TRUE, results = "asis"}
-stargazer::stargazer(train.df.binned, header=FALSE, 
-                     title = "Descriptive Statistics of Binned Training Match_Status Data", 
-                     type='latex', 
-                     nobs = TRUE, 
-                     mean.sd = TRUE, 
-                     median = TRUE, 
-                     iqr = TRUE, 
-                     digits = 1, 
-                     font.size = "small", 
-                     flip = FALSE)
+# stargazer::stargazer(train.df.binned, header=FALSE, 
+#                      title = "Descriptive Statistics of Binned Training Match_Status Data", 
+#                      type='latex', 
+#                      nobs = TRUE, 
+#                      mean.sd = TRUE, 
+#                      median = TRUE, 
+#                      iqr = TRUE, 
+#                      digits = 1, 
+#                      font.size = "small", 
+#                      flip = FALSE)
 ```
 
 ```{r, include = TRUE, align = 'center', echo=FALSE}
@@ -1716,7 +1717,7 @@ dt <-
   t/row.totals
 
 
-#kable(dt, "latex", booktabs = T, caption = "Confusion matrix of Backwards LR on train set") %>% kable_styling(latex_options = "striped")  #########?????????????????????????????????????
+knitr::kable(dt, "latex", booktabs = T, caption = "Confusion matrix of Backwards LR on train set") %>% kable_styling(latex_options = "striped")  
 ```
 
 
@@ -1747,7 +1748,7 @@ t <- table(as.factor(test.df.with.binned.vars.added$Match_Status),test.backwards
 row.totals <- apply(t,MAR=1,FUN=sum)
 #t/row.totals
 dt <- t/row.totals
-# kable(dt, "latex", booktabs = T, caption = "Confusion matrix of Backwards LR on test set") %>% kable_styling(latex_options = "striped")
+knitr::kable(dt, "latex", booktabs = T, caption = "Confusion matrix of Backwards LR on test set") %>% kable_styling(latex_options = "striped")
 ```
 
 The in-sample accuracy was `r lr.accuracy[1]` and the out-of-sample accuracy was `r lr.accuracy.test[1]`.
@@ -1805,7 +1806,7 @@ row.totals <- apply(t,MAR=1,FUN=sum)
 #t/row.totals
 dt <- t/row.totals
 
-# kable(dt, "latex", booktabs = T, caption = "Confusion matrix of CART on train set") %>% kable_styling(latex_options = "striped")
+knitr::kable(dt, "latex", booktabs = T, caption = "Confusion matrix of CART on train set") %>% kable_styling(latex_options = "striped")
 ```
 
 
@@ -1833,8 +1834,8 @@ cat("\n","----- Performance of cart on test set -----","\n")
 row.totals <- apply(t,MAR=1,FUN=sum)
 #t/row.totals
 dt <- t/row.totals
-library()
-# kable(dt, "latex", booktabs = T, caption = "Confusion matrix of CART on test set") %>% kable_styling(latex_options = "striped")
+
+knitr::kable(dt, "latex", booktabs = T, caption = "Confusion matrix of CART on test set") %>% kable_styling(latex_options = "striped")
 
 ##For the CART model, the in-sample accuracy was `r cart.accuracy[1]` and out-of-sample accuracy was `r cart.accuracy.test[1]`.
 
@@ -1919,27 +1920,27 @@ svm.accuracy[1]
 ```{r SVM train conf matrix, align = 'center', include=TRUE}
 # Scale the confusion matrix to accuracy rates by normalizing
 # by the row totals; row totals are used because true values are rows and predicted values are columns.
-#cat("\n","----- Confusion matrix of SVM model on train set -----","\n")
+cat("\n","----- Confusion matrix of SVM model on train set -----","\n")
 t <- table(as.factor(train.df.binned$Match_Status),train.svm)
 row.totals <- apply(t,MAR=1,FUN=sum)
 #t/row.totals
 dt <- t/row.totals
 
-# kable(dt, "latex", booktabs = T, caption = "Confusion matrix of SVM model on train set") %>% kable_styling(latex_options = "striped")
+knitr::kable(dt, "latex", booktabs = T, caption = "Confusion matrix of SVM model on train set") %>% kable_styling(latex_options = "striped")
 # ```
 
 
-```{r SVM test accuracy, align = 'center'}
+# ```{r SVM test accuracy, align = 'center'}
 #####commented out because this does not work
 
-# test.svm <- predict(svm.model, test.df.binned)
+test.svm <- predict(svm.model, test.df.binned)
 # 
-# colnames(test.df.binned)
+colnames(test.df.binned)
 # 
 # 
-# cat("\n","----- Performance of svm on test set -----","\n")
-# svm.accuracy.test <- caret::postResample(pred = test.svm, obs = as.factor(test.df.binned$Match_Status))
-# svm.accuracy.test[1]
+cat("\n","----- Performance of svm on test set -----","\n")
+svm.accuracy.test <- caret::postResample(pred = test.svm, obs = as.factor(test.df.binned$Match_Status))
+svm.accuracy.test[1]
 ```
 
 ```{r SVM test conf matrix, align = 'center', include=TRUE}
@@ -1947,13 +1948,13 @@ dt <- t/row.totals
 
 # Scale the confusion matrix to accuracy rates by normalizing
 # by the row totals; row totals are used because true values are rows and predicted values are columns.
-#cat("\n","----- Confusion matrix of SVM model on test set -----","\n")
-#t <- table(as.factor(test.df.binned$Match_Status),test.svm)
-#row.totals <- apply(t,MAR=1,FUN=sum)
-#t/row.totals
+cat("\n","----- Confusion matrix of SVM model on test set -----","\n")
+t <- table(as.factor(test.df.binned$Match_Status),test.svm)
+row.totals <- apply(t,MAR=1,FUN=sum)
+t/row.totals
 dt <- t/row.totals
 
-# kable(dt, "latex", booktabs = T, caption = "Confusion matrix of SVM model on test set") %>% kable_styling(latex_options = "striped")
+knitr::kable(dt, "latex", booktabs = T, caption = "Confusion matrix of SVM model on test set") %>% kable_styling(latex_options = "striped")
 
 #For the SVM model, the in-sample accuracy was `r svm.accuracy[1]` and out-of-sample accuracy was `r svm.accuracy.test[1]`. The in-sample confusion matrix for the SVM model is shown in Table 8 and the out-of-sample confusion matrix for the SVM model is shown in Table 9.
 ```
@@ -2000,13 +2001,13 @@ rf.accuracy[1]
 ```{r RF train conf matrix, align = 'center', include=TRUE}
 # Scale the confusion matrix to accuracy rates by normalizing
 # by the row totals; row totals are used because true values are rows and predicted values are columns.
-#cat("\n","----- Confusion matrix of RF model on train set -----","\n")
-#t <- table(as.factor(train.df.binned$Match_Status),train.rf)
-#row.totals <- apply(t,MAR=1,FUN=sum)
-#t/row.totals
-#dt <- t/row.totals
+cat("\n","----- Confusion matrix of RF model on train set -----","\n")
+t <- table(as.factor(train.df.binned$Match_Status),train.rf)
+row.totals <- apply(t,MAR=1,FUN=sum)
+t/row.totals
+dt <- t/row.totals
 
-#kable(dt, "latex", booktabs = T, caption = "Confusion matrix of Random Forest model on train set") %>% kable_styling(latex_options = "striped")
+knitr::kable(dt, "latex", booktabs = T, caption = "Confusion matrix of Random Forest model on train set") %>% kable_styling(latex_options = "striped")
 ```
 
 
