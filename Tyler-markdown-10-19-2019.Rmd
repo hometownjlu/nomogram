@@ -1745,7 +1745,9 @@ The in-sample accuracy was `r lr.accuracy[1]` and the out-of-sample accuracy was
 
 **(2) Tree model**
   
-  A CART model was fit using the rpart package. The final model is presented in the figure below. The majority of final predictors were derived from the binning process. The variables char_free_exclamation.binned, word_freq_removed.binned, and woe.char_freq_dollar.binned had significant influence in the model. Table 6 demonstrates the confusion matrix for the in-sample performance of the model and Table 7 demonstrates the confusion matrix for the out-of-sample performance.
+  A CART model was fit using the rpart package. Trees cqn handle both factors and continuous variables and do not need to create dummy variables.   Can model non-linear data.  
+  
+  ## Trees can overfit data.  
 
 ```{r cart model, cache=TRUE}
 #CART
@@ -1758,8 +1760,7 @@ fitControl <- trainControl(method = "repeatedcv",
                            number = 10,
                            repeats = 2)
 
-cart.model <-    train(as.factor(Match_Status) ~ .
-                       ,
+cart.model <-    caret::train(as.factor(Match_Status) ~ .,
                        data = train.df.binned,
                        method = 'rpart',
                        trControl = fitControl,
@@ -1769,13 +1770,18 @@ cart.model <-    train(as.factor(Match_Status) ~ .
 )
 
 
+cart <- rpart(formula = Match_Status ~ ., 
+                      data = train, 
+                      method = "class")
+
+rpart.plot(x = cart, yesno = 2, box.palette = "auto", type = 5, extra = +100, fallen.leaves = TRUE, varlen = 0, faclen = 0, roundint = TRUE, clip.facs = TRUE, shadow.col = "gray", main = "Tree Model of Matching into OBGYN Residency\n(Matched or Unmatched)")
 # Timer off
 proc.time() - ptm
 cart.model
 ```
 
 ```{r CART plot , align = 'center', include=TRUE}
-fancyRpartPlot(cart.model$finalModel, caption = NULL)
+fancyRpartPlot(cart, caption = NULL)
 ```
 
 ```{r Train cart accuracy}
@@ -1834,8 +1840,13 @@ knitr::kable(dt, "latex", booktabs = T, caption = "Confusion matrix of CART on t
 \pagebreak
 
 **(3) a Support Vector Machine model**
-  
-  The support vector machine model was fit. Cross validation identified a cost C = 1 using a linear kernel and a sigma =  ???  using ??? support vectors.
+
+# Is the data linearly separable?
+## The support vector machine model was fit. Cross validation identified a cost C = 100 using a linear kernel and a sigma =  ???  using ??? support vectors.
+
+## SVM is a data classification method that separates data using hyperplanes. SVM can be used to generate multiple separating hyperplanes such that the data space is divided into segments and each segment contains only one kind of data. SVM technique is generally useful for data which has non-regularity which means, data whose distribution is unknown.
+
+## We want to find the “most optimal” solution. What will then be the characteristic of this most optimal line? We have to remember that this is just the training data and we can have more data points which can lie anywhere in the subspace. If our line is too close to any of the datapoints, noisy test data is more likely to get classified in a wrong segment. 
 
 ```{r SVM model, cache=TRUE}
 #SVM
@@ -1846,18 +1857,43 @@ set.seed(12345)
 fitControl <- trainControl(method = "repeatedcv",
                            number = 10,
                            repeats = 2)
-svm.model <-    train(as.factor(Match_Status) ~ .
-                      ,
-                      data = train.df.binned,
-                      method = 'svmLinear',
+svm.model <-  train(as.factor(Match_Status) ~ .,  #formula of interest
+                      data = train.df.binned,     #data for training  
+                      kernel = 'linear',       
+                      type = 'C-classification',  #set for a classification issue
                       trControl = fitControl,
                       tuneLength = 8,
-                      metric = "Accuracy", scale = FALSE #added scale = FALSE to make it work
+                      metric = "Accuracy", 
+                      scale = TRUE #added scale = FALSE to make it work
 )
+# Timer off
+
+
+svm.model <-  e1071::svm((Match_Status) ~ .,
+                      data = train.df.binned,
+                      #method = 'svmLinear',
+                      #trControl = fitControl,
+                      kernel = "linear",
+                      tuneLength = 8,
+                      metric = "Accuracy", 
+                      cost = 100,
+                      scale = TRUE #added scale = FALSE to make it work
+)
+names(svm.model)
+svm.model$index
+svm.model$SV
+svm.model$coefs
+svm.model$rho  #negative intercept
+summary(svm.model)
+
 # Timer off
 proc.time() - ptm; rm(ptm)
 svm.model
 ```
+
+The number of support vectors was ```r svm.model$tot.nSV`.
+In the first class there were `r svm.model$nSV[1]` and in the second class there were `r  svm.model$nSV[2]`.  The cost of the model was set to `r svm.model$cost`.  The cost parameter is changed to avoid overfitting.
+
 
 ```{r medians of values}
 # Select numeric columns
@@ -1885,8 +1921,6 @@ svm.model.one <- svm(Match_Status ~ .,
 plot(x = svm.model.one,
      woe.Age.binned ~ woe.USMLE_Step_1_Score.binned,
      data=train.df.binned)
-
-
 ```
 
 
@@ -1917,7 +1951,6 @@ dt <- t/row.totals
 knitr::kable(dt, "latex", booktabs = T, caption = "Confusion matrix of SVM model on train set") %>% kable_styling(latex_options = "striped")
 
 #####commented out because this does not work
-
 test.svm <- predict(svm.model, test.df.binned)
 # 
 colnames(test.df.binned)
