@@ -763,9 +763,9 @@ knitr::kable(kitchen.sink.model.stats,
 ## Logistic regression models should be free of multicollinearity.  
 ## Here we used the variance inflation factor (VIF).   The VIF may be calculated for each predictor by doing a linear regression of that predictor on all the other predictors.  It’s called the variance inflation factor because it estimates how much the variance of a coefficient is “inflated” because of linear dependence with other predictors. Thus, a VIF of 1.8 tells us that the variance (the square of the standard error) of a particular coefficient is 80% larger than it would be if that predictor was completely uncorrelated with all the other predictors.
 
-##VIF = 1, no correlation
-##VIF between 1 and 5 , moderately correlated
-##VIF greater than 5, highly correlated
+## VIF = 1, no correlation
+## VIF between 1 and 5 , moderately correlated
+## VIF greater than 5, highly correlated
 ```{r, echo=FALSE, include=TRUE}
 car::vif(kitchen.sink)
 #https://statisticalhorizons.com/multicollinearity
@@ -844,7 +844,6 @@ library(caret)
 
 confusion1 <- caret::confusionMatrix(confusion, positive = "1")
 confusion1
-broom::tidy(confusion1, by_class = TRUE)
 ```
 
 ## Evaluating the signficance of kitchen.sink variables 
@@ -934,8 +933,6 @@ levels(train$Match_Status) <-
 
 levels(test$Match_Status) <-
   c("No.Match", "Matched")
-
-
 
 train$Match_Status
 levels(train$Match_Status)
@@ -1756,6 +1753,7 @@ The in-sample accuracy was `r lr.accuracy[1]` and the out-of-sample accuracy was
 ptm = proc.time()
 set.seed(12345)
 
+cat("\n","----- Caret to do the Confusion matrix of CART model -----","\n")
 fitControl <- trainControl(method = "repeatedcv",
                            number = 10,
                            repeats = 2)
@@ -1769,7 +1767,7 @@ cart.model <-    caret::train(as.factor(Match_Status) ~ .,
                        metric = "Accuracy"
 )
 
-
+cat("\n","----- RPART to build the Confusion matrix of CART model -----","\n")
 cart <- rpart(formula = Match_Status ~ ., 
                       data = train, 
                       method = "class")
@@ -1783,41 +1781,53 @@ cart.model
 ```{r CART plot , align = 'center', include=TRUE}
 fancyRpartPlot(cart, caption = NULL)
 ```
-
+## Accuracy is how often the classifier predicts the outcome correctly.  
+## Number of correct predictions divided by total number of rows.  
 ```{r Train cart accuracy}
-train.cart <- predict(cart.model, train.df.binned)
-#cat("\n","----- Performance of cart on train set -----","\n")
-cart.accuracy <- caret::postResample(pred = train.cart, obs = as.factor(train.df.binned$Match_Status))
+train.cart <- predict(object = cart, 
+                      newdata = test, 
+                      type = "class")
+class_prediction <- train.cart
+
+cat("\n","----- Caret for Performance of cart on train set -----","\n")
+cart.accuracy <- caret::postResample(pred = train.cart, 
+                                     obs = as.factor(train$Match_Status))
 cart.accuracy[1]
 ```
+
+Accuracy of the model with the *train* data set is not great at `r cart.accuracy[1]`.  
 
 ```{r conf matrix train cart, align = 'center', include=TRUE}
 # Scale the confusion matrix to accuracy rates by normalizing
 # by the row totals; row totals are used because true values are rows and predicted values are columns.
-#cat("\n","----- Confusion matrix of CART model on train set -----","\n")
-t <- table(as.factor(train.df.binned$Match_Status),train.cart)
+cat("\n","----- Confusion matrix of CART model on train set -----","\n")
+t <- table(as.factor(train$Match_Status),train.cart)
 row.totals <- apply(t,MAR=1,FUN=sum)
 #t/row.totals
 dt <- t/row.totals
 
-knitr::kable(dt, "latex", booktabs = T, caption = "Confusion matrix of CART on train set") %>% kable_styling(latex_options = "striped")
+knitr::kable(dt, booktabs = T, caption = "Confusion matrix of CART on train set") 
+
+#Nicer confusion matrix and accuracy data 
+library(caret)
+caret::confusionMatrix(data = class_prediction, 
+                       reference = as.factor(train$Match_Status),
+                       positive = "1")
 ```
 
 
 ```{r cart test accuracy}
+cat("\n","----- Performance of cart on test set -----","\n")
 
-
-#test.cart <- predict(cart.model, test.df.with.binned.vars.added)  #ISSUE HERE?????????????????
+test.cart <- predict(cart, test.df.with.binned.vars.added)  #ISSUE HERE?????????????????
 
 # Check to ensure the dfs are matching columns
 colnames(train.df.binned)
 colnames(test.df.binned)
 
 
-
-cat("\n","----- Performance of cart on test set -----","\n")
-# cart.accuracy.test <- caret::postResample(pred = test.cart, obs = as.factor(test.df.with.binned.vars.added$Match_Status))
-# cart.accuracy.test[1]
+cart.accuracy.test <- caret::postResample(pred = test.cart, obs = as.factor(test.df.with.binned.vars.added$Match_Status))
+cart.accuracy.test[1]
 ```
 
 ```{r CART test conf matrix, align = 'center', include=TRUE}
@@ -2024,6 +2034,7 @@ t <- table(as.factor(train.df.binned$Match_Status),train.rf)
 row.totals <- apply(t,MAR=1,FUN=sum)
 t/row.totals
 dt <- t/row.totals
+dt
 
 knitr::kable(dt, "latex", booktabs = T, caption = "Confusion matrix of Random Forest model on train set") %>% kable_styling(latex_options = "striped")
 ```
@@ -2031,10 +2042,10 @@ knitr::kable(dt, "latex", booktabs = T, caption = "Confusion matrix of Random Fo
 
 ```{r RF test accuracy, align = 'center'}
 #########?????????Not working ??????????/
-# test.rf <- predict(rf.model, test.df.binned)
-# cat("\n","----- Performance of rf on test set -----","\n")
-# rf.accuracy.test <- caret::postResample(pred = test.rf, obs = as.factor(test.df.binned$Match_Status))
-# rf.accuracy.test[1]
+test.rf <- predict(rf.model, test.df.binned)
+cat("\n","----- Performance of rf on test set -----","\n")
+rf.accuracy.test <- caret::postResample(pred = test.rf, obs = as.factor(test.df.binned$Match_Status))
+rf.accuracy.test[1]
 ```
 
 ```{r RF test conf matrix, align = 'center', include=TRUE}
