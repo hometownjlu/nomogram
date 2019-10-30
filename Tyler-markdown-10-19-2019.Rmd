@@ -75,6 +75,8 @@ always_allow_html: yes
 ERAS is a centralized solution to the residency application and documents distribution process. The data source to be used for the project is the Electronic Residency Application Service data that was in discrete fields in the application.  No hand-searching of data was done. The data was exported from the ERAS Program Director Work Station under the Archives menu.The data is collected by the University of Colorado OBGYN residency that has both a categorical and a preliminary position.  Medical students who applied to the preliminary position were considered to be unmatched. The data set of years 2015, 2016, 2017, and 2018 applicants to the University of Colorado OBGYN residency. The data is contained in a data frame called 'all_data'. In advance, we might anticipate that USMLE_Step_1_Score and US_or_Canadian_Applicant will be key predictors
 
 ```{r directory paths and packrat settings, include=FALSE}
+#Helpful, https://www.kaggle.com/pjmcintyre/titanic-first-kernel/code
+
 # uncomment the following line to restore packrat libraries
 # library(packrat)
 # packrat::packrat_mode(on = TRUE)
@@ -449,7 +451,7 @@ stargazer::stargazer(all_data,
 
 ## Two well known strategies to overcome the problem of overfitting are the train/validation split and cross-validation.
 
-# Identify training and test samples
+# Review the data quality: Identify training and test samples
 ## Here, we will obtain a training sample with the first two years of the data (2015 and 2016), and have the remaining years in a test sample, and properly labeled so that the results can be replicated later. We will then use this training sample.  I will call the training sample `train` and the test sample `test`.  Another option is dplyr::sample_n if you want to instead specify the exact number of observations to be selected. 
 
 ```{r, train vs test, warning=FALSE, echo=TRUE, message=FALSE, include=TRUE}
@@ -461,6 +463,9 @@ test <- filter(all_data, Year %in%  c("2017", "2018")) #Test on 2017, 2018 data
 nrow(test)
 test <- test %>% select(-"Year")
 train <- train %>% select(-"Year")
+
+pandoc.table(checkAllCols(train))
+pandoc.table(checkAllCols(test))
 ```
 There are `r nrow(train)` medical students in the training data set and `nrow(test)` in the test data set.  
 
@@ -546,11 +551,6 @@ train_correlation <-
          Count_of_Peer_Reviewed_Book_Chapter, 
          Count_of_Other_than_Published, 
          Count_of_Online_Publications) %>%
-  #mutate(Gender = fct_recode(Gender,"0" = "Male", "1" = "Female")) %>%
-  #mutate(Couples_Match = fct_recode(Couples_Match,"0" = "No", "1" = "Yes")) %>%
-  #mutate(US_or_Canadian_Applicant = fct_recode(US_or_Canadian_Applicant,"0" = "No", "1" = "Yes")) %>%
-  #mutate(Medical_Education_Interrupted = fct_recode(Medical_Education_Interrupted,"0" = "No", "1" =      "Elections_Senior_Year", "2" = "Yes")) %>%
-  #mutate_all(as.integer) %>%  #I turned this off and it might cause problems later.  
   stats::cor(use="pairwise.complete.obs") %>%
   corrplot::corrplot(type="lower", 
                      diag=FALSE, 
@@ -641,7 +641,7 @@ knitr::kable(crude_summary, caption="2x2 Contingency Table on Matching for all_d
 summary(arsenal::comparedf(train, test))
 ```
 
-# Fitting and Summarizing the Kitchen Sink Model
+# Fitting and Summarizing the Kitchen Sink Model: (aka throw everything at it)
 ## Create a Kitchen Sink or a "large" model with all factors in the `train` data set first. This is essentially a screening model with all variables. 
 
 # Logistic regression model from the rms package on the kitchen sink model
@@ -1229,7 +1229,7 @@ pred <-
   prediction(prob, test$Match_Status)  #removed na.omit
 ```
 
-#ROC: Type 1 using ggplot with nice controls
+#ROC: ROC ggplot with nice controls
 ```{r, include = TRUE}
 # rest of this doesn't need much adjustment except for titles
 perf <-
@@ -1254,7 +1254,7 @@ ggplot(roc.data, aes(x=fpr, ymin=0, ymax=tpr)) +
 ```
 
 
-ROC Curve type 2 with nice labels on the x and y
+#ROC: ROC with nice labels on the x and y
 ```{r, include = TRUE}
 pred <- 
   prediction(prob, test$Match_Status)
@@ -1273,7 +1273,7 @@ auc <-
 auc  
 ```
 
-ROC Curve Type 3, ROC in color
+#ROC: ROC in color
 ```{r, include = TRUE}
 perf <- 
   performance(pred, 'tpr','fpr')
@@ -1292,7 +1292,6 @@ perf2 <-
 
 plot(perf2, colorize = TRUE, text.adj = c(-0.2,1.7), main="Precision and Recall for Model A")
 ```
-
 
 ```{r, include = TRUE, fig.width=8, fig.height=4, fig.cap="Figure: Evaluation of the variable interactions in the train data set."}
 train.df <- 
@@ -1590,26 +1589,6 @@ par(mfrow = c(1,1))
 ```
 
 
-# A simple decision tree model was used for exploration. The variable importance summary from the simple tree was used to explore important relationships. The variables a, b, c, and d  were the top four variables in importance.
-
-CAN WE USE ONLY FACTORS IN THIS TREE MODEL?
-  
-```{r rpart EDA}
-t.model <-
-  rpart(as.factor(Match_Status) ~.,
-        data = train.df.binned)
-
-t.model$variable.importance
-```
-
-The simple tree was plotted below. The a, b and c variables were near the roots of the tree demonstrating importance. DO ALL THE VARIABLES NEED TO BE BINNED AS FACTORS TO RUN A TREE PLOT?
-  
-```{r fancyR plot rpart EDA, include=TRUE}
-# plot
-fancyRpartPlot(t.model)
-```
-
-
 # Exploratory random forest was also performed. The variable importance for the random forest model was summarized in the figure below. The variables capital_run_length_longest, capital_run_length_total, char_freq_dollar.binned, word_freq_free and word_freq_your were the top five using accuracy and the Gini index.
 
 ```{r RF EDA, cache=TRUE, include=TRUE}
@@ -1628,34 +1607,6 @@ rf.eda = randomForest(X,Y,sampsize=25,ntree=5000,mtry=4,
                       keep.forest = T,
                       importance = TRUE)
 rf.eda
-
-train$Match_Status <- as.factor(train$Match_Status)
-levels(train$Match_Status)
-
-#Using caret
-caret_matrix <- train(x=train[,c('white_non_white', 'Age', 'Gender', 'Couples_Match', 'US_or_Canadian_Applicant', 'Medical_Education_Interrupted', 'Alpha_Omega_Alpha', 'Military_Service_Obligation', 'USMLE_Step_1_Score', 'Count_of_Poster_Presentation', 'Count_of_Oral_Presentation', 'Count_of_Articles_Abstracts', 'Count_of_Peer_Reviewed_Book_Chapter', 'Count_of_Other_than_Published', 'Count_of_Online_Publications', 'Visa_Sponsorship_Needed', 'Medical_Degree')],
-y=train$Match_Status, 
-method='rf', 
-trControl=trainControl(method="cv", number=5))
-
-caret_matrix
-caret_matrix$results
-```
-```{r}
-#extracting variable importance and make graph with ggplot (looks nicer that the standard varImpPlot)
-rf_imp <- varImp(caret_matrix, scale = FALSE)
-rf_imp <- rf_imp$importance
-rf_gini <- data.frame(Variables = row.names(rf_imp), MeanDecreaseGini = rf_imp$Overall)
-
-ggplot(rf_gini, aes(x=reorder(Variables, MeanDecreaseGini), y=MeanDecreaseGini, fill=MeanDecreaseGini)) +
-        geom_bar(stat='identity') + coord_flip() + theme(legend.position="none") + labs(x="") +
-        ggtitle('Variable Importance Random Forest') + theme(plot.title = element_text(hjust = 0.5))
-```
-
-```{r}
-#using the model to make Survival predictions on the test set
-solution_rf <- predict(caret_matrix, test)
-caret::confusionMatrix(solution_rf, test$Match_Status)
 ```
 
 # The Model Build
@@ -1682,7 +1633,7 @@ full.model <- glm(as.factor(Match_Status) ~
                     woe.Count_of_Peer_Reviewed_Book_Chapter.binned +
                     woe.Count_of_Online_Publications.binned,
                   data = train.df.binned, family = binomial)
-backwards = step(full.model) # Backwards selection is the default
+backwards = step(full.model, direction = 'backward') # Backwards selection is the default
 
 backwards_results = backwards$coefficients
 
@@ -1772,12 +1723,64 @@ The in-sample accuracy was `r lr.accuracy[1]` and the out-of-sample accuracy was
 
 **(2) Tree model**
   
-  A CART model was fit using the rpart package. Trees cqn handle both factors and continuous variables and do not need to create dummy variables.   Can model non-linear data.  
+#  A CART model was fit using the rpart package. Trees cqn handle both factors and continuous variables and do not need to create dummy variables.   Can model non-linear data.  
   
-  ## Trees can overfit data.  
+# As we all know, Random Forest is a more powerful algorithm over just a single tree. However, the Decision Tree classification preserve the interpretability which the random forest algorithm lacks.  A simple decision tree model was used for exploration. The Decision Tree does not require feature scaling. Let’s fit a decision tree model to our training data.  
 
+```{r rpart EDA}
+t.model <-
+  rpart(as.factor(Match_Status) ~.,
+        data = train,    #Do not use binned data for God's sake.  
+        method = "class")
+
+t.model$variable.importance
+```
+
+  
+```{r fancyR plot rpart EDA, include=TRUE}
+# Tree visualization
+rpart.plot::rpart.plot(t.model,extra =  4,fallen.leaves = T)
+fancyRpartPlot(t.model)
+```
+```{r}
+#using the model to make Survival predictions on the test set
+solution_tree <- predict(t.model, newdata = test, type="class")
+caret::confusionMatrix(solution_tree, test$Match_Status)  #?  Why is this not working?
+table(test$Match_Status, solution_tree)
+error <- mean(test$Match_Status != solution_tree) # Misclassification error
+paste('Accuracy',round(1-error,4))
+```
+
+# Overfitting can easily occur in Decision Tree classification. We can idenfity that evaluating the model using k-Fold Cross Validation. Or we might be able to improve the model. Let’s do 10-fold cross validation to find out whether we could improve the model.
+
+```{r}
+#https://www.kaggle.com/thilakshasilva/predicting-titanic-survival-using-five-algorithms
+
+# Applying k-Fold Cross Validation
+set.seed(789)
+folds = createMultiFolds(train$Match_Status, k = 10, times = 5)
+control <- trainControl(method = "repeatedcv", index = folds)
+solution_tree_cv <- train(Match_Status ~ ., data = train, method = "rpart", trControl = control)
+
+# Tree Visualization
+rpart.plot(solution_tree_cv$finalModel, extra=4)
+
+# Predicting the Validation set results using 10 folds
+y_pred = predict(solution_tree_cv, newdata = test[,-which(names(test)=="Match_Status")])
+
+# Checking the prediction accuracy
+table(test$Match_Status, y_pred) # Confusion matrix
+
+table(test$Match_Status, y_pred)
+error <- mean(test$Match_Status != y_pred) # Misclassification error
+paste('Accuracy',round(1-error,4))
+```  
+
+
+# CART model without caret
 ```{r cart model, cache=TRUE}
 #CART
+# https://www.kaggle.com/thilakshasilva/predicting-titanic-survival-using-five-algorithms
 
 # Timer on
 ptm = proc.time()
@@ -1882,7 +1885,7 @@ knitr::kable(dt, "latex", booktabs = T, caption = "Confusion matrix of CART on t
 **(3) a Support Vector Machine model**
 
 # Is the data linearly separable?
-## The support vector machine model was fit. Cross validation identified a cost C = 100 using a linear kernel and a sigma =  ???  using ??? support vectors.
+##  In order to use SVM, we need to remember to do one thing - Feature Scaling! Because the SVM classifier predicts the class of a given test observation by identifying the observations that are nearest to it, the scale of the variables matters.
 
 ## The next algorithm that I want to use is SVM, as it is known to work well with small datasets. SVM is a data classification method that separates data using hyperplanes. SVM can be used to generate multiple separating hyperplanes such that the data space is divided into segments and each segment contains only one kind of data. SVM technique is generally useful for data which has non-regularity which means, data whose distribution is unknown.
 
@@ -1891,7 +1894,9 @@ knitr::kable(dt, "latex", booktabs = T, caption = "Confusion matrix of CART on t
 ```{r}
 #SVM with caret
 set.seed(2017)
+
 caret_svm <- caret::train(Match_Status ~ white_non_white + Age + Gender + Couples_Match + US_or_Canadian_Applicant + Medical_Education_Interrupted + Alpha_Omega_Alpha + Military_Service_Obligation + USMLE_Step_1_Score + Count_of_Poster_Presentation + Count_of_Oral_Presentation + Count_of_Articles_Abstracts + Count_of_Peer_Reviewed_Book_Chapter + Count_of_Other_than_Published + Count_of_Online_Publications + Visa_Sponsorship_Needed + Medical_Degree, data=train, method='svmLinear', preProcess= c('center', 'scale'), trControl=trainControl(method="cv", number=5))
+
 caret_svm
 caret_svm$results
 ```
@@ -1900,7 +1905,7 @@ caret_svm$results
 #using the model to make Survival predictions on the test set
 test$Match_Status <- as.factor(as.numeric(test$Match_Status) - 1)
 solution_svm <- predict(caret_svm, newdata = test)
-caret::confusionMatrix(solution_svm, test$Match_Status)
+caret::confusionMatrix(solution_svm, test$Match_Status, positive = "1")
 ```
 
 ```{r SVM model, cache=TRUE}
@@ -2039,6 +2044,38 @@ knitr::kable(dt, "latex", booktabs = T, caption = "Confusion matrix of SVM model
   
   A random forest model was fit to the training data. Cross-validation selected the a final value used for mtry = 12 based on optimizing accuracy. The variable importance plot for the random forest model is demonstrated below. Important predictors were similar between the CART model and the RF model. The predictors char_freq_exclamation.binned, woe.char_freq_exclamation.binned, aand woe.char_freq_dollar.binned were top three for variable importance.
 
+```{r}
+train$Match_Status <- as.factor(train$Match_Status)
+levels(train$Match_Status)
+
+#Using caret
+caret_matrix <- train(x=train[,c('white_non_white', 'Age', 'Gender', 'Couples_Match', 'US_or_Canadian_Applicant', 'Medical_Education_Interrupted', 'Alpha_Omega_Alpha', 'Military_Service_Obligation', 'USMLE_Step_1_Score', 'Count_of_Poster_Presentation', 'Count_of_Oral_Presentation', 'Count_of_Articles_Abstracts', 'Count_of_Peer_Reviewed_Book_Chapter', 'Count_of_Other_than_Published', 'Count_of_Online_Publications', 'Visa_Sponsorship_Needed', 'Medical_Degree')],
+y=train$Match_Status, 
+method='rf', 
+trControl=trainControl(method="cv", number=5))
+
+caret_matrix
+caret_matrix$results
+
+#extracting variable importance and make graph with ggplot (looks nicer that the standard varImpPlot)
+rf_imp <- varImp(caret_matrix, scale = FALSE)
+rf_imp <- rf_imp$importance
+rf_gini <- data.frame(Variables = row.names(rf_imp), MeanDecreaseGini = rf_imp$Overall)
+
+ggplot(rf_gini, aes(x=reorder(Variables, MeanDecreaseGini), y=MeanDecreaseGini, fill=MeanDecreaseGini)) +
+        geom_bar(stat='identity') + coord_flip() + theme(legend.position="none") + labs(x="") +
+        ggtitle('Variable Importance Random Forest') + theme(plot.title = element_text(hjust = 0.5))
+```
+## The random Forest classification suffers in terms of interpretability. We are unable to visualize the 500 trees and identify important features of the model. However, we can assess the Feature Importance using the Gini index measure. Let’s plot mean Gini index across all trees and identify important features.
+
+```{r}
+#using the model to make Survival predictions on the test set
+solution_rf <- predict(caret_matrix, test)
+caret::confusionMatrix(solution_rf, test$Match_Status, positive = "1")
+```
+```
+
+
 ```{r RF model, cache=TRUE}
 #RF
 #https://www.kaggle.com/kernels/scriptcontent/7086189/download
@@ -2048,7 +2085,7 @@ set.seed(12345)
 fitControl <- trainControl(method = "cv",
                            number = 10)
 rf.model <- train(as.factor(Match_Status) ~ .,
-                  data = train.df.binned,
+                  data = train,
                   method = 'rf',
                   trControl = fitControl,
                   # tuneLength = 8,
@@ -2075,7 +2112,7 @@ rf.accuracy[1]
 # Scale the confusion matrix to accuracy rates by normalizing
 # by the row totals; row totals are used because true values are rows and predicted values are columns.
 cat("\n","----- Confusion matrix of RF model on train set -----","\n")
-t <- table(as.factor(train.df.binned$Match_Status),train.rf)
+t <- table(as.factor(train$Match_Status),train.rf)
 row.totals <- apply(t,MAR=1,FUN=sum)
 t/row.totals
 dt <- t/row.totals
@@ -2087,7 +2124,7 @@ knitr::kable(dt, "latex", booktabs = T, caption = "Confusion matrix of Random Fo
 
 ```{r RF test accuracy, align = 'center'}
 #########?????????Not working ??????????/
-test.rf <- predict(rf.model, test.df.binned)
+test.rf <- predict(rf.model, test)
 cat("\n","----- Performance of rf on test set -----","\n")
 rf.accuracy.test <- caret::postResample(pred = test.rf, obs = as.factor(test.df.binned$Match_Status))
 rf.accuracy.test[1]
@@ -2126,7 +2163,7 @@ print(caret_boost)
 ```{r}
 #using the model to make Survival predictions on the test set
 solution_boost <- predict(caret_boost, test)
-caret::confusionMatrix(solution_boost, test$Match_Status)
+caret::confusionMatrix(solution_boost, test$Match_Status, positive = "1")
 ```
 
 \pagebreak
@@ -2145,7 +2182,7 @@ fitControl <- trainControl(method = "repeatedcv",
                            repeats = 2)
 nbwoe <-    train(as.factor(Match_Status) ~ .
                   ,
-                  data = train.df.binned,
+                  data = train,
                   method = 'naive_bayes',
                   trControl = fitControl,
                   tuneLength = 8,
@@ -2157,16 +2194,16 @@ nbwoe
 ```
 
 ```{r NB model accuracy, align = 'center'}
-train.nbwoe <- predict(nbwoe, train.df.binned)
+train.nbwoe <- predict(nbwoe, newdata = test[,-which(names(train)=="Match_Status")])
 cat("\n","----- Performance of nbwoe on train set -----","\n")
-nb.accuracy <- postResample(pred = train.nbwoe, obs = as.factor(train.df.binned$Match_Status))
+nb.accuracy <- postResample(pred = train.nbwoe, obs = as.factor(train$Match_Status))
 nb.accuracy[1]
 ```
 
 ```{r NB model conf matrix, align = 'center', include=TRUE}
 # Scale the confusion matrix to accuracy rates by normalizing
 # by the row totals; row totals are used because true values are rows and predicted values are columns.
-#cat("\n","----- Confusion matrix of Naive Bayes model on train set -----","\n")
+cat("\n","----- Confusion matrix of Naive Bayes model on train set -----","\n")
 t <- table(as.factor(train.df.binned$Match_Status),train.nbwoe)
 row.totals <- apply(t,MAR=1,FUN=sum)
 #t/row.totals
@@ -2215,6 +2252,7 @@ dt <- t/row.totals
 test$RF <- as.numeric(solution_rf)-1
 test$SVM <- as.numeric(solution_svm)-1
 test$Boost <- as.numeric(solution_boost)-1
+#test$tree <- as.numeric(solution_tree)-1
 
 #compose correlations plot
 corrplot.mixed(cor(test[, c('RF', 'SVM', 'Boost')]), order="hclust", tl.col="black")
