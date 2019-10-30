@@ -199,8 +199,13 @@ na.pattern(all_data)
 ## After the data check was completed, an exploratory data analysis (EDA) was conducted to look for interesting relationships among the variables. Histograms were used to visualize distributions among predictors. Since the assignment was a classification problem, relationships between predictors and the dichotomous outcome were also performed. Distributions of all variables were skewed right. Examples of histograms of seven variables: age, Count of articles and abstracts, count of oral presentations, count of poster presentations, Count of online pubications, count of non-published publications, count of peer-reviewed book chapters,  are demonstrated.
 
 # Description of Match_Status variable.  
-```{r data check, include=TRUE}
+```{r data check, include=TRUE, out.width="50%"}
 describe(as.factor(all_data$Match_Status))
+ggplot(all[!is.na(all_data$Match_Status),], aes(x = Survived, fill = Survived)) +
+  geom_bar(stat='count') +
+  labs(x = 'How many people matched into OBGYN?') +
+        geom_label(stat='count',aes(label=..count..), size=7) +
+        theme_grey(base_size = 18)
 ```
 
 # Data Description and Univariate analysis of variables. 
@@ -1617,16 +1622,41 @@ Y <-
 X <-
   !is.na(train.df.binned[,-10])
 
-
-
 #train default model and the most regularized model with same predictive performance
 rf.eda = randomForest(X,Y,sampsize=25,ntree=5000,mtry=4,
                       keep.inbag = T,
                       keep.forest = T,
                       importance = TRUE)
-varImpPlot(rf.eda, main = "Random Forest EDA Variable Importance", cex = 0.75)
+rf.eda
+
+train$Match_Status <- as.factor(train$Match_Status)
+levels(train$Match_Status)
+
+#Using caret
+caret_matrix <- train(x=train[,c('white_non_white', 'Age', 'Gender', 'Couples_Match', 'US_or_Canadian_Applicant', 'Medical_Education_Interrupted', 'Alpha_Omega_Alpha', 'Military_Service_Obligation', 'USMLE_Step_1_Score', 'Count_of_Poster_Presentation', 'Count_of_Oral_Presentation', 'Count_of_Articles_Abstracts', 'Count_of_Peer_Reviewed_Book_Chapter', 'Count_of_Other_than_Published', 'Count_of_Online_Publications', 'Visa_Sponsorship_Needed', 'Medical_Degree')],
+y=train$Match_Status, 
+method='rf', 
+trControl=trainControl(method="cv", number=5))
+
+caret_matrix
+caret_matrix$results
+```
+```{r}
+#extracting variable importance and make graph with ggplot (looks nicer that the standard varImpPlot)
+rf_imp <- varImp(caret_matrix, scale = FALSE)
+rf_imp <- rf_imp$importance
+rf_gini <- data.frame(Variables = row.names(rf_imp), MeanDecreaseGini = rf_imp$Overall)
+
+ggplot(rf_gini, aes(x=reorder(Variables, MeanDecreaseGini), y=MeanDecreaseGini, fill=MeanDecreaseGini)) +
+        geom_bar(stat='identity') + coord_flip() + theme(legend.position="none") + labs(x="") +
+        ggtitle('Variable Importance Random Forest') + theme(plot.title = element_text(hjust = 0.5))
 ```
 
+```{r}
+#using the model to make Survival predictions on the test set
+solution_rf <- predict(caret_matrix, test)
+caret::confusionMatrix(solution_rf, test$Match_Status)
+```
 
 # The Model Build
 
@@ -1854,12 +1884,27 @@ knitr::kable(dt, "latex", booktabs = T, caption = "Confusion matrix of CART on t
 # Is the data linearly separable?
 ## The support vector machine model was fit. Cross validation identified a cost C = 100 using a linear kernel and a sigma =  ???  using ??? support vectors.
 
-## SVM is a data classification method that separates data using hyperplanes. SVM can be used to generate multiple separating hyperplanes such that the data space is divided into segments and each segment contains only one kind of data. SVM technique is generally useful for data which has non-regularity which means, data whose distribution is unknown.
+## The next algorithm that I want to use is SVM, as it is known to work well with small datasets. SVM is a data classification method that separates data using hyperplanes. SVM can be used to generate multiple separating hyperplanes such that the data space is divided into segments and each segment contains only one kind of data. SVM technique is generally useful for data which has non-regularity which means, data whose distribution is unknown.
 
 ## We want to find the “most optimal” solution. What will then be the characteristic of this most optimal line? We have to remember that this is just the training data and we can have more data points which can lie anywhere in the subspace. If our line is too close to any of the datapoints, noisy test data is more likely to get classified in a wrong segment. 
 
+```{r}
+#SVM with caret
+set.seed(2017)
+caret_svm <- caret::train(Match_Status ~ white_non_white + Age + Gender + Couples_Match + US_or_Canadian_Applicant + Medical_Education_Interrupted + Alpha_Omega_Alpha + Military_Service_Obligation + USMLE_Step_1_Score + Count_of_Poster_Presentation + Count_of_Oral_Presentation + Count_of_Articles_Abstracts + Count_of_Peer_Reviewed_Book_Chapter + Count_of_Other_than_Published + Count_of_Online_Publications + Visa_Sponsorship_Needed + Medical_Degree, data=train, method='svmLinear', preProcess= c('center', 'scale'), trControl=trainControl(method="cv", number=5))
+caret_svm
+caret_svm$results
+```
+
+```{r}
+#using the model to make Survival predictions on the test set
+test$Match_Status <- as.factor(as.numeric(test$Match_Status) - 1)
+solution_svm <- predict(caret_svm, newdata = test)
+caret::confusionMatrix(solution_svm, test$Match_Status)
+```
+
 ```{r SVM model, cache=TRUE}
-#SVM
+#SVM using e1071
 
 # Timer on
 ptm = proc.time()
@@ -1996,7 +2041,7 @@ knitr::kable(dt, "latex", booktabs = T, caption = "Confusion matrix of SVM model
 
 ```{r RF model, cache=TRUE}
 #RF
-
+#https://www.kaggle.com/kernels/scriptcontent/7086189/download
 # Timer on
 ptm = proc.time()
 set.seed(12345)
@@ -2067,8 +2112,25 @@ rf.accuracy.test[1]
 
 \pagebreak
 
+## 4) Gradient Boosting Machine (GBM) model
 
-## 4) Naïve Bayes with WOE Binning model
+As I am already having a model that uses Bagging, I want the 3rd model to be a boosting model. Of the possible boosting algorithms, I am choosing GBM.
+
+```{r}
+set.seed(2017)
+caret_boost <- train(Match_Status~ white_non_white + Age + Gender + Couples_Match + US_or_Canadian_Applicant + Medical_Education_Interrupted + Alpha_Omega_Alpha + Military_Service_Obligation + USMLE_Step_1_Score + Count_of_Poster_Presentation + Count_of_Oral_Presentation + Count_of_Articles_Abstracts + Count_of_Peer_Reviewed_Book_Chapter + Count_of_Other_than_Published + Count_of_Online_Publications + Visa_Sponsorship_Needed + Medical_Degree, 
+                     data=train, method='gbm', preProcess= c('center', 'scale'), trControl=trainControl(method="cv", number=7), verbose=FALSE)
+print(caret_boost)
+```
+
+```{r}
+#using the model to make Survival predictions on the test set
+solution_boost <- predict(caret_boost, test)
+caret::confusionMatrix(solution_boost, test$Match_Status)
+```
+
+\pagebreak
+## 5) Naïve Bayes with WOE Binning model
 
 Finally, a Naïve Bayes model was fit. Similar to the previous models, the top 5 WOE binned variables were also included in this model. Cross-validation demonstrated that the tuning parameter 'laplace' was held constant at a value of 0 and tuning parameter 'adjust' was held constant at a value of 1.
 
@@ -2144,32 +2206,47 @@ dt <- t/row.totals
 
 
 # Model Comparison
+
+##Given the fact that all three models have decent public scores, especially the correlation between SVM and the RF model is low. The most likely explanation is that SVM really is a different algorithm (both other models are tree-based).
+
+```{r}
+#https://www.kaggle.com/kernels/scriptcontent/7086189/download
+#adding model predictions to test dataframe
+test$RF <- as.numeric(solution_rf)-1
+test$SVM <- as.numeric(solution_svm)-1
+test$Boost <- as.numeric(solution_boost)-1
+
+#compose correlations plot
+corrplot.mixed(cor(test[, c('RF', 'SVM', 'Boost')]), order="hclust", tl.col="black")
+```
+
+
 ```{r model comparison, align = 'center', include=TRUE}
 #Table 14 summarizes the overall in-sample and out-of-sample accuracy of each model. The best performing models (highest accuracy) was the random forest model with a test set accuracy of `r rf.accuracy.test[1]`. The Logistic regression model using backwards elimination was second with a test set accuracy of `r lr.accuracy.test[1]`. The Naive Bayes model did not perform as well as the other models. In summary, if accuracy is the most important aspect of the model and interpretion is not a priority then the best model was the random forest model. If interpretability of the model is paramount, then the logistic regression model is recommended.
 
 # Training set performance summary
 
-###???????Commented OUT #########
-##x <- postResample(pred = train.backwards, obs = as.factor(train.df$Match_Status))
-##a <- postResample(pred = train.cart, obs = as.factor(train.df.binned$Match_Status))
-##c <- postResample(pred = train.svm, obs = as.factor(train.df.binned$Match_Status))
-#e <- postResample(pred = train.rf, obs = as.factor(train.df.binned$Match_Status))
+
+x <- postResample(pred = train.backwards, obs = as.factor(train.df$Match_Status))
+a <- postResample(pred = train.cart, obs = as.factor(train.df.binned$Match_Status))
+c <- postResample(pred = train.svm, obs = as.factor(train.df.binned$Match_Status))
+e <- postResample(pred = train.rf, obs = as.factor(train.df.binned$Match_Status))
 
 ##g commented out
-##g <- postResample(pred = train.nbwoe, obs = as.factor(train.df.binned$Match_Status))
+g <- postResample(pred = train.nbwoe, obs = as.factor(train.df.binned$Match_Status))
 # Test set performance summary
-#xt <- postResample(pred = test.backwards, obs = as.factor(test.df$Match_Status))
-#at <- postResample(pred = test.cart, obs = as.factor(test.df.binned$Match_Status))
+xt <- postResample(pred = test.backwards, obs = as.factor(test.df$Match_Status))
+at <- postResample(pred = test.cart, obs = as.factor(test.df.binned$Match_Status))
 
 ##ct commented out
-##ct <- postResample(pred = test.svm, obs = as.factor(test.df.binned$Match_Status))
-#et  <- postResample(pred = test.rf, obs = as.factor(test.df.binned$Match_Status))
-#gt <- postResample(pred = test.nbwoe, obs = as.factor(test.df.binned$Match_Status))
-#matrix <- matrix(data = c(x[1], a[1], c[1], e[1], g[1], xt[1], at[1], ct[1], et[1], gt[1]), nrow = 5, ncol = 2, byrow = FALSE)
-#colnames(matrix) <- c("Training Set Accuracy", "Test Set Accuracy")
-#rownames(matrix) <- c("LR Backwards Elimination", "CART", "Support Vector Machine", "Random Forest", "Naive Bayes")
-#df <- round(matrix, 3)
-#kable(df, "latex", booktabs = T, caption = "In-sample and out-of-sample accuracy of all models") %>% kable_styling(latex_options = "striped")
+ct <- postResample(pred = test.svm, obs = as.factor(test.df.binned$Match_Status))
+et  <- postResample(pred = test.rf, obs = as.factor(test.df.binned$Match_Status))
+gt <- postResample(pred = test.nbwoe, obs = as.factor(test.df.binned$Match_Status))
+matrix <- matrix(data = c(x[1], a[1], c[1], e[1], g[1], xt[1], at[1], ct[1], et[1], gt[1]), nrow = 5, ncol = 2, byrow = FALSE)
+colnames(matrix) <- c("Training Set Accuracy", "Test Set Accuracy")
+rownames(matrix) <- c("LR Backwards Elimination", "CART", "Support Vector Machine", "Random Forest", "Naive Bayes")
+df <- round(matrix, 3)
+kable(df, "latex", booktabs = T, caption = "In-sample and out-of-sample accuracy of all models") %>% kable_styling(latex_options = "striped")
 ```
 \pagebreak
 
