@@ -3,6 +3,8 @@ title: "A Model to Predict Chances of Matching into Obstetrics and Gynecology Re
 author: "Tyler Muffly, MD"
 date: "Department of Obstetrics and Gynecology, Denver Health, Denver, CO"
 output:
+  word_document:
+    toc_depth: '2'
   pdf_document:
     df_print: paged
     fig_caption: yes
@@ -11,8 +13,6 @@ output:
     pandoc_args:
     - --wrap=none
     - --top-level-division=chapter
-  word_document:
-    toc_depth: '2'
   html_document:
     code_folding: hide
     dev: svg
@@ -76,17 +76,198 @@ ERAS is a centralized solution to the residency application and documents distri
 
 ```{r directory paths and packrat settings, include=FALSE}
 #Helpful, https://www.kaggle.com/pjmcintyre/titanic-first-kernel/code
-
-# uncomment the following line to restore packrat libraries
 # library(packrat)
-# packrat::packrat_mode(on = TRUE)
-# packrat::restore()
 # packrat::set_opts(local.repos = c("packrat/lib/x86_64-apple-darwin15.6.0/3.6.0/"))
+# packrat::packrat_mode(on = TRUE)
+# packrat::snapshot(infer.dependencies = TRUE)
+# packrat::restore()
+
 ```
 
 
 ```{r, echo=FALSE, include = FALSE}
-source(file="~/Dropbox/Nomogram/nomogram/data/Additional_functions_nomogram.R")
+#source(file="~/Dropbox/Nomogram/nomogram/data/Additional_functions_nomogram.R")
+
+########################################################################
+# This R script implements additional functions for the nomogram database
+#
+# Author: Tyler Muffly
+# Date: 10/19/2019
+
+#Instillation packages
+
+#Paths
+data_folder <- "~/Dropbox/Nomogram/nomogram/data"#paste0(getwd(), "/Data/")
+results_folder <- "~/Dropbox/Nomogram/nomogram/results"#paste0(getwd(), "/Results/")
+data_file <- "all_years_filter_112.rds"
+
+#Install and Load needed R packages.
+# Set libPaths.
+.libPaths("/Users/tylermuffly/.exploratory/R/3.6")
+
+#install.packages("dplR", dependencies = TRUE)
+#library(dplR)
+
+#install.packages("anonymizer", type="source")
+if(!require(pacman))install.packages("pacman")
+pacman::p_load('R.methodsS3', 'caret', 'readxl', 'XML', 'reshape2', 'devtools', 'purrr', 'readr', 'ggplot2', 'dplyr', 'magick', 'janitor', 'lubridate', 'hms', 'tidyr', 'stringr', 'openxlsx', 'forcats', 'RcppRoll', 'tibble', 'bit64', 'munsell', 'scales', 'rgdal', 'tidyverse', "foreach", "PASWR", "rms", "pROC", "ROCR", "nnet", "packrat", "DynNom", "export", "caTools", "mlbench", "randomForest", "ipred", "xgboost", "Metrics", "RANN", "AppliedPredictiveModeling", "nomogramEx", "shiny", "earth", "fastAdaboost", "Boruta", "glmnet", "ggforce", "tidylog", "InformationValue", "pscl", "scoring", "DescTools", "gbm", "Hmisc", "arsenal", "pander", "moments", "leaps", "MatchIt", "car", "mice", "rpart", "beepr", "fansi", "utf8", "zoom", "lmtest", "ResourceSelection", "rmarkdown", "rattle", "rmda", "funModeling", "tinytex", "caretEnsemble", "broom", "Rmisc", "corrplot", "GGally", "alluvial", "progress", "perturb", "vctrs", "highr", "labeling", "DataExplorer", "rsconnect", "inspectdf", "ggpubr", "esquisse", "stargazer", "tableone", "knitr", "drake", "visNetwork", "woeBinning", "OneR", "rpart.plot", "RColorBrewer", "kableExtra", "kernlab", "naivebayes", "e1071", "data.table", "skimr", "naniar", "english", "mosaic", "broom", "xgboost", "mltools")
+#Sys.sleep(7)
+
+pacman::p_install_gh("cran/doMC")
+library("doMC")
+doMC::registerDoMC(cores = detectCores()-1) #Use multiple cores for processing
+
+### Skimr set up
+skim_with(numeric = list(hist = NULL), integer = list(hist = NULL))
+
+#####  Functions for nomogram
+create_plot_num <- 
+  function(data) {
+    funModeling::plot_num(data, path_out = results_folder)
+  } 
+
+create_plot_cross_plot <- 
+  function(data) {
+    funModeling::cross_plot(data, 
+                            input=(colnames(data)), 
+                            target="Match_Status", 
+                            path_out = results_folder,
+                            auto_binning = TRUE)
+  } #, auto_binning = FALSE, #Export results
+
+create_profiling_num <- 
+  function(data) {
+    funModeling::profiling_num(data)
+  }
+
+
+#####  Load in the data
+#Create a dataframe of independent and dependent variables. 
+## Here are the data for download
+URL<- paste0("https://www.dropbox.com/s/qbykb8sl2c8z3me/", (data_file), "?raw=1")
+download.file(url = URL, destfile = paste0(data_file), method = "curl")
+
+# read in data
+all_data <- 
+  read_rds(paste0(data_folder, "/", data_file)) %>%
+  select(-"Gold_Humanism_Honor_Society", 
+         -"Sigma_Sigma_Phi", 
+         -"Misdemeanor_Conviction", 
+         -"Malpractice_Cases_Pending", 
+         -"Citizenship", 
+         -"BLS", 
+         -"Positions_offered") 
+
+all_data <- 
+  all_data[c(
+    'white_non_white', 
+    'Age',  
+    'Year', 
+    'Gender', 
+    'Couples_Match', 
+    'US_or_Canadian_Applicant', 
+    "Medical_Education_or_Training_Interrupted", 
+    "Alpha_Omega_Alpha",  
+    "Military_Service_Obligation", 
+    "USMLE_Step_1_Score", 
+    "Count_of_Poster_Presentation",  
+    "Count_of_Oral_Presentation", 
+    "Count_of_Peer_Reviewed_Journal_Articles_Abstracts", 
+    "Count_of_Peer_Reviewed_Book_Chapter", 
+    "Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published", 
+    "Count_of_Peer_Reviewed_Online_Publication", 
+    "Visa_Sponsorship_Needed", 
+    "Medical_Degree", 
+    'Match_Status')]
+
+#Rename columns with more human readable names
+colnames(all_data)[colnames(all_data)=="Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published"] <- "Count_of_Other_than_Published"
+
+colnames(all_data)[colnames(all_data)=="Count_of_Peer_Reviewed_Journal_Articles_Abstracts"] <- "Count_of_Articles_Abstracts"
+
+colnames(all_data)[colnames(all_data)=="Medical_Education_or_Training_Interrupted"] <- 
+  "Medical_Education_Interrupted"
+
+colnames(all_data)[colnames(all_data)=="Count_of_Peer_Reviewed_Online_Publication"] <- 
+  "Count_of_Online_Publications"
+
+colnames(all_data)[colnames(all_data)=="Match_Status_Dichot"] <- 
+  "Match_Status"
+
+#factor_columns <- all_data %>%  select_if(is.factor) %>% colnames()
+#factor_columns
+
+all_data$Count_of_Online_Publications <- as.numeric(all_data$Count_of_Online_Publications)
+
+all_data$white_non_white <- forcats::fct_explicit_na(all_data$white_non_white, na_level="(Missing)")
+all_data$Year <- forcats::fct_explicit_na(all_data$Year, na_level="(Missing)")
+all_data$Gender <- forcats::fct_explicit_na(all_data$Gender, na_level="(Missing)")
+all_data$Couples_Match <- forcats::fct_explicit_na(all_data$Couples_Match, na_level="(Missing)")
+all_data$US_or_Canadian_Applicant <- forcats::fct_explicit_na(all_data$US_or_Canadian_Applicant, na_level="(Missing)")
+all_data$Medical_Education_Interrupted <- forcats::fct_explicit_na(all_data$Medical_Education_Interrupted, na_level="(Missing)")
+all_data$Alpha_Omega_Alpha <- forcats::fct_explicit_na(all_data$Alpha_Omega_Alpha, na_level="(Missing)")
+all_data$Military_Service_Obligation <- forcats::fct_explicit_na(all_data$Military_Service_Obligation, na_level="(Missing)")
+all_data$Visa_Sponsorship_Needed <- forcats::fct_explicit_na(all_data$Visa_Sponsorship_Needed, na_level="(Missing)")
+all_data$Medical_Degree <- forcats::fct_explicit_na(all_data$Medical_Degree, na_level="(Missing)")
+all_data$Match_Status <- forcats::fct_explicit_na(all_data$Match_Status, na_level="(Missing)")
+
+all_data$Count_of_Articles_Abstracts <- as.numeric(all_data$Count_of_Articles_Abstracts)
+all_data$Age <- as.numeric(all_data$Age)
+all_data$Count_of_Poster_Presentation <- as.numeric(all_data$Count_of_Poster_Presentation)
+all_data$USMLE_Step_1_Score <- as.numeric(all_data$USMLE_Step_1_Score)
+all_data$Count_of_Oral_Presentation <- as.numeric(all_data$Count_of_Oral_Presentation)
+all_data$Count_of_Other_than_Published <- as.numeric(all_data$Count_of_Other_than_Published)
+all_data$Count_of_Peer_Reviewed_Book_Chapter <- as.numeric(all_data$Count_of_Peer_Reviewed_Book_Chapter)
+all_data$Count_of_Online_Publications <- as.numeric(all_data$Count_of_Online_Publications)
+
+all_data <- na.omit(all_data)
+
+#### https://stirlingcodingclub.github.io/Manuscripts_in_Rmarkdown/Rmarkdown_notes.html
+knitr::opts_chunk$set(fig.width=7, 
+                      fig.height=5,
+                      fig.align="center",
+                      include=FALSE,
+                      echo=FALSE, # does not show R code
+                      warning=FALSE,  # does not show warnings during generation
+                      message=FALSE, # shows no messages
+                      tidy = TRUE, 
+                      comment="",
+                      align = 'left',
+                      cache = TRUE,
+                      dev = "png",   #Will need to change for manuscript
+                      dpi = 200)   #Will need to change for manuscript
+
+ggplot2::theme_set(ggplot2::theme_bw())
+pander::panderOptions("table.split.table", Inf)
+set.seed(123456)
+
+###tableby labels
+mylabels <- list(white_non_white = "Race", Age = "Age, years", Gender = "Sex", Couples_Match = "Participating in the Couples Match", US_or_Canadian_Applicant = "US or Canadian Applicant", Medical_Education_Interrupted = "Medical Education Process was Interrupted", Alpha_Omega_Alpha = "Alpha Omega Alpha", Military_Service_Obligation = "Military Service Obligation", USMLE_Step_1_Score = "USMLE Step 1 Score", Military_Service_Obligation = "Military Service Obligations", Count_of_Poster_Presentation = "Count of Poster Presentations", Count_of_Oral_Presentation = "Count of Oral Presentations", Count_of_Articles_Abstracts = "Count of Published Abstracts", Count_of_Peer_Reviewed_Book_Chapter = "Count of Peer Reviewed Book Chapters", Count_of_Other_than_Published = "Count of Other Published Products", Count_of_Online_Publications = "Count of Online Publications", Visa_Sponsorship_Needed = "Visa Sponsorship is Needed", Medical_Degree = "Medical Degree Training")
+
+##Functions
+#https://www.kaggle.com/pjmcintyre/titanic-first-kernel#final-checks
+
+checkColumn = function(df,colname){
+  
+  testData = df[[colname]]
+  numMissing = max(sum(is.na(testData)|is.nan(testData)|testData==''),0)
+  
+  
+  if (class(testData) == 'numeric' | class(testData) == 'Date' | class(testData) == 'difftime' | class(testData) == 'integer'){
+    list('col' = colname,'class' = class(testData), 'num' = length(testData) - numMissing, 'numMissing' = numMissing, 'numInfinite' = sum(is.infinite(testData)), 'avgVal' = mean(testData,na.rm=TRUE), 'minVal' = round(min(testData,na.rm = TRUE)), 'maxVal' = round(max(testData,na.rm = TRUE)))
+  } else{
+    list('col' = colname,'class' = class(testData), 'num' = length(testData) - numMissing, 'numMissing' = numMissing, 'numInfinite' = NA,  'avgVal' = NA, 'minVal' = NA, 'maxVal' = NA)
+  }
+  
+}
+
+checkAllCols = function(df){
+  resDF = data.frame()
+  for (colName in names(df)){
+    resDF = rbind(resDF,as.data.frame(checkColumn(df=df,colname=colName)))
+  }
+  resDF
+}
 ```
 
 # Load and Tidy the Data
@@ -2073,7 +2254,6 @@ ggplot(rf_gini, aes(x=reorder(Variables, MeanDecreaseGini), y=MeanDecreaseGini, 
 solution_rf <- predict(caret_matrix, test)
 caret::confusionMatrix(solution_rf, test$Match_Status, positive = "1")
 ```
-```
 
 
 ```{r RF model, cache=TRUE}
@@ -2123,23 +2303,22 @@ knitr::kable(dt, "latex", booktabs = T, caption = "Confusion matrix of Random Fo
 
 
 ```{r RF test accuracy, align = 'center'}
-#########?????????Not working ??????????/
 test.rf <- predict(rf.model, test)
 cat("\n","----- Performance of rf on test set -----","\n")
-rf.accuracy.test <- caret::postResample(pred = test.rf, obs = as.factor(test.df.binned$Match_Status))
+rf.accuracy.test <- caret::postResample(pred = test.rf, obs = as.factor(test$Match_Status))
 rf.accuracy.test[1]
 ```
 
 ```{r RF test conf matrix, align = 'center', include=TRUE}
 # Scale the confusion matrix to accuracy rates by normalizing
 # by the row totals; row totals are used because true values are rows and predicted values are columns.
-#cat("\n","----- Confusion matrix of RF model on test set -----","\n")
-#t <- table(as.factor(test.df.binned$Match_Status),test.rf)
-#row.totals <- apply(t,MAR=1,FUN=sum)
-#t/row.totals
-#dt <- t/row.totals
+cat("\n","----- Confusion matrix of RF model on test set -----","\n")
+t <- table(as.factor(test$Match_Status),test.rf)
+row.totals <- apply(t,MAR=1,FUN=sum)
+t/row.totals
+dt <- t/row.totals
 
-#kable(dt, "latex", booktabs = T, caption = "Confusion matrix of Random Forest model on test set") %>% kable_styling(latex_options = "striped")
+kable(dt, "latex", booktabs = T, caption = "Confusion matrix of Random Forest model on test set") %>% kable_styling(latex_options = "striped")
 
 #For the random forest model, the in-sample accuracy was `r rf.accuracy[1]` and out-of-sample accuracy was `r rf.accuracy.test[1]`. The in-sample confusion matrix for the RF model is shown in Table 10 and the out-of-sample confusion matrix for the RF model is shown in Table 11.
 
@@ -2206,38 +2385,111 @@ nb.accuracy[1]
 cat("\n","----- Confusion matrix of Naive Bayes model on train set -----","\n")
 t <- table(as.factor(train.df.binned$Match_Status),train.nbwoe)
 row.totals <- apply(t,MAR=1,FUN=sum)
-#t/row.totals
+t/row.totals
 dt <- t/row.totals
 
-# kable(dt, "latex", booktabs = T, caption = "Confusion matrix of Naive Bayes model on train set") %>% kable_styling(latex_options = "striped")
+kable(dt, "latex", booktabs = T, caption = "Confusion matrix of Naive Bayes model on train set") %>% kable_styling(latex_options = "striped")
 ```
 
 
 ```{r NB test accuracy, align = 'center'}
 ###  Not working, commented out  ???????????? #########################
 
-# test.nbwoe <- predict(nbwoe, test.df.binned)
-# cat("\n","----- Performance of nbwoe on test set -----","\n")
-# nb.accuracy.test <- postResample(pred = test.nbwoe, obs = as.factor(test.df.binned$Match_Status))
-# nb.accuracy.test[1]
+test.nbwoe <- predict(nbwoe, test)
+cat("\n","----- Performance of nbwoe on test set -----","\n")
+nb.accuracy.test <- postResample(pred = test.nbwoe, obs = as.factor(test$Match_Status))
+nb.accuracy.test[1]
 ```
 
 ```{r NB test conf matrix, align = 'center', include=TRUE}
 # Scale the confusion matrix to accuracy rates by normalizing
 # by the row totals; row totals are used because true values are rows and predicted values are columns.
-#cat("\n","----- Confusion matrix of Naive Bayes model on test set -----","\n")
-#t <- table(as.factor(test.df.binned$Match_Status),test.nbwoe)
-#row.totals <- apply(t,MAR=1,FUN=sum)
-#t/row.totals
-#dt <- t/row.totals
+cat("\n","----- Confusion matrix of Naive Bayes model on test set -----","\n")
+t <- table(as.factor(test$Match_Status),test.nbwoe)
+row.totals <- apply(t,MAR=1,FUN=sum)
+t/row.totals
+dt <- t/row.totals
 
-#kable(dt, "latex", booktabs = T, caption = "Confusion matrix of Naive Bayes model on test set") %>% kable_styling(latex_options = "striped")
+kable(dt, "latex", booktabs = T, caption = "Confusion matrix of Naive Bayes model on test set") %>% kable_styling(latex_options = "striped")
 
 #For the naive Bayes model, the in-sample accuracy was `r nb.accuracy[1]` and out-of-sample accuracy was `r nb.accuracy.test[1]`. The in-sample confusion matrix for the naive Bayes model is shown in Table 12 and the out-of-sample confusion matrix for the naive Bayes model is shown in Table 13.
 
 
 ```
+\pagebreak
 
+**(6) xgboost model**
+
+# XGBoost (which stands for eXtreme Gradient Boosting) is an especialy efficent implimentation of gradient boosting. In practice, XGBoost is a very powerful tool for classification and regression. 
+
+## Data prep for xgboost
+## How can we convert these categories to a matrix? One way to do this is using one-hot encoding. One-hot encoding takes each category and makes it its own column. Then, for each observation, it puts a "0" in that column if that observation doesn't belong to that column and "1" if it does.
+
+```{r}
+# get the subset of the dataframe that doesn't have labels about match_status
+diseaseInfo_humansRemoved <- all_data %>%
+    select(-starts_with("Match"))
+
+# select just the numeric columns
+diseaseInfo_numeric <- diseaseInfo_humansRemoved %>%
+    select_if(is.numeric) # select remaining numeric columns
+
+# make sure that our dataframe is all numeric
+str(diseaseInfo_numeric)
+
+# convert categorical factor into one-hot encoding
+white_non_white <- model.matrix(~white_non_white-1,diseaseInfo_humansRemoved)
+Year <- model.matrix(~Year-1,diseaseInfo_humansRemoved)
+Gender <- model.matrix(~Gender-1,diseaseInfo_humansRemoved)
+Couples_Match <- model.matrix(~Couples_Match-1,diseaseInfo_humansRemoved)
+US_or_Canadian_Applicant <- model.matrix(~US_or_Canadian_Applicant-1,diseaseInfo_humansRemoved)
+Medical_Education_Interrupted <- model.matrix(~Medical_Education_Interrupted-1,diseaseInfo_humansRemoved)
+Alpha_Omega_Alpha <- model.matrix(~Alpha_Omega_Alpha-1,diseaseInfo_humansRemoved)
+Military_Service_Obligation <- model.matrix(~Military_Service_Obligation-1,diseaseInfo_humansRemoved)
+Medical_Degree <- model.matrix(~Medical_Degree-1,diseaseInfo_humansRemoved)
+
+
+# add our one-hot encoded variable and convert the dataframe into a matrix
+diseaseInfo_numeric <- cbind(diseaseInfo_numeric, white_non_white, Year, Gender, Couples_Match, US_or_Canadian_Applicant, Alpha_Omega_Alpha, Military_Service_Obligation, Medical_Degree)
+diseaseInfo_matrix <- data.matrix(diseaseInfo_numeric)
+```
+
+
+```{r}
+# get a boolean vector of training labels
+diseaseLabels <- all_data %>%
+    select(Match_Status) %>% # get the column with the # of humans affected
+    is.na() 
+
+# get the numb 70/30 training test split
+numberOfTrainingSamples <- round(length(diseaseLabels) * .7)
+
+# training data
+train_data <- diseaseInfo_matrix[1:numberOfTrainingSamples,]
+train_labels <- diseaseLabels[1:numberOfTrainingSamples]
+
+# testing data
+test_data <- diseaseInfo_matrix[-(1:numberOfTrainingSamples),]
+test_labels <- diseaseLabels[-(1:numberOfTrainingSamples)]
+
+# check out the first few lines
+head(diseaseLabels) # of our target variable
+head(all_data$Match_Status) # of the original column
+```
+
+```{r}
+# put our testing & training data into two seperates Dmatrixs objects
+dtrain <- xgb.DMatrix(data = train_data, label= train_labels)
+dtest <- xgb.DMatrix(data = test_data, label= test_labels)
+```
+
+
+```{r}
+# train a model using our training data
+model <- xgboost(data = dtrain, # the data   
+                 nround = 2, # max number of boosting iterations
+                 objective = "binary:logistic")  # the objective function
+```
 
 \pagebreak
 
@@ -2424,7 +2676,7 @@ References
 # Appendix, DynNom Model for Shiny Upload
 ```{r DynNom logistic regression model}
 DynNom
-library(dplR)
+#library(dplR)
 DynNom.model.lrm  <-
   rms::lrm(Match_Status ~
              rms::rcs(Age, 5) +
