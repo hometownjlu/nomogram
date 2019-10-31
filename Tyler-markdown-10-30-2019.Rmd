@@ -3,12 +3,8 @@ title: "A Model to Predict Chances of Matching into Obstetrics and Gynecology Re
 author: "Tyler Muffly, MD"
 date: "Department of Obstetrics and Gynecology, Denver Health, Denver, CO"
 output:
-  html_document:
-    code_folding: hide
-    dev: svg
-    df_print: paged
-    theme: united
-    toc_depth: 2
+  word_document:
+    toc_depth: '2'
   pdf_document:
     df_print: paged
     fig_caption: yes
@@ -17,6 +13,12 @@ output:
     pandoc_args:
     - --wrap=none
     - --top-level-division=chapter
+  html_document:
+    code_folding: hide
+    dev: svg
+    df_print: paged
+    theme: united
+    toc_depth: 2
 fontsize: 12pt
 geometry: margin=1in
 header-includes:
@@ -25,7 +27,6 @@ header-includes:
 - \fancyhead[R]{Muffly et al.}
 - \usepackage{lineno}
 - \linenumbers
-#linestretch: 2
 fontfamily: mathpazo
 spacing: double
 always_allow_html: yes
@@ -2522,7 +2523,7 @@ DynNom.model.lrm  <-
 ```
 
 
-```{r generalized logistic regression, include=FALSE}
+```{r generalized logistic regression, include=FALSE, echo=FALSE, cache=TRUE}
 DynNom.model.glm  <-
 DynNom.model.glm <- glm(Match_Status ~
                           Age +
@@ -2556,6 +2557,6 @@ DynNom::DNbuilder(model = DynNom.model.glm, data = train)
 #rsconnect::deployApp('DynNomapp/')
 ```
 
-```{r sessionInfo, include=FALSE}
+```{r sessionInfo, include=FALSE, echo=FALSE, cache=TRUE}
 sessionInfo()
 ```
