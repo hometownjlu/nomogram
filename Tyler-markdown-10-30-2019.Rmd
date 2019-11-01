@@ -1578,10 +1578,9 @@ The in-sample accuracy was `r lr.accuracy[1]` and the out-of-sample accuracy was
 
 **(2) Regression Tree model**
   
-#  A CART model was fit using the rpart package. Trees cqn handle both factors and continuous variables and do not need to create dummy variables.   Can model non-linear data.  
-  
-# As we all know, Random Forest is a more powerful algorithm over just a single tree. However, the Decision Tree classification preserve the interpretability which the random forest algorithm lacks.  A simple decision tree model was used for exploration. The Decision Tree does not require feature scaling. Let’s fit a decision tree model to our training data.  
+#  A CART model was fit using the rpart package. Trees cqn handle both factors and continuous variables and do not need to create dummy variables.   Use the divide-and-conquer (aka recursive partinioning e.g. rpart) technique to create two homogenous groups.  Leaf nodes are at the bottom and denote final decisions on matching success. Random Forest is a more powerful algorithm over just a single tree. However, the Decision Tree classification preserve the interpretability which the random forest algorithm lacks.  A simple decision tree model was used for exploration. The Decision Tree does not require feature scaling but can overfit data by fitting the noise instead of the whole data.  It is very important to evaluate decision trees on data it has not seen before.
 
+Here we intentionally grow a large and complex tree then prune it to be smaller and more efficient later on.
 ```{r rpart EDA}
 train <- filter(all_data, Year %in% c("2015", "2016"))  #Train on years 2015, 2016
 nrow(train) 
@@ -1593,16 +1592,16 @@ train <- train %>% select(-"Year")
 t.model <-
   rpart(as.factor(Match_Status) ~.,
         data = train,    #Do not use binned data for God's sake.  
-        method = "class", 
-        control = rpart.control(cp = 0.01),
-        minsplit = 20)  #Adding this control made the tree much more complicated
+        method = "class", #Builds a classification tree
+        control = rpart.control(cp = 0, maxdepth = 6), #Decreaseing this CP control made the tree much more complicated
+        minsplit = 20) 
 
 t.model$variable.importance
 ```
 
 ```{r fancyR plot rpart EDA, include=TRUE}
 # Tree visualization
-rpart.plot::rpart.plot(t.model,yesno = 2, type = 5, extra = +100, fallen.leaves = TRUE, varlen = 0, faclen = 0, roundint = TRUE, clip.facs = TRUE, shadow.col = "gray", main = "Tree Model of Matching into OBGYN Residency\n(Matched or Unmatched)", box.palette = c("red", "green"))
+rpart.plot::rpart.plot(t.model,yesno = 2, type = 5, extra = +100, fallen.leaves = TRUE, varlen = 0, faclen = 0, roundint = TRUE, clip.facs = TRUE, shadow.col = "gray", main = "Tree Model of Medical Students Matching into OBGYN Residency\n(Matched or Unmatched)", box.palette = c("red", "green"))
 
 fancyRpartPlot(t.model)
 ```
@@ -1614,134 +1613,22 @@ table(solution_tree, test$Match_Status)
 # Compute the accuracy on the test dataset
 round(mean(solution_tree == test$Match_Status), digits = 3)
 ```
+The accuracy or correct classification rate of the decision tree called `t.model` is `r round(mean(solution_tree == test$Match_Status), digits = 3)`.  
 
-# Overfitting can easily occur in Decision Tree classification. We can idenfity that evaluating the model using k-Fold Cross Validation. Or we might be able to improve the model. Let’s do 10-fold cross validation to find out whether we could improve the model.
+Look at pruning the tree branches to determine the optimal complexity vs. accuracy point for stopping branch growth.  
+```{r}
+plotcp(t.model)
+pruned.t.model <- prune(t.model, cp = 0.005) #Set the cp where the complexity to accuraty rate plateaued.  
+rpart.plot::rpart.plot(pruned.t.model,yesno = 2, type = 5, extra = +100, fallen.leaves = TRUE, varlen = 0, faclen = 0, roundint = TRUE, clip.facs = TRUE, shadow.col = "gray", main = "Tree Model of Medical Students Matching into OBGYN Residency\n(Matched or Unmatched)", box.palette = c("red", "green"))
+```
+Based on the complexity plot, prune the tree to a complexity of 0.005 using the prune() function with the tree and the complexity parameter.  Now Compute the accuracy of the pruned tree.  
 
 ```{r}
-#https://www.kaggle.com/thilakshasilva/predicting-titanic-survival-using-five-algorithms
-
-# Applying k-Fold Cross Validation
-set.seed(789)
-folds = createMultiFolds(train$Match_Status, k = 10, times = 5)
-control <- trainControl(method = "repeatedcv", index = folds)
-solution_tree_cv <- train(Match_Status ~ ., data = train, method = "rpart", trControl = control)
-
-# Tree Visualization
-rpart.plot(solution_tree_cv$finalModel, yesno = 2, type = 5, extra = +100, fallen.leaves = TRUE, varlen = 0, faclen = 0, roundint = TRUE, clip.facs = TRUE, shadow.col = "gray", main = "Tree Model of Matching into OBGYN Residency\n(Matched or Unmatched)", box.palette = c("red", "green"))
-
-# Predicting the Validation set results using 10 folds
-y_pred = predict(solution_tree_cv, newdata = test[,-which(names(test)=="Match_Status")])
-
-# Checking the prediction accuracy
-table(test$Match_Status, y_pred) # Confusion matrix
-
-table(test$Match_Status, y_pred)
-error <- mean(test$Match_Status != y_pred) # Misclassification error
-paste('Accuracy',round(1-error,4))
-```  
-
-
-# CART model without caret
-```{r cart model, cache=TRUE}
-#CART
-# https://www.kaggle.com/thilakshasilva/predicting-titanic-survival-using-five-algorithms
-
-# Timer on
-ptm = proc.time()
-set.seed(12345)
-
-cat("\n","----- Caret to do the Confusion matrix of CART model -----","\n")
-fitControl <- trainControl(method = "repeatedcv",
-                           number = 10,
-                           repeats = 2)
-
-cart.model <-    caret::train(as.factor(Match_Status) ~ .,
-                       data = train,
-                       method = 'rpart',
-                       trControl = fitControl,
-                       tuneLength = 8,
-                       preProc = c("center", "scale"),
-                       metric = "Accuracy"
-)
-
-cat("\n","----- RPART to build the Confusion matrix of CART model -----","\n")
-cart <- rpart(formula = Match_Status ~ ., 
-                      data = train, 
-                      method = "class")
-
-rpart.plot(x = cart, yesno = 2, type = 5, extra = +100, fallen.leaves = TRUE, varlen = 0, faclen = 0, roundint = TRUE, clip.facs = TRUE, shadow.col = "gray", main = "Tree Model of Matching into OBGYN Residency\n(Matched or Unmatched)", box.palette = c("red", "green"))
-# Timer off
-proc.time() - ptm
-cart.model
+# Compute the accuracy of the pruned tree
+solution_tree <- predict(pruned.t.model, test, type = "class")
+mean(solution_tree == test$Match_Status)
 ```
-
-```{r CART plot , align = 'center', include=TRUE}
-fancyRpartPlot(cart, caption = NULL)
-```
-## Accuracy is how often the classifier predicts the outcome correctly.  
-## Number of correct predictions divided by total number of rows.  
-```{r Train cart accuracy}
-train.cart <- predict(object = cart, 
-                      newdata = test, 
-                      type = "class")
-class_prediction <- train.cart
-
-cat("\n","----- Caret for Performance of cart on train set -----","\n")
-cart.accuracy <- caret::postResample(pred = train.cart, 
-                                     obs = as.factor(train$Match_Status))
-cart.accuracy[1]
-```
-
-Accuracy of the model with the *train* data set is not great at `r cart.accuracy[1]`.  
-
-```{r conf matrix train cart, align = 'center', include=TRUE}
-# Scale the confusion matrix to accuracy rates by normalizing
-# by the row totals; row totals are used because true values are rows and predicted values are columns.
-# cat("\n","----- Confusion matrix of CART model on train set -----","\n")
-# t <- table(as.factor(train$Match_Status),train.cart)
-# row.totals <- apply(t,MAR=1,FUN=sum)
-# #t/row.totals
-# dt <- t/row.totals
-# 
-# knitr::kable(dt, booktabs = T, caption = "Confusion matrix of CART on train set") 
-# 
-# #Nicer confusion matrix and accuracy data 
-# library(caret)
-# caret::confusionMatrix(data = class_prediction, 
-#                        reference = as.factor(train$Match_Status),
-#                        positive = "1")
-```
-
-
-```{r cart test accuracy}
-cat("\n","----- Performance of cart on test set -----","\n")
-
-test.cart <- predict(cart, test.df.with.binned.vars.added)  #ISSUE HERE?????????????????
-
-# Check to ensure the dfs are matching columns
-colnames(train.df.binned)
-colnames(test.df.binned)
-
-
-cart.accuracy.test <- caret::postResample(pred = test.cart, obs = as.factor(test.df.with.binned.vars.added$Match_Status))
-cart.accuracy.test[1]
-```
-
-```{r CART test conf matrix, align = 'center', include=TRUE}
-# Scale the confusion matrix to accuracy rates by normalizing
-# by the row totals; row totals are used because true values are rows and predicted values are columns.
-#cat("\n","----- Confusion matrix of CART model on test set -----","\n")
-#t <- table(as.factor(test.df.binned$Match_Status),test.cart)
-row.totals <- apply(t,MAR=1,FUN=sum)
-#t/row.totals
-dt <- t/row.totals
-
-knitr::kable(dt, "latex", booktabs = T, caption = "Confusion matrix of CART on test set") %>% kable_styling(latex_options = "striped")
-
-##For the CART model, the in-sample accuracy was `r cart.accuracy[1]` and out-of-sample accuracy was `r cart.accuracy.test[1]`.
-
-```
-
+The accuracy or correct classification rate of the PRUNED decision tree called `pruned.t.model` is `r round(mean(solution_tree == test$Match_Status), digits = 3)`.  Not a huge benefit in accuracy but the model will be more understandable and be faster to run now that it is pruned.  
 
 
 \pagebreak
@@ -1906,7 +1793,7 @@ cat("\n","----- Confusion matrix of SVM model on train set -----","\n")
 
 **(4) Random Forest model**
   
-A random forest model was fit to the training data. Cross-validation selected the a final value used for mtry = 12 based on optimizing accuracy. The variable importance plot for the random forest model is demonstrated below. Important predictors were similar between the CART model and the RF model. The predictors char_freq_exclamation.binned, woe.char_freq_exclamation.binned, aand woe.char_freq_dollar.binned were top three for variable importance.
+A random forest model is a forest of decision trees. Think of random forest as an ensemble of multiple trees.  
 
 ```{r Random Forest}
 train$Match_Status <- as.factor(train$Match_Status)
@@ -1935,79 +1822,9 @@ The random Forest classification suffers in terms of interpretability. We are un
 ```{r}
 #using the model to make Survival predictions on the test set
 solution_rf <- predict(caret_matrix, test)
-#caret::confusionMatrix(solution_rf, test$Match_Status, positive = "1")
+mean(solution_rf == test$Match_Status)
 ```
-
-
-```{r RF model, cache=TRUE}
-#RF
-#https://www.kaggle.com/kernels/scriptcontent/7086189/download
-# Timer on
-ptm = proc.time()
-set.seed(12345)
-fitControl <- trainControl(method = "cv",
-                           number = 10)
-rf.model <- train(as.factor(Match_Status) ~ .,
-                  data = train,
-                  method = 'rf',
-                  trControl = fitControl,
-                  # tuneLength = 8,
-                  metric = "Accuracy")
-# Timer off
-proc.time() - ptm
-rf.model
-```
-
-```{r var imp plot rf model, align = 'center', include=TRUE}
-
-plot(varImp(rf.model), top = 10)
-```
-
-
-```{r RF train accuracy, align = 'center'}
-# train.rf <- predict(rf.model, train.df.binned)  ###Not working
-# cat("\n","----- Performance of rf on train set -----","\n")
-# rf.accuracy <- caret::postResample(pred = train.rf, obs = as.factor(train.df.binned$Match_Status))
-# rf.accuracy[1]
-```
-
-```{r RF train conf matrix, align = 'center', include=TRUE}
-# Scale the confusion matrix to accuracy rates by normalizing
-# by the row totals; row totals are used because true values are rows and predicted values are columns.
-# cat("\n","----- Confusion matrix of RF model on train set -----","\n")  ###Not working
-# t <- table(as.factor(train$Match_Status),train.rf)
-# row.totals <- apply(t,MAR=1,FUN=sum)
-# t/row.totals
-# dt <- t/row.totals
-# dt
-# 
-# knitr::kable(dt, "latex", booktabs = T, caption = "Confusion matrix of Random Forest model on train set") %>% kable_styling(latex_options = "striped")
-```
-
-
-```{r RF test accuracy, align = 'center'}
-test.rf <- predict(rf.model, test)
-cat("\n","----- Performance of rf on test set -----","\n")
-rf.accuracy.test <- caret::postResample(pred = test.rf, obs = as.factor(test$Match_Status))
-rf.accuracy.test[1]
-```
-
-```{r RF test conf matrix, align = 'center', include=TRUE}
-# Scale the confusion matrix to accuracy rates by normalizing
-# by the row totals; row totals are used because true values are rows and predicted values are columns.
-# cat("\n","----- Confusion matrix of RF model on test set -----","\n")  #Not working
-# t <- table(as.factor(test$Match_Status),test.rf)
-# row.totals <- apply(t,MAR=1,FUN=sum)
-# t/row.totals
-# dt <- t/row.totals
-# 
-# kable(dt, "latex", booktabs = T, caption = "Confusion matrix of Random Forest model on test set") %>% kable_styling(latex_options = "striped")
-
-#For the random forest model, the in-sample accuracy was `r rf.accuracy[1]` and out-of-sample accuracy was `r rf.accuracy.test[1]`. The in-sample confusion matrix for the RF model is shown in Table 10 and the out-of-sample confusion matrix for the RF model is shown in Table 11.
-
-
-```
-
+Random forest has accuracy of `r round(mean(solution_rf == test$Match_Status), digits=2)`.  
 
 \pagebreak
 
@@ -2031,7 +1848,7 @@ solution_boost <- predict(caret_boost, test)
 \pagebreak
 ## 5) Naïve Bayes with WOE Binning model
 
-Finally, a Naïve Bayes model was fit. Similar to the previous models, the top 5 WOE binned variables were also included in this model. Cross-validation demonstrated that the tuning parameter 'laplace' was held constant at a value of 0 and tuning parameter 'adjust' was held constant at a value of 1.
+?????????????Finally, a Naïve Bayes model was fit. Similar to the previous models, the top 5 WOE binned variables were also included in this model. Cross-validation demonstrated that the tuning parameter 'laplace' was held constant at a value of 0 and tuning parameter 'adjust' was held constant at a value of 1.
 
 ```{r NB model, cache=TRUE}
 #Naive Bayes with WOE Binning
@@ -2042,8 +1859,7 @@ set.seed(12345)
 fitControl <- trainControl(method = "repeatedcv",
                            number = 10,
                            repeats = 2)
-nbwoe <-    train(as.factor(Match_Status) ~ .
-                  ,
+nbwoe <-    train(as.factor(Match_Status) ~ .,
                   data = train,
                   method = 'naive_bayes',
                   trControl = fitControl,
@@ -2062,43 +1878,6 @@ nb.accuracy <- postResample(pred = train.nbwoe, obs = as.factor(train$Match_Stat
 nb.accuracy[1]
 ```
 
-```{r NB model conf matrix, align = 'center', include=TRUE}
-# Scale the confusion matrix to accuracy rates by normalizing
-# by the row totals; row totals are used because true values are rows and predicted values are columns.
-# cat("\n","----- Confusion matrix of Naive Bayes model on train set -----","\n")
-# t <- table(as.factor(train.df.binned$Match_Status),train.nbwoe)
-# row.totals <- apply(t,MAR=1,FUN=sum)
-# t/row.totals
-# dt <- t/row.totals
-# 
-# kable(dt, "latex", booktabs = T, caption = "Confusion matrix of Naive Bayes model on train set") %>% kable_styling(latex_options = "striped")
-```
-
-
-```{r NB test accuracy, align = 'center'}
-###  Not working, commented out  ???????????? #########################
-# 
-# test.nbwoe <- predict(nbwoe, test)
-# cat("\n","----- Performance of nbwoe on test set -----","\n")
-# nb.accuracy.test <- postResample(pred = test.nbwoe, obs = as.factor(test$Match_Status))
-# nb.accuracy.test[1]
-```
-
-```{r NB test conf matrix, align = 'center', include=TRUE}
-# Scale the confusion matrix to accuracy rates by normalizing
-# by the row totals; row totals are used because true values are rows and predicted values are columns.
-# cat("\n","----- Confusion matrix of Naive Bayes model on test set -----","\n")
-# t <- table(as.factor(test$Match_Status),test.nbwoe)
-# row.totals <- apply(t,MAR=1,FUN=sum)
-# t/row.totals
-# dt <- t/row.totals
-# 
-# kable(dt, "latex", booktabs = T, caption = "Confusion matrix of Naive Bayes model on test set") %>% kable_styling(latex_options = "striped")
-
-#For the naive Bayes model, the in-sample accuracy was `r nb.accuracy[1]` and out-of-sample accuracy was `r nb.accuracy.test[1]`. The in-sample confusion matrix for the naive Bayes model is shown in Table 12 and the out-of-sample confusion matrix for the naive Bayes model is shown in Table 13.
-
-
-```
 \pagebreak
 
 **(6) xgboost model**
