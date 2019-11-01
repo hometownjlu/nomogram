@@ -761,13 +761,6 @@ The accuracy of the `limited.vif.model.kitchen.sink` model is `r round(confusion
 plot(anova(limited.vif.model.kitchen.sink, test = 'Chisq'), cex=0.9, cex.lab=0.9, cex.axis = 0.7)
 ```
 
-# Backwards Stepwise Elimination
-```{r, echo=FALSE, include = FALSE}
-#Truned off because it was a huge output.  
-#step(lm.fit2) #Need to use model created with lm
-```
-
-
 # Use the Two Models to predict the outcome in the Test Sample
 How do the Models perform?  How good is the `limited.vif.model.kitchen.sink` model?  Calculating the Prediction Errors
 ```{r, include=TRUE}
@@ -781,10 +774,35 @@ test_ksink <- augment(lm.fit2, newdata = test) %>%   #Use lm.fit2 because it is 
 head(test_ksink,10)
 ```
 
-# Factor Selection
+# Automatic Factor Selection
 After splitting the model in training and validation data, it is necessary to evaluate the variables with a major predictive power. The best method is reviewing the p-values in the regression model, however there are many variables in the model so it will take considerable time to do so manually. In this case, the LASSO regularization algorithm is implemented to identify the variables to be significant on the model. 
 
-Also, I like lasso because some people will find that using predictors of age, race, gender as predictors will be discriminatory.  Lasso is a statistical test that lets me choose why I selected these variables.  
+Start with Stepwise Regression  Backwards is when you start with a model of all the predictors and then check what happens when each of the predictors is removed.  If removing a variable does not change the ability to predict then the predictor is safely deleted.  This continues step by step until only important predictors remain.    This is just one tool.  
+```{r, echo=FALSE, include = FALSE}
+#Forward regression!!  #https://campus.datacamp.com/courses/supervised-learning-in-r-classification/chapter-3-logistic-regression?ex=15
+# Specify a null model with no predictors
+null_model <- glm(Match_Status ~ 1, data = train, family = "binomial")
+
+# Specify the full model using all of the potential predictors
+full_model <- glm(Match_Status ~ ., data = train, family = "binomial")
+
+# Use a forward stepwise algorithm to build a parsimonious model
+step_model <- step(null_model, scope = list(lower = null_model, upper = full_model), direction = "forward")
+
+# Estimate the stepwise matching probability
+step_prob <- predict(step_model, type = "response")
+
+# Plot the ROC of the stepwise model
+ROC <- pROC::roc(train$Match_Status, step_prob,
+    levels=c("1", "0"), direction = "auto")
+plot(ROC, col = "red")
+pROC::auc(ROC) 
+```
+Fowards step-wise regression model `step_prob` has an AUC of `r round(pROC::auc(ROC)[[1]], digits=2) ` using these predictors `r step_model$formula[[c(3)]]`.  
+
+
+# LASSO
+Also, I like lasso because some people will find that using predictors of age, race, gender as predictors will be discriminatory.  In short, LASSO eliminates the need for an author to be a subject expert on matching when selecting variables.  
 
 # Factor Selection using a LASSO model (Penalized Logistic Regression)
 
