@@ -399,7 +399,7 @@ Overfitting is one of the biggest challenges in the machine learning process. Ov
 
 Two well known strategies to overcome the problem of overfitting are the train/validation split and cross-validation.
 
-## Identify training and test samples
+# Identify training and test samples
 Here, we will obtain a training sample with the first two years of the data (2015 and 2016), and have the remaining years in a test sample, and properly labeled so that the results can be replicated later. We will then use this training sample.  I will call the training sample `train` and the test sample `test`.  *Creative!*  Another option is dplyr::sample_n if you want to instead specify the exact number of observations to be selected. There are `r nrow(train)` medical students in the training data set and `r nrow(test)` in the test data set.  
 
 ```{r, train vs test, warning=FALSE, echo=FALSE, message=FALSE, include=TRUE}
@@ -509,52 +509,6 @@ Summarize the outcome and the predictors
 Using the training sample, we will provide numerical summaries of each predictor variable and the outcome, as well as graphical summaries of the outcome variable. Our results should now show no missing values in any variable. We’ll need to determine whether there are any evident problems, such as substantial skew in the outcome variable.
 
 # Scatterplot Matrix and Correlation
-In this step, I built a scatterplot matrix to describe the associations (both numerically and graphically) between the outcome and all predictors.
-
-```{r ggpairs, warning=F, message=FALSE, include=TRUE, echo=FALSE, align = 'center', cache=TRUE}
-all_data_ggally <- 
-  as.data.frame(all_data) 
-
-ggpairs(data = all_data_ggally, 
-        progress = TRUE, 
-        columns = 
-          c("Match_Status" , # Match_Status or predictor should be first 
-            "Age", 
-            "white_non_white", 
-            "Gender"),
-        title = "First Scatterplot Matrix",
-        lower = list(combo = wrap("facethist", bins = 20)))
-
-ggpairs(data = all_data_ggally, progress = TRUE, 
-        columns = 
-          c("Match_Status" ,  
-            "Medical_Education_Interrupted", 
-            "Alpha_Omega_Alpha", 
-            "USMLE_Step_1_Score"),
-                title = "Second Scatterplot Matrix",
-        lower = list(combo = wrap("facethist", bins = 20)))
-
-ggpairs(data = all_data_ggally,
-        progress = TRUE, 
-        columns = 
-          c("Match_Status" , 
-            "Medical_Degree", 
-            "Visa_Sponsorship_Needed",
-            "Count_of_Peer_Reviewed_Book_Chapter"),
-                title = "Third Scatterplot Matrix",
-                  lower = list(combo = wrap("facethist", bins = 20)))
-
-ggpairs(data = all_data_ggally, 
-        progress = TRUE, 
-        columns = 
-          c("Match_Status" , 
-            "US_or_Canadian_Applicant" , 
-            "Couples_Match", 
-            "Count_of_Poster_Presentation"),
-                title = "Fourth Scatterplot Matrix",
-                  lower = list(combo = wrap("facethist", bins = 20)))
-```
-
 ```{r, warning= FALSE, message=FALSE, echo=FALSE, include=TRUE}
 train_correlation <- 
   train %>% 
@@ -566,9 +520,10 @@ train_correlation <-
                      tl.cex = 0.5, 
                      tl.col = "black", 
                      sig.level = "0.01", 
-                     insig = "blank", 
+                     insig = "blank", #Insignficant values are left blank
                      pch = TRUE)
 train_correlation
+
 ```
 In this correlation plot we want to look for the bright, large circles which immediately show the strong correlations (size and shading depends on the absolute values of the coefficients; color depends on direction).  This shows whether two features are connected so that one changes with a predictable trend if you change the other. The closer this coefficient is to zero the weaker is the correlation. Anything that you would have to squint to see is usually not worth seeing! 
 
@@ -578,6 +533,11 @@ inspectdf::inspect_cor(train, method = "pearson", alpha = 0.05) %>% show_plot()
 Correlation was found with Count_of_Poster_Presentation, Age, and USMLE_Step_1_Score in the train data set.  The lower the age (correlation -0.33)  the patient the more likely they are to match.  The higher the USMLE_Step_1 scores the more likely they are to match (correlation 0.344).  The younger you are the more likely that you get a higher USMLE_Step_1 score.  The number of posters and the number of abstract articles are positively correleated as well.  The strongest positive correlation was between the count of articles and the count of posters.  No shocker there.  Strong negative correlations were between Age and USMLE step 1 score.  Also match status and age were negatively correlated (the younger you are the more likely you are to match).   
 
 Take a brief look at potential collinearity. We want to see strong correlations between our outcome and the predictors, but modest correlations between the predictors.  There are no correlations between predictors according to the above scatterplots.  If we did see signs of meaningful collinearity, we might rethink our selected set of predictors.
+
+```{r, include = TRUE, fig.width=8, fig.height=4, fig.cap="Figure: Evaluation of the variable interactions in the train data set."}
+#https://jamesmarquezportfolio.com/correlation_matrices_in_r.html
+psych::pairs.panels(train[, c(9:15, 18)], bg=c("red","blue")[as.factor(train$Match_Status)], pch=21, jiggle = TRUE, scale = TRUE)
+```
 
 # Fitting and Summarizing the Kitchen Sink Model: (aka throw everything at it)
 Create a Kitchen Sink or a "large" model with all factors in the `train` data set first. This is essentially a screening model with all variables. 
@@ -657,11 +617,11 @@ knitr::kable(tmp,
              digits=2)
 ```
 
-## This `kitchen.sink` model accounts for just over `r kitchen.sink$stats[[10]]*100`% (r.squared) of the variation in sbp_diff in our training sample of `r nrow(train)` medical students in `train`.  
+This `kitchen.sink` model accounts for just over `r kitchen.sink$stats[[10]]*100`% (r.squared) of the variation in sbp_diff in our training sample of `r nrow(train)` medical students in `train`.  
 
-## The `kitchen.sink` p.value (`r kitchen.sink$stats[[5]]`, which is zero for all reasonable purposes) indicates a highly statistically significant amount of predictive value is accounted for by the model. This predictive value is no surprise given the moderate R2 value (`r kitchen.sink$stats[[10]]*100`%) and reasonably large (n = `r nrow(train)`) size of this training sample.
+The `kitchen.sink` p.value (`r kitchen.sink$stats[[5]]`, which is zero for all reasonable purposes) indicates a highly statistically significant amount of predictive value is accounted for by the model. This predictive value is no surprise given the moderate R2 value (`r kitchen.sink$stats[[10]]*100`%) and reasonably large (n = `r nrow(train)`) size of this training sample.
 
-# Effect Sizes: Interpreting Coefficient Estimates
+Effect Sizes: Interpreting Coefficient Estimates
 Specify the size, magnitude and meaning of all coefficients, and identify appropriate conclusions regarding effect sizes with 90% confidence intervals.
 
 ```{r}
@@ -709,14 +669,14 @@ summary(lm.fit2)
 ```{r, include = TRUE}
 glance(lm.fit2)
 ```
-## This lm.fit2 model accounts for just over `r glance(lm.fit2)[[1]]*100`% (r.squared) of the variation in sbp_diff in our training sample of `r nrow(train)` medical students in `train`.  
+This lm.fit2 model accounts for just over `r glance(lm.fit2)[[1]]*100`% (r.squared) of the variation in sbp_diff in our training sample of `r nrow(train)` medical students in `train`.  
 
-## The lm.fit2 adjusted R2 (`r glance(lm.fit2)[[2]]`) is very close to the raw R2 (`r glance(lm.fit2)[[1]]`), suggesting that we’re not likely to have a serious problem with collinearity.
+The lm.fit2 adjusted R2 (`r glance(lm.fit2)[[2]]`) is very close to the raw R2 (`r glance(lm.fit2)[[1]]`), suggesting that we’re not likely to have a serious problem with collinearity.
 
-## The lm.fit2 ANOVA F test p.value (`r glance(lm.fit2)[[5]]`, which is zero for all reasonable purposes) indicates a highly statistically significant amount of predictive value is accounted for by the model. This predictive value is no surprise given the moderate R2 value and reasonably large (n = `r nrow(train)`) size of this training sample.
+The lm.fit2 ANOVA F test p.value (`r glance(lm.fit2)[[5]]`, which is zero for all reasonable purposes) indicates a highly statistically significant amount of predictive value is accounted for by the model. This predictive value is no surprise given the moderate R2 value and reasonably large (n = `r nrow(train)`) size of this training sample.
 
 # Effect Sizes: Interpreting Coefficient Estimates
-## Specify the size, magnitude and meaning of all coefficients, and identify appropriate conclusions regarding effect sizes with 90% confidence intervals.
+Specify the size, magnitude and meaning of all coefficients, and identify appropriate conclusions regarding effect sizes with 90% confidence intervals.
 
 
 ```{r}
@@ -726,7 +686,7 @@ coefficients
 
 Our model formula is `r round(coefficients[[1, 2]], digit=1)`+`r round(coefficients[[2, 2]], digit = 2)`(`r coefficients[[2, 1]]`) `r round(coefficients[[3, 2]], digit =2)`(`r coefficients[[3, 1]]`) `r round(coefficients[[4, 2]], digit =2)`(`r coefficients[[4, 1]]`) `r round(coefficients[[5, 2]], digit =2)`(`r coefficients[[5, 1]]`) `r round(coefficients[[6, 2]], digit =2)`(`r coefficients[[6, 1]]`) `r round(coefficients[[7, 2]], digit =2)`(`r coefficients[[7, 1]]`) `r round(coefficients[[8, 2]], digit=3)` (`r coefficients[[8, 1]]`) `r round(coefficients[[9, 2]], digit=2)`(`r coefficients[[9, 1]]`) `r round(coefficients[[10, 2]], digit=2)`(`r coefficients[[10, 1]]`).  
 
-#This implies that for every 1 year increase in Age, we anticipate a drop in the outcome (difference in matching success) of ??.  
+This implies that for every 1 year increase in Age, we anticipate a drop in the outcome (difference in matching success) of ??.  
 
 # Does collinearity in the kitchen sink model have a meaningful impact?
 Logistic regression models should be free of multicollinearity so we used the variance inflation factor (VIF).   The VIF may be calculated for each predictor by doing a linear regression of that predictor on all the other predictors.  It’s called the variance inflation factor because it estimates how much the variance of a coefficient is “inflated” because of linear dependence with other predictors. Thus, a VIF of 1.8 tells us that the variance (the square of the standard error) of a particular coefficient is 80% larger than it would be if that predictor was completely uncorrelated with all the other predictors.
@@ -870,7 +830,7 @@ dim(train)
 sum(is.na(train))
 ```
 
-## Create the LASSO using glmnet within the caret package.  Here we are solely using the train dataset to determine what varaiables predict the outcome.  
+Create the LASSO using glmnet within the caret package.  Here we are solely using the train dataset to determine what varaiables predict the outcome.  
 
 ```{r}
 # Train glmnet with custom trainControl and tuning: model
@@ -909,7 +869,7 @@ Plot the results of the lasso.mod so we can see if this is more ridge or more la
 plot(lasso.mod)
 ```
   
-## Plot LASSO factors - Plot the individual variables by lambda.  Saves the lasso.mod to an RDS file for later use.  
+Plot LASSO factors - Plot the individual variables by lambda.  Saves the lasso.mod to an RDS file for later use.  
 ```{r,  fig.asp=1}
 plot(lasso.mod$finalModel, xvar = 'lambda', label = TRUE)
 legend("topright", lwd = 1, col = 1:5, legend = colnames(train), cex = .6)
@@ -925,7 +885,8 @@ predict(lasso.mod, newx = x[1:5,], type = "prob", s = c(0.05, 0.01))
 ```
 
 # GLMNet to do factor selection with the previously made LASSO model
-## And we use the glmnet library to determine the optimal penalization parameter. Note that this must be assigned through cross validation; here, we use 50-fold cross validation (only suitable in small datasets).  GLMnet accepts data in a matrix format so the data format was changed before giving it to glmnet.cv. 
+
+And we use the glmnet library to determine the optimal penalization parameter. Note that this must be assigned through cross validation; here, we use 50-fold cross validation (only suitable in small datasets).  GLMnet accepts data in a matrix format so the data format was changed before giving it to glmnet.cv. 
 
 ```{r, echo=TRUE, message=FALSE, include=TRUE, fig.cap="Figure: Determining optimal penalization parameters for factor selection with the least absolute shrinkage and selection operator (LASSO) model."}
 `%ni%`<-Negate(`%in%`)
@@ -945,9 +906,9 @@ glmnet1 <-
 plot(glmnet1,main = "Misclassification Error")
 ```
 
-## The left vertical line represents the minimum error, and the right vertical line represents the cross-validated error within 1 standard error of the minimum. LASSO, least absolute shrinkage and selection operator
+The left vertical line represents the minimum error, and the right vertical line represents the cross-validated error within 1 standard error of the minimum. LASSO, least absolute shrinkage and selection operator
 
-## If you look at this graph we ran the model with a range of values for lambda and saw which returned the lowest cross-validated error. You'll see that our cross-validated error remains consistent until we hit the dotted lines, where we start to see our model perform very poorly due to underfitting with misclassification error.  Cross validation is an essential step in studies to help up us not only calibrate the parameters of our model but estimate the prediction accuracy with unseen data.
+If you look at this graph we ran the model with a range of values for lambda and saw which returned the lowest cross-validated error. You'll see that our cross-validated error remains consistent until we hit the dotted lines, where we start to see our model perform very poorly due to underfitting with misclassification error.  Cross validation is an essential step in studies to help up us not only calibrate the parameters of our model but estimate the prediction accuracy with unseen data.
 
 # Variable selection using LASSO in the train dataset
 ```{r, echo=TRUE, warning=FALSE, message=FALSE}
@@ -1057,12 +1018,12 @@ Annotation for Manuscript Table:  A:  Nonlinear component A of the function desc
 # Use Model to predict match for Test Data
 Shift Gears: Test Accuracy of Model on Training Data, Use glmnet model on 207 and 2018 `test` data.   Run the 2017, 2018 data through the train model.  
 
-# Build both a glm (train.glm.with.lasso.variables) and a lrm model (train.lrm.with.lasso.variables) here with the same predictor variables.  
+Build both a glm (train.glm.with.lasso.variables) and a lrm model (train.lrm.with.lasso.variables) here with the same predictor variables.  
 
 ```{r, echo=TRUE, warning=FALSE}
 test$Match_Status
 
-test.glm.with.lasso.variables  <- 
+train.glm.with.lasso.variables  <- 
   glm(Match_Status ~ 
                                     white_non_white + 
                                     Age +
@@ -1075,56 +1036,33 @@ test.glm.with.lasso.variables  <-
                                     Count_of_Oral_Presentation + 
                                     Visa_Sponsorship_Needed +
                                     Medical_Degree, 
-      data = test, 
+      data = train, 
       family = "binomial"(link=logit))  
+
+train.lrm.with.lasso.variables <- 
+  rms::lrm(formula = Match_Status ~ 
+                                    white_non_white + 
+                                    Age +
+                                    Gender +
+                                    Couples_Match +
+                                    US_or_Canadian_Applicant +
+                                    Medical_Education_Interrupted + 
+                                    Alpha_Omega_Alpha + 
+                                    USMLE_Step_1_Score + 
+                                    Count_of_Oral_Presentation + 
+                                    Visa_Sponsorship_Needed +
+                                    Medical_Degree, data = train,
+           x=TRUE, y=TRUE)
 ```
 
-Here the code is creating a vector called predictorsNames so that we can reuse the model by changing the variables in predictorsNames in the future prn. 
-```{r, warning=FALSE, message=FALSE}
-#Create predictorsNames variable
-outcomeName <- 
-  'Match_Status'
+First, we need to fit lrm.with.lasso.variables in GLM, rather than rms, to get the AUC.  There is probably a better way to do this.  Using the test data set.  Also built the same model in lrm.  
 
-predictorsNames <- 
-  names(test)[names(test) != outcomeName]  #Removes outcome from list of predictrs
-
-# get predictions on your testing data
-b <- 
-  model.matrix(test$Match_Status~., 
-               data=test) #x <- model.matrix(train$Match_Status~., data=train)
-
-a <- 
-  b[,-1]  #Removes intercept from the matrix as we did for model
-
-predictions <- 
-  predict(object = glmnet1, 
-          newx=a, 
-          s="lambda.min", 
-          family = "binomial")  #What is the matrix?
-
-#predictions
-d <- 
-  as.data.frame(test[,outcomeName])
-
-levels(d$Match_Status) <- 
-  c("No.Match", "Matched")
-
-test$Match_Status <- 
-  as.numeric(test$Match_Status)-1  #pROC only accepts numeric variables, not a matrix
-
-predictions <- 
-  as.numeric(predictions)
-```
-
-# First, we need to fit lrm.with.lasso.variables in GLM, rather than rms, to get the AUC.  There is probably a better way to do this.  Using the test data set.  Also built the same model in lrm.  
-
-#The Receiver Operating Characteristic (ROC) curve is plotted below for false positive rate (FPR) in the x-axis vs. the true positive rate (TPR) in the y-axis. It shows the detection of true positive while avoiding the false positive. This is the same as measuring the unspecificity (1 - specificity) in x-axis, against the sensitivity in y-axis. This ROC curve in particular shows that its very closed to the perfect classifier meaning that its better at identifying the positive values. 
-
-## Use Model to predict match Status for Test Data
+The Receiver Operating Characteristic (ROC) curve is plotted below for false positive rate (FPR) in the x-axis vs. the true positive rate (TPR) in the y-axis. It shows the detection of true positive while avoiding the false positive. This is the same as measuring the unspecificity (1 - specificity) in x-axis, against the sensitivity in y-axis. This ROC curve in particular shows that its very closed to the perfect classifier meaning that its better at identifying the positive values. 
+Use Model to predict match Status for Test Data
 ```{r}
 #Use Model to predict match Status for Test Data
 prob <- 
-  predict(test.glm.with.lasso.variables, newdata = test, type="response")
+  predict(train.glm.with.lasso.variables, newdata = test, type="response")
 dim(test)
 
 test$Match_Status
@@ -1135,7 +1073,7 @@ pred <-
   prediction(prob, test$Match_Status)  #removed na.omit
 ```
 
-#ROC: ROC ggplot with nice controls
+ROC: ROC ggplot with nice controls
 ```{r, include = TRUE}
 # rest of this doesn't need much adjustment except for titles
 perf <-
@@ -1156,11 +1094,10 @@ ggplot(roc.data, aes(x=fpr, ymin=0, ymax=tpr)) +
   geom_ribbon(alpha=0.2) +
   geom_line(aes(y=tpr)) +
   labs(title = paste0("ROC Curve with area under the curve = ", auc),
-       subtitle = "Model: test.glm.with.lasso.variables")
+       subtitle = "Model: train.glm.with.lasso.variables")
 ```
 
-
-#ROC: ROC with nice labels on the x and y
+ROC: ROC with nice labels on the x and y
 ```{r, include = TRUE}
 pred <- 
   prediction(prob, test$Match_Status)
@@ -1179,7 +1116,7 @@ auc <-
 auc  
 ```
 
-#ROC: ROC in color
+ROC: ROC in color
 ```{r, include = TRUE}
 perf <- 
   performance(pred, 'tpr','fpr')
@@ -1199,20 +1136,16 @@ perf2 <-
 plot(perf2, colorize = TRUE, text.adj = c(-0.2,1.7), main="Precision and Recall for Model A")
 ```
 
-```{r, include = TRUE, fig.width=8, fig.height=4, fig.cap="Figure: Evaluation of the variable interactions in the train data set."}
-train.df <- 
-  train
-
-psych::pairs.panels(train.df[, c(9:15, 18)], bg=c("red","blue")[as.factor(train.df$Match_Status)], pch=21, jiggle = TRUE)
-```
-
-# Since the predictors were highly skewed, binning was also explored. This facilitated visualizing associations between binned variables and the outcome using contingency plots. Supervised Weight of Evidence (WOE) binning of numeric variables were explored using the woeBinning package. Fine and coarse classing that merged granular classes and levels step by step was performed. Bins were merged and respectively split based on similar weight of evidence (WOE) values and stop via an information value (IV) based criteria. The figure below demonstrated the top five predictors ranked by information value during binning.
+Since the predictors were highly skewed, binning was also explored. This facilitated visualizing associations between binned variables and the outcome using contingency plots. Supervised Weight of Evidence (WOE) binning of numeric variables were explored using the woeBinning package. Fine and coarse classing that merged granular classes and levels step by step was performed. Bins were merged and respectively split based on similar weight of evidence (WOE) values and stop via an information value (IV) based criteria. The figure below demonstrated the top five predictors ranked by information value during binning.
 
 ```{r, include = TRUE, align = 'center', echo=FALSE}
 # WOE binning 
 # Confirming target variable is numeric and 0 or 1
-train$Match_Status <- 
-  as.numeric(train$Match_Status) - 1
+
+# Convert the wealth rating to a factor
+#donors$wealth_rating <- factor(donors$wealth_rating, levels = c(0, 1, 2, 3), labels = c("Unknown", "Low", "Medium", "High"))
+# Convert the wealth rating to a factor
+train$Match_Status <- factor(train$Match_Status, levels = c(0, 1), labels = c("No.Match", "Matched"))
 
 table(train$Match_Status)
 
@@ -1247,8 +1180,7 @@ woe.binning.plot(binning)
 bin.top.five <- binning[1:5,c(1,3)]
 pander::pander(bin.top.five, style = "simple", justify = c('left', 'center'))
 ```
-## These top five binned variables were used for the training and test set.
-
+These top five binned variables were used for the training and test set.
 ```{r bin train}
 # Deploy the binning solution to the data frame
 # (add all binned variables and corresponding WOE variables)
@@ -1494,8 +1426,7 @@ plot(model.8)
 par(mfrow = c(1,1))
 ```
 
-
-# Exploratory random forest was also performed. The variable importance for the random forest model was summarized in the figure below. The variables capital_run_length_longest, capital_run_length_total, char_freq_dollar.binned, word_freq_free and word_freq_your were the top five using accuracy and the Gini index.
+Exploratory random forest was also performed. The variable importance for the random forest model was summarized in the figure below. 
 
 ```{r RF EDA, cache=TRUE, include=TRUE}
 # Random forest for EDA
@@ -1515,12 +1446,12 @@ rf.eda = randomForest(X,Y,sampsize=25,ntree=5000,mtry=4,
 rf.eda
 ```
 
-# The Model Build
+The Model Build
 
-## All models were fit using the data labeled train and validated using the data labeled test. 10-fold cross-validation was performed for variable selection and parameter estimation was performed using cross-validation where appropriate.
+All models were fit using the data labeled train and validated using the data labeled test. 10-fold cross-validation was performed for variable selection and parameter estimation was performed using cross-validation where appropriate.
 
 # Logistic regression using backwards variable selection model
-## A logistic regression model using backwards variable selection was fit. The summary of the model coefficients for the final model is presented in Table 3. Table 4 demonstrates the confusion matrix for the in-sample performance of the model and Table 5 demonstrates the confusion matrix? or AUC? for the out-of-sample performance.
+A logistic regression model using backwards variable selection was fit. The summary of the model coefficients for the final model is presented in Table 3. Table 4 demonstrates the confusion matrix for the in-sample performance of the model and Table 5 demonstrates the confusion matrix? or AUC? for the out-of-sample performance.
 
 
 #I'M NOT SURE IF I INCLUDED ALL THE RIGHT VARIABLES
@@ -1627,7 +1558,7 @@ The in-sample accuracy was `r lr.accuracy[1]` and the out-of-sample accuracy was
 
 \pagebreak
 
-**(2) Tree model**
+**(2) Regression Tree model**
   
 #  A CART model was fit using the rpart package. Trees cqn handle both factors and continuous variables and do not need to create dummy variables.   Can model non-linear data.  
   
@@ -1644,23 +1575,26 @@ train <- train %>% select(-"Year")
 t.model <-
   rpart(as.factor(Match_Status) ~.,
         data = train,    #Do not use binned data for God's sake.  
-        method = "class")
+        method = "class", 
+        control = rpart.control(cp = 0.01),
+        minsplit = 20)  #Adding this control made the tree much more complicated
 
 t.model$variable.importance
 ```
 
 ```{r fancyR plot rpart EDA, include=TRUE}
 # Tree visualization
-rpart.plot::rpart.plot(t.model,extra =  4,fallen.leaves = T)
+rpart.plot::rpart.plot(t.model,yesno = 2, type = 5, extra = +100, fallen.leaves = TRUE, varlen = 0, faclen = 0, roundint = TRUE, clip.facs = TRUE, shadow.col = "gray", main = "Tree Model of Matching into OBGYN Residency\n(Matched or Unmatched)", box.palette = c("red", "green"))
+
 fancyRpartPlot(t.model)
 ```
+Using the model to make Match_Status predictions on the test dataframe
 ```{r}
-#using the model to make Survival predictions on the test set
-solution_tree <- predict(t.model, newdata = test, type="class")
-caret::confusionMatrix(solution_tree, test$Match_Status)  #?  Why is this not working?
-table(test$Match_Status, solution_tree)
-error <- mean(test$Match_Status != solution_tree) # Misclassification error
-paste('Accuracy',round(1-error,4))
+#using the model to make Match_Status predictions on the test dataframe
+solution_tree <- predict(t.model, newdata = test, type="class")  #predict(model made with training data, test data)
+table(solution_tree, test$Match_Status)
+# Compute the accuracy on the test dataset
+round(mean(solution_tree == test$Match_Status), digits = 3)
 ```
 
 # Overfitting can easily occur in Decision Tree classification. We can idenfity that evaluating the model using k-Fold Cross Validation. Or we might be able to improve the model. Let’s do 10-fold cross validation to find out whether we could improve the model.
@@ -1675,7 +1609,7 @@ control <- trainControl(method = "repeatedcv", index = folds)
 solution_tree_cv <- train(Match_Status ~ ., data = train, method = "rpart", trControl = control)
 
 # Tree Visualization
-rpart.plot(solution_tree_cv$finalModel, extra=4)
+rpart.plot(solution_tree_cv$finalModel, yesno = 2, type = 5, extra = +100, fallen.leaves = TRUE, varlen = 0, faclen = 0, roundint = TRUE, clip.facs = TRUE, shadow.col = "gray", main = "Tree Model of Matching into OBGYN Residency\n(Matched or Unmatched)", box.palette = c("red", "green"))
 
 # Predicting the Validation set results using 10 folds
 y_pred = predict(solution_tree_cv, newdata = test[,-which(names(test)=="Match_Status")])
@@ -1717,7 +1651,7 @@ cart <- rpart(formula = Match_Status ~ .,
                       data = train, 
                       method = "class")
 
-rpart.plot(x = cart, yesno = 2, box.palette = "auto", type = 5, extra = +100, fallen.leaves = TRUE, varlen = 0, faclen = 0, roundint = TRUE, clip.facs = TRUE, shadow.col = "gray", main = "Tree Model of Matching into OBGYN Residency\n(Matched or Unmatched)")
+rpart.plot(x = cart, yesno = 2, type = 5, extra = +100, fallen.leaves = TRUE, varlen = 0, faclen = 0, roundint = TRUE, clip.facs = TRUE, shadow.col = "gray", main = "Tree Model of Matching into OBGYN Residency\n(Matched or Unmatched)", box.palette = c("red", "green"))
 # Timer off
 proc.time() - ptm
 cart.model
@@ -1797,11 +1731,11 @@ knitr::kable(dt, "latex", booktabs = T, caption = "Confusion matrix of CART on t
 **(3) a Support Vector Machine model**
 
 # Is the data linearly separable?
-##  In order to use SVM, we need to remember to do one thing - Feature Scaling! Because the SVM classifier predicts the class of a given test observation by identifying the observations that are nearest to it, the scale of the variables matters.
+In order to use SVM, we need to remember to do one thing - Feature Scaling! Because the SVM classifier predicts the class of a given test observation by identifying the observations that are nearest to it, the scale of the variables matters.
 
-## The next algorithm that I want to use is SVM, as it is known to work well with small datasets. SVM is a data classification method that separates data using hyperplanes. SVM can be used to generate multiple separating hyperplanes such that the data space is divided into segments and each segment contains only one kind of data. SVM technique is generally useful for data which has non-regularity which means, data whose distribution is unknown.
+The next algorithm that I want to use is SVM, as it is known to work well with small datasets. SVM is a data classification method that separates data using hyperplanes. SVM can be used to generate multiple separating hyperplanes such that the data space is divided into segments and each segment contains only one kind of data. SVM technique is generally useful for data which has non-regularity which means, data whose distribution is unknown.
 
-## We want to find the “most optimal” solution. What will then be the characteristic of this most optimal line? We have to remember that this is just the training data and we can have more data points which can lie anywhere in the subspace. If our line is too close to any of the datapoints, noisy test data is more likely to get classified in a wrong segment. 
+We want to find the “most optimal” solution. What will then be the characteristic of this most optimal line? We have to remember that this is just the training data and we can have more data points which can lie anywhere in the subspace. If our line is too close to any of the datapoints, noisy test data is more likely to get classified in a wrong segment. 
 
 ```{r}
 #SVM with caret
@@ -1954,9 +1888,9 @@ cat("\n","----- Confusion matrix of SVM model on train set -----","\n")
 
 **(4) Random Forest model**
   
-  A random forest model was fit to the training data. Cross-validation selected the a final value used for mtry = 12 based on optimizing accuracy. The variable importance plot for the random forest model is demonstrated below. Important predictors were similar between the CART model and the RF model. The predictors char_freq_exclamation.binned, woe.char_freq_exclamation.binned, aand woe.char_freq_dollar.binned were top three for variable importance.
+A random forest model was fit to the training data. Cross-validation selected the a final value used for mtry = 12 based on optimizing accuracy. The variable importance plot for the random forest model is demonstrated below. Important predictors were similar between the CART model and the RF model. The predictors char_freq_exclamation.binned, woe.char_freq_exclamation.binned, aand woe.char_freq_dollar.binned were top three for variable importance.
 
-```{r}
+```{r Random Forest}
 train$Match_Status <- as.factor(train$Match_Status)
 levels(train$Match_Status)
 
@@ -1978,7 +1912,7 @@ ggplot(rf_gini, aes(x=reorder(Variables, MeanDecreaseGini), y=MeanDecreaseGini, 
         geom_bar(stat='identity') + coord_flip() + theme(legend.position="none") + labs(x="") +
         ggtitle('Variable Importance Random Forest') + theme(plot.title = element_text(hjust = 0.5))
 ```
-## The random Forest classification suffers in terms of interpretability. We are unable to visualize the 500 trees and identify important features of the model. However, we can assess the Feature Importance using the Gini index measure. Let’s plot mean Gini index across all trees and identify important features.
+The random Forest classification suffers in terms of interpretability. We are unable to visualize the 500 trees and identify important features of the model. However, we can assess the Feature Importance using the Gini index measure. Let’s plot mean Gini index across all trees and identify important features.
 
 ```{r}
 #using the model to make Survival predictions on the test set
@@ -2151,10 +2085,10 @@ nb.accuracy[1]
 
 **(6) xgboost model**
 
-# XGBoost (which stands for eXtreme Gradient Boosting) is an especialy efficent implimentation of gradient boosting. In practice, XGBoost is a very powerful tool for classification and regression. 
+## XGBoost (which stands for eXtreme Gradient Boosting) is an especialy efficent implimentation of gradient boosting. In practice, XGBoost is a very powerful tool for classification and regression. 
 
-## Data prep for xgboost
-## How can we convert these categories to a matrix? One way to do this is using one-hot encoding. One-hot encoding takes each category and makes it its own column. Then, for each observation, it puts a "0" in that column if that observation doesn't belong to that column and "1" if it does.
+Data prep for xgboost
+How can we convert these categories to a matrix? One way to do this is using one-hot encoding. One-hot encoding takes each category and makes it its own column. Then, for each observation, it puts a "0" in that column if that observation doesn't belong to that column and "1" if it does.
 
 ```{r}
 # get the subset of the dataframe that doesn't have labels about match_status
@@ -2227,7 +2161,7 @@ dtest <- xgb.DMatrix(data = test_data, label= test_labels)
 
 # Model Comparison
 
-##Given the fact that all three models have decent public scores, especially the correlation between SVM and the RF model is low. The most likely explanation is that SVM really is a different algorithm (both other models are tree-based).
+Given the fact that all three models have decent public scores, especially the correlation between SVM and the RF model is low. The most likely explanation is that SVM really is a different algorithm (both other models are tree-based).
 
 ```{r}
 #https://www.kaggle.com/kernels/scriptcontent/7086189/download
