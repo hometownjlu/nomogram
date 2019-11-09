@@ -83,7 +83,6 @@ A codebook is a technical description of the data that was collected for a parti
 # packrat::packrat_mode(on = TRUE)
 # packrat::snapshot(infer.dependencies = TRUE)
 # packrat::restore()
-
 ```
 
 
@@ -195,6 +194,21 @@ DataExplorer::plot_bar(all_data, nrow = 2L, ncol = 2L)  #Not useful whatsoever.
 #Univariate of boxplots
 inspectdf::inspect_num(all_data) %>% show_plot()  
 ```
+
+```{r, include=TRUE}
+#EDA,  https://ryjohnson09.netlify.com/post/caret-and-tidymodels/
+# Create vector of predictors
+expl <- names(all_data)[-19]
+
+# Loop vector with map
+expl_plots_box <- map(expl, ~box_fun_plot(data = all_data, x = "Match_Status", y = .x) )
+cowplot::plot_grid(plotlist = expl_plots_box)
+
+# Loop vector with map
+expl_plots_density <- map(expl, ~density_fun_plot(data = all_data, x = "Match_Status", y = .x) )
+cowplot::plot_grid(plotlist = expl_plots_density)
+```
+
 
 ```{r funModeling2, echo=FALSE, message=FALSE, warning=TRUE, include=FALSE}
 create_plot_num(all_data)  #Uses custom function so it can be run in Drake
@@ -416,7 +430,13 @@ Correlation was found with Count_of_Poster_Presentation, Age, and USMLE_Step_1_S
 
 Take a brief look at potential collinearity. We want to see strong correlations between our outcome and the predictors, but modest correlations between the predictors.  There are no correlations between predictors according to the above scatterplots.  If we did see signs of meaningful collinearity, we might rethink our selected set of predictors.
 
+You can see that there is a natural separation between the Match status and USMLE socres.  See bottom row that is second from the left.  Same thing for Age and same thing for Count of posters.  Samne with article abstracts and number of peer-reviewed journals.  ALL COUNT VARIABLES SHOWED SEPARATION IN MATCHED VS. NOT MATCHED.  
+
+The values of correlation range from -1 to 1.  If there is a value of 0 there is no correlation between the variables.  Perfect correlation is 1.  Perfect negative correlation is -1.  
+
 ```{r, include = TRUE, fig.width=8, fig.height=4, fig.cap="Figure: Evaluation of the variable interactions in the train data set."}
+cor(1:5, 1:5) #Perfect positive correlation
+cor(1:5, 5:1) #Perfect negative correlation
 #https://jamesmarquezportfolio.com/correlation_matrices_in_r.html
 psych::pairs.panels(train[, c(2, 9:15, 18)], bg=c("red","blue")[as.factor(train$Match_Status)], pch=21, jiggle = TRUE, scale = TRUE)
 ```
@@ -473,16 +493,15 @@ tm_nomogram_prep(kitchen.sink)
 ```
 
 ```{r}
-##################NOT WORKING!
-# train$Match_Status <- as.factor(train$Match_Status)
-# prediction_test <- predict(kitchen.sink, newdata = train, 
-#                            type = "response")
-# prediction_categories <- ifelse(prediction_test > 0.5, 1, 0)
-# confusion <- table(prediction_categories, test$Match_Status)
-# (confusion.limited.vif.model.kitchen.sink <- caret::confusionMatrix(confusion, positive = "1"))
+#???
+train$Match_Status <- as.factor(train$Match_Status)
+###Not working!!!
+prediction_test <- stats::predict(kitchen.sink, newdata = test, 
+                            type = "response")
+prediction_categories <- ifelse(prediction_test > 0.5, 1, 0)
+confusion <- table(prediction_categories, test$Match_Status)
+(confusion.limited.vif.model.kitchen.sink <- caret::confusionMatrix(confusion, positive = "1"))
 ```
-
-
 
 ```{r, warning=FALSE, echo=FALSE, include = TRUE}
 #Shows the C-statistic and the Brier score.  
@@ -566,14 +585,11 @@ Our model formula is intercept of `r round(coefficients[[1, 2]], digit=1)`+`r ro
 The r squared for model `lmfit2` is: `r round(summary.lmfit2[[8]], digit=3)`.  
 
 ```{r}
-##??  
 prediction_test <- predict.lm(lm.fit2, newdata = test, 
                            type = "response")
 prediction_categories <- ifelse(prediction_test > 0.5, 1, 0)
 confusion <- table(prediction_categories, test$Match_Status)
 confusion
-
-
 ```
 
 
@@ -678,7 +694,7 @@ Fowards step-wise regression model `step_model` has an AUC of `r round(pROC::auc
 
 Try BACKWARDS stepwise regression here:  
 ```{r, echo=FALSE, include = FALSE}
-#Forward regression!!  #https://campus.datacamp.com/courses/supervised-learning-in-r-classification/chapter-3-logistic-regression?ex=15
+#BACKWARDS regression!!  #https://campus.datacamp.com/courses/supervised-learning-in-r-classification/chapter-3-logistic-regression?ex=15
 # Specify a null model with no predictors
 null_model <- glm(Match_Status ~ 1, data = train, family = "binomial")
 
@@ -686,13 +702,13 @@ null_model <- glm(Match_Status ~ 1, data = train, family = "binomial")
 full_model <- glm(Match_Status ~ ., data = train, family = "binomial")
 
 # Use a forward stepwise algorithm to build a parsimonious model
-step_model <- stats::step(full_model, scope = list(lower = null_model, upper = full_model), direction = "backward")
+back_step_model <- stats::step(full_model, scope = list(lower = null_model, upper = full_model), direction = "backward")
 
 # Estimate the stepwise matching probability
-step_prob <- predict(step_model, type = "response")
+back_step_prob <- predict(back_step_model, data = test, type = "response")  #train or test data here?
 
 # Plot the ROC of the stepwise model
-backwards_ROC <- pROC::roc(train$Match_Status, step_prob,
+backwards_ROC <- pROC::roc(train$Match_Status, back_step_prob,
     levels=c("1", "0"), direction = "auto")
 plot(backwards_ROC, col = "red")
 pROC::auc(backwards_ROC) 
@@ -789,7 +805,7 @@ plot(lasso.mod)
 Plot LASSO factors - Plot the individual variables by lambda.  Saves the lasso.mod to an RDS file for later use.  
 ```{r,  fig.asp=1}
 plot(lasso.mod$finalModel, xvar = 'lambda', label = TRUE)
-legend("topright", lwd = 1, col = 1:5, legend = colnames(train), cex = .6)
+#legend("topright", lwd = 1, col = 1:5, legend = colnames(train), cex = .6)
 #https://www.datacamp.com/community/tutorials/tutorial-ridge-lasso-elastic-net
 colnames(train[1:17])
 saveRDS(lasso.mod, "best.LASSO.rds")  #save the model
@@ -1102,7 +1118,7 @@ Based on the complexity plot, prune the tree to a complexity of 0.005 using the 
 
 ```{r}
 # Compute the accuracy of the pruned tree
-solution_tree <- predict(pruned.t.model, test, type = "class")
+solution_tree <- predict(pruned.t.model, newdata = test, type = "class")
 mean(solution_tree == test$Match_Status)
 ```
 The accuracy or correct classification rate of the PRUNED decision tree called `pruned.t.model` is `r round(mean(solution_tree == test$Match_Status), digits = 3)`.  Not a huge benefit in accuracy but the model will be more understandable and be faster to run now that it is pruned.  
@@ -1119,7 +1135,7 @@ The next algorithm that I want to use is SVM, as it is known to work well with s
 
 We want to find the “most optimal” solution. What will then be the characteristic of this most optimal line? We have to remember that this is just the training data and we can have more data points which can lie anywhere in the subspace. If our line is too close to any of the datapoints, noisy test data is more likely to get classified in a wrong segment. 
 
-```{r}
+```{r, include=TRUE}
 #SVM with caret
 set.seed(2017)
 
@@ -1127,108 +1143,9 @@ caret_svm <- caret::train(Match_Status ~ white_non_white + Age + Gender + Couple
 
 caret_svm
 caret_svm$results
+caret_svm$finalModel
 ```
-
-
-```{r}
-#using the model to make Survival predictions on the test set
-test$Match_Status <- as.factor(as.numeric(test$Match_Status) - 1)
-solution_svm <- predict(caret_svm, newdata = test)
-#caret::confusionMatrix(solution_svm, test$Match_Status)  #Not working now, ugh.  
-```
-
-```{r SVM model, cache=FALSE}
-#SVM using e1071
-
-#Removed binning with woe so the SVM model is not working
-
-# Timer on
-ptm = proc.time()
-set.seed(12345)
-fitControl <- trainControl(method = "repeatedcv",
-                           number = 10,
-                           repeats = 2)
-svm.model <-  train(as.factor(Match_Status) ~ .,  #formula of interest
-                      data = train.df.binned,     #data for training  
-                      kernel = 'linear',       
-                      type = 'C-classification',  #set for a classification issue
-                      trControl = fitControl,
-                      tuneLength = 8,
-                      metric = "Accuracy", 
-                      scale = TRUE #added scale = FALSE to make it work
-)
-# Timer off
-
-
-svm.model <-  e1071::svm((Match_Status) ~ .,
-                      data = train.df.binned,
-                      #method = 'svmLinear',
-                      #trControl = fitControl,
-                      kernel = "linear",
-                      tuneLength = 8,
-                      metric = "Accuracy", 
-                      cost = 100,
-                      scale = TRUE #added scale = FALSE to make it work
-)
-names(svm.model)
-svm.model$index
-svm.model$SV
-svm.model$coefs
-svm.model$rho  #negative intercept
-summary(svm.model)
-
-# Timer off
-proc.time() - ptm; rm(ptm)
-svm.model
-```
-
-The number of support vectors was ```r svm.model$tot.nSV`.
-In the first class there were `r svm.model$nSV[1]` and in the second class there were `r  svm.model$nSV[2]`.  The cost of the model was set to `r svm.model$cost`.  The cost parameter is changed to avoid overfitting.
-
-
-```{r medians of values}
-# Select numeric columns
-data.numcols <- train.df.binned[, sapply(train.df.binned, is.numeric)]
-# Using apply
-all.medians <- apply(data.numcols, 2, median)
-# Using colMeans
-all.means <- colMeans(data.numcols)
-```
-
-
-```{r SVM model one, eval=FALSE, include=FALSE}
-# Fit the SVM using C value of 1
-
-train.df.binned <- train.df.binned %>%
-  mutate(Match_Status = as.factor(Match_Status))
-
-
-# train.df.binned <- train.df.binned %>% 
-#   mutate(Match_Status = as.numeric(Match_Status)-1)
-svm.model.one <- svm(Match_Status ~ .,
-                     data=train.df.binned)
-
-###?????????????????????????????????????????????????
-plot(x = svm.model.one,
-     woe.Age.binned ~ woe.USMLE_Step_1_Score.binned,
-     data=train.df.binned)
-```
-
-
-```{r Plot SVM, eval=FALSE, include=TRUE}
-# Plot SVM model
-plot(svm.model.one, train.df.binned, woe.Age.binned ~ woe.USMLE_Step_1_Score.binned,
-     svSymbol = 1, dataSymbol = 2, symbolPalette = rainbow(4),
-     color.palette = terrain.colors)
-```
-
-
-```{r SVM train accuracy, align = 'center'}
-train.svm <- predict(svm.model, train.df.binned)
-cat("\n","----- Performance of svm on train set -----","\n")
-svm.accuracy <- caret::postResample(pred = train.svm, obs = as.factor(train.df.binned$Match_Status))
-svm.accuracy[1]
-```
+The accuracy of the supported vector machine model is `r round(caret_svm$results[[2]], digits=2)`.  
 
 
 **(4) Random Forest model**
@@ -1240,7 +1157,7 @@ train$Match_Status <- as.factor(train$Match_Status)
 levels(train$Match_Status)
 
 #Using caret
-caret_matrix <- train(x=train[,c('white_non_white', 'Age', 'Gender', 'Couples_Match', 'US_or_Canadian_Applicant', 'Medical_Education_Interrupted', 'Alpha_Omega_Alpha', 'Military_Service_Obligation', 'USMLE_Step_1_Score', 'Count_of_Poster_Presentation', 'Count_of_Oral_Presentation', 'Count_of_Articles_Abstracts', 'Count_of_Peer_Reviewed_Book_Chapter', 'Count_of_Other_than_Published', 'Count_of_Online_Publications', 'Visa_Sponsorship_Needed', 'Medical_Degree')],
+caret_matrix <- caret::train(x=train[,c('white_non_white', 'Age', 'Gender', 'Couples_Match', 'US_or_Canadian_Applicant', 'Medical_Education_Interrupted', 'Alpha_Omega_Alpha', 'Military_Service_Obligation', 'USMLE_Step_1_Score', 'Count_of_Poster_Presentation', 'Count_of_Oral_Presentation', 'Count_of_Articles_Abstracts', 'Count_of_Peer_Reviewed_Book_Chapter', 'Count_of_Other_than_Published', 'Count_of_Online_Publications', 'Visa_Sponsorship_Needed', 'Medical_Degree')],
 y=train$Match_Status, 
 method='rf', 
 trControl=trainControl(method="cv", number=5))
@@ -1256,7 +1173,7 @@ The random Forest classification suffers in terms of interpretability. We are un
 
 ```{r}
 #using the model to make Survival predictions on the test set
-solution_rf <- predict(caret_matrix, test)
+solution_rf <- predict(caret_matrix, newdata = test, type = "raw")
 mean(solution_rf == test$Match_Status)
 ```
 Random forest has accuracy of `r round(mean(solution_rf == test$Match_Status), digits=2)`.  
@@ -1265,19 +1182,17 @@ Random forest has accuracy of `r round(mean(solution_rf == test$Match_Status), d
 
 ## 4) Gradient Boosting Machine (GBM) model
 
-As I am already having a model that uses Bagging, I want the 3rd model to be a boosting model. Of the possible boosting algorithms, I am choosing GBM.
-
-```{r}
+```{r, include = T}
 set.seed(2017)
-caret_boost <- train(Match_Status~ white_non_white + Age + Gender + Couples_Match + US_or_Canadian_Applicant + Medical_Education_Interrupted + Alpha_Omega_Alpha + Military_Service_Obligation + USMLE_Step_1_Score + Count_of_Poster_Presentation + Count_of_Oral_Presentation + Count_of_Articles_Abstracts + Count_of_Peer_Reviewed_Book_Chapter + Count_of_Other_than_Published + Count_of_Online_Publications + Visa_Sponsorship_Needed + Medical_Degree, 
+caret_boost <- caret::train(Match_Status~ white_non_white + Age + Gender + Couples_Match + US_or_Canadian_Applicant + Medical_Education_Interrupted + Alpha_Omega_Alpha + Military_Service_Obligation + USMLE_Step_1_Score + Count_of_Poster_Presentation + Count_of_Oral_Presentation + Count_of_Articles_Abstracts + Count_of_Peer_Reviewed_Book_Chapter + Count_of_Other_than_Published + Count_of_Online_Publications + Visa_Sponsorship_Needed + Medical_Degree, 
                      data=train, method='gbm', preProcess= c('center', 'scale'), trControl=trainControl(method="cv", number=7), verbose=FALSE)
 print(caret_boost)
 ```
 
 ```{r}
 #using the model to make Survival predictions on the test set
-solution_boost <- predict(caret_boost, test)
-# caret::confusionMatrix(solution_boost, test$Match_Status, positive = "1")
+solution_boost <- predict(caret_boost, newdata = test, type = "raw")
+caret::confusionMatrix(solution_boost, test$Match_Status)
 ```
 
 \pagebreak
@@ -1294,7 +1209,7 @@ set.seed(12345)
 fitControl <- trainControl(method = "repeatedcv",
                            number = 10,
                            repeats = 2)
-nbwoe <-    train(as.factor(Match_Status) ~ .,
+nbwoe <-    caret::train(as.factor(Match_Status) ~ .,
                   data = train,
                   method = 'naive_bayes',
                   trControl = fitControl,
@@ -1345,7 +1260,7 @@ model_04_xgboost <- parsnip::boost_tree(mode = "classification",
 model_04_xgboost
 
 ?calc_metrics
-model_04_xgboost %>% calc_metrics(test, truth = Match_Status)
+model_04_xgboost %>% calc_metrics(test, truth = Match_Status) #Not working!!!!
 
 model_04_xgboost %>% plot_predictions(new_data = test_tbl)
 
@@ -1353,86 +1268,21 @@ model_04_xgboost %>% plot_predictions(new_data = test_tbl)
 model_04_xgboost$fit %>%
     xgb.importance(model = .) %>%
     xgb.plot.importance(main = "XGBoost Feature Importance")
-
-
-diseaseInfo_humansRemoved <- all_data %>%
-    select(-starts_with("Match"))
-
-# select just the numeric columns
-diseaseInfo_numeric <- diseaseInfo_humansRemoved %>%
-    select_if(is.numeric) # select remaining numeric columns
-
-# make sure that our dataframe is all numeric
-str(diseaseInfo_numeric)
-
-# convert categorical factor into one-hot encoding
-white_non_white <- model.matrix(~white_non_white-1,diseaseInfo_humansRemoved)
-Year <- model.matrix(~Year-1,diseaseInfo_humansRemoved)
-Gender <- model.matrix(~Gender-1,diseaseInfo_humansRemoved)
-Couples_Match <- model.matrix(~Couples_Match-1,diseaseInfo_humansRemoved)
-US_or_Canadian_Applicant <- model.matrix(~US_or_Canadian_Applicant-1,diseaseInfo_humansRemoved)
-Medical_Education_Interrupted <- model.matrix(~Medical_Education_Interrupted-1,diseaseInfo_humansRemoved)
-Alpha_Omega_Alpha <- model.matrix(~Alpha_Omega_Alpha-1,diseaseInfo_humansRemoved)
-Military_Service_Obligation <- model.matrix(~Military_Service_Obligation-1,diseaseInfo_humansRemoved)
-Medical_Degree <- model.matrix(~Medical_Degree-1,diseaseInfo_humansRemoved)
-
-
-# add our one-hot encoded variable and convert the dataframe into a matrix
-diseaseInfo_numeric <- cbind(diseaseInfo_numeric, white_non_white, Year, Gender, Couples_Match, US_or_Canadian_Applicant, Alpha_Omega_Alpha, Military_Service_Obligation, Medical_Degree)
-diseaseInfo_matrix <- data.matrix(diseaseInfo_numeric)
-```
-
-
-```{r}
-# get a boolean vector of training labels
-diseaseLabels <- all_data %>%
-    select(Match_Status) %>% # get the column with the # of humans affected
-    is.na() 
-
-# get the numb 70/30 training test split
-numberOfTrainingSamples <- round(length(diseaseLabels) * .7)
-
-# training data
-train_data <- diseaseInfo_matrix[1:numberOfTrainingSamples,]
-train_labels <- diseaseLabels[1:numberOfTrainingSamples]
-
-# testing data
-test_data <- diseaseInfo_matrix[-(1:numberOfTrainingSamples),]
-test_labels <- diseaseLabels[-(1:numberOfTrainingSamples)]
-
-# check out the first few lines
-head(diseaseLabels) # of our target variable
-head(all_data$Match_Status) # of the original column
-```
-
-```{r}
-# put our testing & training data into two seperates Dmatrixs objects
-dtrain <- xgb.DMatrix(data = train_data, label= train_labels)
-dtest <- xgb.DMatrix(data = test_data, label= test_labels)
-```
-
-
-```{r}
-# train a model using our training data  ### NOT WORKING
-# model <- xgboost(data = dtrain, # the data   
-#                  nround = 2, # max number of boosting iterations
-#                  objective = "binary:logistic")  # the objective function
 ```
 
 \pagebreak
-
 
 # Model Comparison
 
 Given the fact that all three models have decent public scores, especially the correlation between SVM and the RF model is low. The most likely explanation is that SVM really is a different algorithm (both other models are tree-based).
 
-```{r}
+```{r, include=TRUE}
 #https://www.kaggle.com/kernels/scriptcontent/7086189/download
 #adding model predictions to test dataframe
 test$RF <- as.numeric(solution_rf)-1
 test$SVM <- as.numeric(solution_svm)-1
 test$Boost <- as.numeric(solution_boost)-1
-#test$tree <- as.numeric(solution_tree)-1
+test$tree <- as.numeric(solution_tree)-1
 
 #compose correlations plot
 corrplot.mixed(cor(test[, c('RF', 'SVM', 'Boost')]), order="hclust", tl.col="black")
@@ -1443,28 +1293,25 @@ corrplot.mixed(cor(test[, c('RF', 'SVM', 'Boost')]), order="hclust", tl.col="bla
 #Table 14 summarizes the overall in-sample and out-of-sample accuracy of each model. The best performing models (highest accuracy) was the random forest model with a test set accuracy of `r rf.accuracy.test[1]`. The Logistic regression model using backwards elimination was second with a test set accuracy of `r lr.accuracy.test[1]`. The Naive Bayes model did not perform as well as the other models. In summary, if accuracy is the most important aspect of the model and interpretion is not a priority then the best model was the random forest model. If interpretability of the model is paramount, then the logistic regression model is recommended.
 
 # Training set performance summary
-# 
-# 
-# x <- postResample(pred = train.backwards, obs = as.factor(train.df$Match_Status))
-# a <- postResample(pred = train.cart, obs = as.factor(train.df.binned$Match_Status))
-# c <- postResample(pred = train.svm, obs = as.factor(train.df.binned$Match_Status))
-# e <- postResample(pred = train.rf, obs = as.factor(train.df.binned$Match_Status))
-# 
-# ##g commented out
-# g <- postResample(pred = train.nbwoe, obs = as.factor(train.df.binned$Match_Status))
-# # Test set performance summary
-# xt <- postResample(pred = test.backwards, obs = as.factor(test.df$Match_Status))
-# at <- postResample(pred = test.cart, obs = as.factor(test.df.binned$Match_Status))
-# 
-# ##ct commented out
-# ct <- postResample(pred = test.svm, obs = as.factor(test.df.binned$Match_Status))
-# et  <- postResample(pred = test.rf, obs = as.factor(test.df.binned$Match_Status))
-# gt <- postResample(pred = test.nbwoe, obs = as.factor(test.df.binned$Match_Status))
-# matrix <- matrix(data = c(x[1], a[1], c[1], e[1], g[1], xt[1], at[1], ct[1], et[1], gt[1]), nrow = 5, ncol = 2, byrow = FALSE)
-# colnames(matrix) <- c("Training Set Accuracy", "Test Set Accuracy")
-# rownames(matrix) <- c("LR Backwards Elimination", "CART", "Support Vector Machine", "Random Forest", "Naive Bayes")
-# df <- round(matrix, 3)
-# kable(df, "latex", booktabs = T, caption = "In-sample and out-of-sample accuracy of all models") %>% kable_styling(latex_options = "striped")
+x <- caret::postResample(pred = step_prob, obs = as.factor(train$Match_Status))
+a <- caret::postResample(pred = train.cart, obs = as.factor(train$Match_Status))
+c <- caret::postResample(pred = train.svm, obs = as.factor(train$Match_Status))
+e <- caret::postResample(pred = train.rf, obs = as.factor(train$Match_Status))
+g <- caret::postResample(pred = train.nbwoe, obs = as.factor(train$Match_Status))
+
+
+# Test set performance summary
+xt <- postResample(pred = back_step_prob, obs = as.factor(test$Match_Status))
+at <- postResample(pred = test.cart, obs = as.factor(test.df.binned$Match_Status))
+
+ct <- postResample(pred = test.svm, obs = as.factor(test.df.binned$Match_Status))
+et  <- postResample(pred = test.rf, obs = as.factor(test.df.binned$Match_Status))
+gt <- postResample(pred = test.nbwoe, obs = as.factor(test.df.binned$Match_Status))
+matrix <- matrix(data = c(x[1], a[1], c[1], e[1], g[1], xt[1], at[1], ct[1], et[1], gt[1]), nrow = 5, ncol = 2, byrow = FALSE)
+colnames(matrix) <- c("Training Set Accuracy", "Test Set Accuracy")
+rownames(matrix) <- c("LR Backwards Elimination", "CART", "Support Vector Machine", "Random Forest", "Naive Bayes")
+df <- round(matrix, 3)
+kable(df, "latex", booktabs = T, caption = "In-sample and out-of-sample accuracy of all models") %>% kable_styling(latex_options = "striped")
 ```
 \pagebreak
 
@@ -1501,11 +1348,6 @@ calib <- rms::calibrate(train.lrm.with.lasso.variables, method = "boot", boot=10
 plot(calib, legend = TRUE, subtitles = TRUE, xlab = "Predicted probability according to model", ylab = "Observation Proportion of Matching")
 ```
 
-\pagebreak
-
-## References
-Lorrie Faith Cranor and Brian A. LaMacchia. Match_Status! Communications of the ACM. Vol. 41, No. 8 (Aug. 1998), Pages 74-83. Definitive version: http://www.acm.org/pubs/citations/journals/cacm/1998-41-8/p74-cranor/
-  
   \pagebreak
 # Appendix, Exploratory Data Analysis
 The funModeling package will first give distributions for numerical data and finally creates cross-plots.  This also saves the output of the distributions to the results folder.
@@ -1585,7 +1427,6 @@ References
 
 # Appendix, DynNom Model for Shiny Upload
 ```{r DynNom logistic regression model}
-DynNom
 library(dplR)
 DynNom.model.lrm  <-
   rms::lrm(Match_Status ~
@@ -1605,7 +1446,7 @@ DynNom.model.lrm  <-
            x = TRUE,
            y= TRUE)
 
-# DynNom::DynNom.lrm(model = DynNom.model.lrm, data = test,  clevel = 0.95)
+DynNom::DynNom(model = DynNom.model.lrm, data = test,  clevel = 0.95)
 ```
 
 
@@ -1626,7 +1467,7 @@ DynNom.model.glm <- glm(Match_Status ~
                           white_non_white,
                         family = "binomial",  #Removed the relax cubic splines for age and USMLE step 1
                         data = test, x = TRUE, y= TRUE)
-DynNom::DNbuilder(model = DynNom.model.glm, data = train)
+#DynNom::DNbuilder(model = DynNom.model.glm, data = train)
 ```
 
 
