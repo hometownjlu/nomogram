@@ -47,31 +47,39 @@ expl_plots_density <- map(expl, ~density_fun_plot(data = train_tbl, x = "Match_S
 cowplot::plot_grid(plotlist = expl_plots_density) #Must view with zoom function
 
 #--------------------------------------------------- Preprocessing  -----------------------------------------------#
+#Recipes handles the pre-processing. Given a sample of training data, you first specify a model formula using add_role() (or the traditional y ~ x notation). Once roles are assigned, variables can be referenced with dplyr-like helper functions such as all_predictors() or all_nominal() — this comes in handy for the processing steps that follow.
+
+#The various step_ functions allow for easy rescaling and transformation, but more importantly they allow you to specify a routine that will consistently reshape all the data you’re feeding into your model. 
+
 #1 - Recipe - Define a specification for preprocessing steps.  The recipe knows the structure of the data with columns and roles but not the actual data.  
 #2 - Preparation - For a recipe with at least one preprocessing steps, estimate the required parameters from a training set that can be later applie to other data sets.  
 #3 - Bake applies the recipe to the test set.  This is like running predict on a model.  
 #https://www.youtube.com/watch?v=VYCZFKlUaq4&feature=share
 #https://ryjohnson09.netlify.com/post/caret-and-tidymodels/
 
-recipe_simple <- recipe_simple(dataset = train_tbl)
+recipe <- recipe_simple(dataset = train_tbl)
 
 
 #--------------------------------------------------- Preparing the recipe  -----------------------------------------------#
-recipe_prepped <- prep(recipe_simple)  #Data brought in with the recipe_simple step above for ease.  
+## Prep step included here.  Once we’ve created a recipe() object, the next step is to prep() it. In the baking analogy, the recipe we created is simply a specification for how we want to process our data, and prepping is the process of getting our ingredients and tools in order so that we can bake it. We specify retain = TRUE in the prepping process if we want to hold onto the recipe’s initial training data for later.
 
+recipe_prepped <- recipes::prep(x = recipe, training = train_tbl, retain=TRUE)   #Data brought in with the recipe_simple step above for ease.  
+recipe_prepped
+recipe_prepped %>% recipes::juice(composition = "tibble")
 
 #--------------------------------------------------- Bake  -----------------------------------------------#
-#I “bake the recipe” to apply all preprocessing to the data sets.
+#I “bake the recipe” to apply all preprocessing to the data sets. #Now that we have a recipe and a prepped object, we’re ready to start baking. The bake() function allows us to apply a prepped recipe to new data, which will be processed according to our exact specifications. The juice() function is essentially a shortcut for bake() that’s useful when we want to process and output the training data used to originally specify the recipe (with retain = TRUE during prepping).
 train_baked <- bake(recipe_prepped, new_data = train_tbl)
 test_baked  <- bake(recipe_prepped, new_data = test_tbl)
 
 #--------------------------------------------------- Create Models  -----------------------------------------------#
 # 1) Pick the model you want
 # 2) set the type of model you want to fit (here is a logistic regression) and its mode (classification)
-# 3) decide which computational engine to use (glm in this case)
+# 3) decide which computational engine to use (glm in this case but I do have tensorflow set up)
 # 4) spell out the exact model specification to fit (I’m using all variables here) and what data to use (the baked train dataset)
 # classification models in parsnip: boost_tree(), decision_tree(), logistic_reg(), mars(), mlp(), multinom_reg(), nearest_neighbor(), null_model(), rand_forest(), svm_poly(), svm_rbf()
 
+#--------------------------------------------------- Model: xgBoost  -----------------------------------------------#
 args(boost_tree)
 model_boost_trees <- 
   parsnip::boost_tree(mode = "classification", trees = 2000, mtry = floor(.preds() * 0.75), min_n = 2, tree_depth = 6, learn_rate = 0.35, loss_reduction = 0.0001) %>%
@@ -84,11 +92,12 @@ model_boost_trees$fit %>%
   xgb.importance(model = .) %>%
   xgb.plot.importance(main = "XGBoost Feature Importance")
 
-
+#--------------------------------------------------- Model: Decision Tree  -----------------------------------------------#
 args(decision_tree)
 set.seed(1978)
 decision_tree <- 
   parsnip::decision_tree(mode = "classification", cost_complexity = varying(), min_n = 20, tree_depth = 6) %>%
+  #set_engine("C5.0") %>%
   parsnip::set_engine("rpart") %>%   #Explain what model we want
   parsnip::set_args(cost_complexity = 0.01) %>%  #Can tinker with this variable  
   parsnip::fit(Match_Status ~ ., data = train_baked)  #Finally, to execute the model, the fit() function is used. 
@@ -96,10 +105,10 @@ decision_tree
 
 decision_tree$fit%>%
   rpart.plot(
-    yesno = 2, type = 5, extra = +100, fallen.leaves = TRUE, varlen = 0, faclen = 0, roundint = TRUE, clip.facs = TRUE, shadow.col = "gray", main = "Tree Model of Medical Students Matching into OBGYN Residency\n(Matched or Unmatched)", box.palette = c("red", "green"))  
+    yesno = 2, type = 5, extra = +100, fallen.leaves = TRUE, varlen = 0, faclen = 0, roundint = FALSE, clip.facs = TRUE, shadow.col = "gray", main = "Tree Model of Medical Students Matching into OBGYN Residency\n(Matched or Unmatched)", box.palette = c("red", "green"))  
 
 
-
+#--------------------------------------------- Model: Logistic Regression  -----------------------------------------------#
 args(logistic_reg)  #Check what parameters exist with the model you want to use.  
 set.seed(1978)
 logistic_glm <-
@@ -109,6 +118,7 @@ logistic_glm <-
 logistic_glm
 
 
+#--------------------------------------------------- Model: Random Forest  -----------------------------------------------#
 args(rand_forest)
 random_forest <-
   parsnip::rand_forest(mtry = floor(.preds() * 0.75), mode = "classification", trees = 2000, min_n = 3) %>%   
@@ -117,10 +127,42 @@ random_forest <-
 random_forest
 
 
+#https://cdn.rawgit.com/ClaytonJY/tidymodels-talk/145e6574/slides.html#64
+#Training error
+set.seed(1978)
+rset <- rsample::vfold_cv(data = train_baked, v = 10, repeats = 1, strata = Match_Status) #V-fold cross-validation, creates folds
+rset
+rset$splits[[1]]
+analysis(rset$splits[[1]]) # Anatomy of a split
+assessment(rset$splits[[1]])  # test
+rset$recipes <- map(rset$splits, prepper, recipe = recipe, retain = TRUE)
+rset
+rset$models <- map(rset$recipes, ~ranger(formula = formula(.x), juice(.x)))
+rset
+
+predict_rf <- function(split, rec, model) {
+  test <- bake(rec, assessment(split))
+  tibble(
+    actual    = test_tbl$Match_Status,
+    predicted = predict(model, test)$predictions
+  )
+}
+rset <- rset %>%
+  mutate(
+    predictions = pmap(list(splits, recipes, models), predict_rf),
+    metrics     = map(predictions, metrics, actual, predicted)
+  )
+  
+#--------------------------------------------------- Model: Random Forest  -----------------------------------------------#
+args(rand_forest)
+ranger_random_forest <-
+  parsnip::rand_forest(mtry = floor(.preds() * 0.75), mode = "classification", trees = 2000, min_n = 3) %>%   
+  parsnip::set_engine("ranger", seed = 1978) %>%   #Explain what model we want
+  parsnip::fit(Match_Status ~ ., data = train_baked)  #Finally, to execute the model, the fit() function is used. 
+ranger_random_forest
 
 
-
-
+#----------------------------------------- Model: Support Vector Machines  -----------------------------------------------#
 args(svm_poly)
 svm <-
   parsnip::svm_poly(mode = "classification") %>%
@@ -128,6 +170,7 @@ svm <-
   parsnip::fit(Match_Status ~ ., data = train_baked)
 svm
 
+#--------------------------------------------------- Model: MARS  -----------------------------------------------#
 args(mars)
 mars <- 
   parsnip::mars(mode = "classification") %>%
@@ -135,272 +178,116 @@ mars <-
   parsnip::fit(Match_Status ~ ., data=train_baked)
 mars
 
-#--------------------------------------------------- Predict  -----------------------------------------------#
+
+#--------------------------------------------------- Model: glmnet  -----------------------------------------------#
+args(multinom_reg)
+set.seed(1978)
+glmn_fit <- 
+  parsnip::multinom_reg(penalty = 0.01, mixture = 0.5, mode = "classification") %>% 
+  parsnip::set_engine("glmnet") %>%
+  parsnip::fit(Match_Status ~ ., data=train_baked) 
+glmn_fit
+
+#--------------------------------------------------- Model: Single Layer Neural Network  ----------------------------#
+args(mlp)
+mlp <- 
+  parsnip::mlp(mode = "classification", hidden_units = 5, penalty = 0.01, dropout = 0, epochs = 20, activation = NULL) %>%
+  parsnip::set_engine("nnet", seed = 1978) %>%
+  parsnip::fit(Match_Status ~ ., data=train_baked) 
+mlp
+
+#--------------------------------------------------- Model: General Interface for K-Nearest Neighbor Models -------------#
+args(nearest_neighbor)
+set.seed(1978)
+nearest_neighbor <- 
+  parsnip::nearest_neighbor(mode = "classification", neighbors = 5) %>%
+  parsnip::set_engine("kknn") %>%
+  parsnip::fit(Match_Status ~ ., data=train_baked) 
+nearest_neighbor
+
+#--------------------------------------------------- Model: Naive Bayes------------------------------------ -------------#
+args(naive_Bayes)  #https://tidymodels.github.io/discrim/reference/index.html
+set.seed(1978)
+naive_Bayes <- 
+  naive_Bayes(mode = "classification") %>%
+  parsnip::set_engine("klaR") %>%
+  parsnip::fit(Match_Status ~ ., data=train_baked) 
+naive_Bayes
+
+tibble_of_model_names <- as_tibble(c("model_boost_trees", "decision_tree", "logistic_reg", "rand_forest", "ranger_random_forest","svm", "mars", "multinom_reg", "mlp", "nearest_neighbor", "naive_Bayes"))
+#--------------------------------------------------- Predict on new data -----------------------------------------------#
 # parsnip models always return the results as a data frame.  
-predictions_glm <- logistic_glm %>%
-  stats::predict(new_data = test_baked) %>%
-  bind_cols(test_baked %>% select(Match_Status))
+# Accuracy - The model’s Accuracy is the fraction of predictions the model got right and can be easily calculated by passing the predictions_rf to the metrics function. However, accuracy is not a very reliable metric as it will provide misleading results if the data set is unbalanced.
+#https://rviews.rstudio.com/2019/06/19/a-gentle-intro-to-tidymodels/
 
+#Per classifier metrics - It is easy to obtain the probability for each possible predicted value by setting the type argument to prob. That will return a tibble with as many variables as there are possible predicted values. Their name will default to the original value name, prefixed with .pred_.
 
-#--------------------------------------------------- Predict  -----------------------------------------------#
-# When truth is a factor like Match_Status there are rows for accuracy.
-predictions_glm %>%
-  yardstick::conf_mat(Match_Status, .pred_class) %>%
+#Model validation
+tm_model_metrics <- random_forest %>%  #Plug in the model using the training data
+  stats::predict(new_data = test_baked) %>%  #Predict the test_data with the new model
+  bind_cols(test_baked) %>%
+  yardstick::metrics(truth = Match_Status, estimate = .pred_class) %>%
+  select(-.estimator) 
+tm_model_metrics
+
+#Measuring Model Performance
+confusion_matrix_graph <- random_forest %>%  #Plug in the model using the training data
+  stats::predict(new_data = test_baked) %>%  #Predict the test_data with the new model
+  bind_cols(test_baked) %>%
+  conf_mat(Match_Status, .pred_class) %>%
   purrr::pluck(1) %>%
   tibble::as_tibble() %>%
-  ggplot2::ggplot(aes(Prediction, Truth, alpha = n)) +
+  ggplot2::ggplot(aes(Prediction, Truth, alpha = n)) +  #Not plotting
   ggplot2::geom_tile(show.legend = FALSE) +
   ggplot2::geom_text(aes(label = n), colour = "white", alpha = 1, size = 8) +
   labs(
-    title = "Confusion matrix using glm model"
+    title = "Confusion matrix using randomForest model"
   )
-
-#Accuracy
-predictions_glm %>%
-  yardstick::metrics(Match_Status, .pred_class) %>%  #Use the metrics() function to measure the performance of the model. It will automatically choose metrics appropriate for a given type of model. The function expects a tibble that contains the actual results (truth) and what the model predicted (estimate).
-  select(-.estimator) %>%
-  filter(.metric == "accuracy") 
-
-#PRecision and recall
-tibble(
-  "precision" = 
-    yardstick::precision(predictions_glm, Match_Status, .pred_class) %>%
-    select(.estimate),
-  "recall" = 
-    yardstick::recall(predictions_glm, Match_Status, .pred_class) %>%
-    select(.estimate)
-) %>%
-  unnest() 
-
-#F measure
-predictions_glm %>%
-  f_meas(Match_Status, .pred_class) %>%
-  dplyr::select(-.estimator)
+plot(confusion_matrix_graph)
 
 
 
-# Let's do some RF Cross-validation
-set.seed(1978)
-# Create a 5 fold cross validation dat set
-cv_splits <- rsample::vfold_cv(train_tbl, 
-                                   v = 10,
-                                   strata = "Match_Status")
-cv_splits
-cv_splits$splits[[1]]  #Let’s look a the first fold just to see how the data will be split
-cv_splits$splits[[1]] %>% analysis() %>% dim()  # This will extract the 4/5ths analysis data part
+# Estimate the stepwise matching probability
+prediction_test <- predict.lm(lm.fit2, newdata = test, 
+                              type = "response")
+back_step_prob <- predict(back_step_model, type = "response")
+solution_tree <- predict(t.model, newdata = test, type="class") 
+solution_tree <- predict(pruned.t.model, newdata = test, type = "class")
+solution_rf <- predict(caret_matrix, newdata = test, type = "raw")
+solution_boost <- predict(caret_boost, newdata = test, type = "raw")
 
-cv_splits$splits[[1]] %>% assessment() %>% dim() # This will extract the 1/5th assessment data part
+# Training set performance summary
+x <- caret::postResample(pred = .pred_class, obs = as.factor(train$Match_Status))
 
-#Now I need to create a function that contains my model that can be iterated over each split of the data. I also want a function that will make predictions using said model.
-
-# Make prediction
-spec_rf <- parsnip::rand_forest(mtry = 5, mode = "classification", trees = 2000, min_n = 3) %>% 
-  set_engine("ranger", seed = 1978)
-
-cv_splits <- cv_splits %>% 
-  mutate(models_rf = purrr::map(.x = splits, .f = fit_mod_func, spec = spec_rf))
-cv_splits
-cv_splits$models_rf[[1]]  #Inspect each model.    
-
-cv_splits <- cv_splits %>% #add a column that contains the predictions
-  mutate(pred_rf = map2(.x = splits, .y = models_rf, .f = predict_func))
-cv_splits
-
-
-perf_metrics <- yardstick::metric_set(accuracy) # Will calculate accuracy of classification
-
-cv_splits <- cv_splits %>% 
-  mutate(perf_rf = map(pred_rf, rf_metrics))
-
-
-#Update the recipe to be used in RANDOM FOREST with dummy variables and centered and scaled data   
-recipe_rf <- function(dataset) {
-  recipe(Match_Status ~ ., data = dataset) %>%
-    step_dummy(all_nominal(), -all_outcomes()) %>%
-    step_center(all_numeric()) %>%
-    step_scale(all_numeric()) %>%
-    prep(data = dataset)
-}
-
-recipe_rf(dataset = train_tbl)
-
-
-rf_fun <- function(split, try, tree) {   #Needed the original data object data_split  #removed id field
-  analysis_set <- split %>% analysis()
-  analysis_prepped <- analysis_set %>% recipe_rf()
-  analysis_baked <- analysis_prepped %>% bake(new_data = analysis_set)
-  model_rf <-
-    rand_forest(
-      mode = "classification",
-      mtry = try,
-      trees = tree
-    ) %>%
-    set_engine("ranger", seed = 1978,
-               importance = "impurity"
-    ) %>%
-    fit(Match_Status ~ ., data = analysis_baked)
-  assessment_set <- split %>% assessment()
-  assessment_prepped <- assessment_set %>% recipe_rf()
-  assessment_baked <- assessment_prepped %>% bake(new_data = assessment_set)
-  tibble(
-    #"id" = id,
-    "truth" = assessment_baked$Match_Status,
-    "prediction" = model_rf %>%
-      predict(new_data = assessment_baked) %>%
-      unlist())
-}
-
-rf_fun(split = data_split, try = 5, tree = 500)
-
-pred_rf <- map2_df(
-  .x = cross_val_tbl$splits,
-  .y = cross_val_tbl$id,
-  ~ rf_fun(split = .x, try = 3, tree = 200)  #removed y = .id
-)
-head(pred_rf)
-
-pred_rf %>%
-  conf_mat(truth, prediction) %>%
-  summary() %>%
-  select(-.estimator) #%>%
-  #filter(.metric %in%
-  #         c("accuracy", "precision", "recall", "f_meas")) 
-
-
-
-
-
-
-#Recipes handles the pre-processing. Given a sample of training data, you first specify a model formula using add_role() (or the traditional y ~ x notation). Once roles are assigned, variables can be referenced with dplyr-like helper functions such as all_predictors() or all_nominal() — this comes in handy for the processing steps that follow.
-
-#The various step_ functions allow for easy rescaling and transformation, but more importantly they allow you to specify a routine that will consistently reshape all the data you’re feeding into your model. 
-
-# Pre-processing
-credit_rec <- 
-  train %>%
-  recipe(Match_Status ~ .) %>%
-  add_role(Match_Status, new_role = "outcome") %>% 
-  add_role(starts_with("Count_of_"), new_role = "predictor") %>% 
-  add_role(white_non_white, Age, Gender, Couples_Match, US_or_Canadian_Applicant, Medical_Education_Interrupted, Alpha_Omega_Alpha, Military_Service_Obligation, USMLE_Step_1_Score, Visa_Sponsorship_Needed, Medical_Degree, new_role = "predictor") %>% 
-  step_dummy(all_nominal(), -Match_Status) %>%
-  step_center(all_predictors()) %>%
-  step_scale(all_predictors()) %>%
-  prep(training = train, retain = TRUE)  # Prep step included here.  Once we’ve created a recipe() object, the next step is to prep() it. In the baking analogy, the recipe we created is simply a specification for how we want to process our data, and prepping is the process of getting our ingredients and tools in order so that we can bake it. We specify retain = TRUE in the prepping process if we want to hold onto the recipe’s initial training data for later.
-
-
-#Now that we have a recipe and a prepped object, we’re ready to start baking. The bake() function allows us to apply a prepped recipe to new data, which will be processed according to our exact specifications. The juice() function is essentially a shortcut for bake() that’s useful when we want to process and output the training data used to originally specify the recipe (with retain = TRUE during prepping).
-train <- 
-  credit_rec %>% 
-  juice()
-
-test <- 
-  credit_rec %>% 
-  bake(new_data = test)
-
-#Random Forest Model
-## Model specification
-rf_mod <- 
-  rand_forest(
-    mode = "classification",
-    trees = 200
-  )
-
-## Fitting
-rf_fit <- 
-  fit(
-    object = rf_mod,
-    formula = formula(credit_rec),
-    data = train,
-    set_engine = "ranger", seed = 1978
-  )
-
-## Predict using the random forest model above on new data 
-predictions_rf_fit <- rf_fit %>%
-  predict(new_data = test) %>%
-  bind_cols(test %>% select(Match_Status))
-
-#Measuring Model PErformance
-predictions_rf_fit %>%
-  conf_mat(Match_Status, .pred_class) %>%
-  pluck(1) %>%
-  as_tibble() %>%
-  ggplot(aes(Prediction, Truth, alpha = n)) +  #Not plotting
-  geom_tile(show.legend = FALSE) +
-  geom_text(aes(label = n), colour = "white", alpha = 1, size = 8)
-
-# Accuracy - The model’s Accuracy is the fraction of predictions the model got right and can be easily calculated by passing the predictions_rf to the metrics function. However, accuracy is not a very reliable metric as it will provide misleading results if the data set is unbalanced.
-
-predictions_rf_fit %>%
-  metrics(Match_Status, .pred_class) %>%
-  select(-.estimator) %>%
-  filter(.metric == "accuracy") 
-
-#Precision shows how sensitive models are to False Positives (i.e. predicting a customer is leaving when he-she is actually staying) whereas Recall looks at how sensitive models are to False Negatives (i.e. forecasting that a customer is staying whilst he-she is in fact leaving).
-
-tibble( 
-  "precision" = 
-    precision(predictions_rf_fit, Match_Status, .pred_class) %>%  
-    select(.estimate),
-  "recall" = 
-    recall(predictions_rf_fit, Match_Status, .pred_class) %>%
-    select(.estimate)
-) %>%
-  unnest() 
-
-predictions_rf_fit %>%
-  f_meas(Match_Status, .pred_class) %>%
-  select(-.estimator) 
-
+#https://tidymodels.github.io/rsample/articles/Working_with_rsets.html
 #Cross-validation - To further refine the model’s predictive power, I am implementing a 10-fold cross validation using vfold_cv from rsample, which splits again the initial training data.
-cross_val_tbl <- rsample::vfold_cv(train, v = 10)
 
-cross_val_tbl$splits %>%
-  pluck(1)
+set.seed(1978)
+# First, let’s make the splits of the data:
+rs_obj <- rsample::vfold_cv(train_tbl, 
+                                   v = 10, repeats = 10, 
+                                   strata = "Match_Status")
 
+#Now let’s write a function (tm_holdout_results) that will, for each resample:obtain the analysis data set (i.e. the 90% used for modeling)fit a logistic regression model predict the assessment data (the other 10% not used for the model) using the broom package determine if each sample was predicted correctly.
+## splits will be the `rsplit` object with the 90/10 partition
 
+#Example of how splits will be handled.  
+example <- tm_holdout_results(rs_obj$splits[[1]],  Match_Status ~ .)  #Use function called tm_holdout_results
+dim(example)
+dim(assessment(rs_obj$splits[[1]]))
+example[1:10, setdiff(names(example), names(attrition))]
 
-## Predicting!
-results <-
-  tibble(
-    actual = test$Match_Status,
-    predicted = predict_class(rf_fit, test)
-  )
+#Handle all split data at once with map.  
+rs_obj$results <- purrr::map(rs_obj$splits,  #Applies the function against all the splits
+                             tm_holdout_results,
+                             Match_Status ~ .)
+rs_obj
 
-
-
-## Assessment -- test error
-metrics(results, truth = actual, estimate = predicted) %>% 
-  knitr::kable()
-
-
-conf_mat(results, truth = actual, estimate = predicted)[[1]] %>% 
-  as_tibble() %>% 
-  ggplot(aes(Prediction, Truth, alpha = n)) + 
-  geom_tile(fill = custom_palette[4], show.legend = FALSE) +
-  geom_text(aes(label = n), color = "white", alpha = 1, size = 8) +
-  custom_theme +
-  labs(
-    title = "Confusion matrix"
-  )
-
-
-
-
+rs_obj$accuracy <- map_dbl(rs_obj$results, function(x) mean(x$correct)) #Now we can compute the accuracy values for all of the assessment data sets
+summary(rs_obj$accuracy)
 
 
 --------------------------------------------------------------------------------------
-test_normalized <- bake(credit_rec, new_data = test, all_predictors())
-
-set.seed(1978)
-nnet_fit <-
-  mlp(epochs = 100, hidden_units = 5, dropout = 0.1) %>%
-  set_mode("classification") %>% 
-  # Also set engine-specific arguments: 
-  set_engine("keras", verbose = 0, validation_split = .20, seed = 1978) %>%
-  fit(Match_Status ~ ., data = juice(credit_rec))
-
-nnet_fit
-
 test_results <- 
   test %>%
   select(Match_Status) %>%
@@ -419,59 +306,6 @@ test_results %>% conf_mat(truth = Match_Status, nnet_class)
 
 
 
-#Another example, https://tidymodels.github.io/parsnip/articles/articles/Regression.html
-#LASSO
-train <- filter(all_data, Year %in% c("2015", "2016"))  #Train on years 2015, 2016
-nrow(train) 
-test <- filter(all_data, Year %in%  c("2017", "2018")) #Test on 2017, 2018 data
-nrow(test)
-test <- test %>% select(-"Year")
-train <- train %>% select(-"Year")
-
-train$Age <- round(train$Age, digits=2)
-
-norm_recipe <- 
-  recipe(
-    Match_Status ~ ., 
-    data = train) %>%
-  step_dummy(all_nominal()) %>%
-  step_center(all_predictors()) %>%
-  step_center(Age) %>%
-  step_scale(all_predictors()) %>%
-  # estimate the means and standard deviations
-  prep(training = train, retain = TRUE)
-
-# Now let's fit the model using the processed version of the data
-
-glmn_fit <- 
-  logistic_reg(penalty = 0.001, mixture = 0.5) %>% 
-  set_engine("glmnet", seed = 1978) %>%
-  fit(Match_Status ~ ., data = train)
-glmn_fit
-
-
-# First, get the processed version of the test set predictors:
-test_normalized <- bake(norm_recipe, new_data = ames_test, all_predictors())
-
-test_results <- 
-  test_results %>%
-  rename(`random forest` = .pred) %>%
-  bind_cols(
-    predict(glmn_fit, new_data = test_normalized) %>%
-      rename(glmnet = .pred)
-  )
-test_results
-
-test_results %>% metrics(truth = Sale_Price, estimate = glmnet) 
-
-
-test_results %>% 
-  gather(model, prediction, -Sale_Price) %>% 
-  ggplot(aes(x = prediction, y = Sale_Price)) + 
-  geom_abline(col = "green", lty = 2) + 
-  geom_point(alpha = .4) + 
-  facet_wrap(~model) + 
-  coord_fixed()
 
 #youtube.com data preprocessing using recipes
 #Original usage of lm model
@@ -566,41 +400,9 @@ test_data <- bake(prepped_rec, new_data = titanic_test)
 
 # We can now try basic logistic regression
 logistic_regression <- logistic_reg() %>% 
-  set_engine("glm", seed = 1978) %>% 
+  set_engine("glm") %>% 
   fit(Match_Status ~ ., data = train_data)
 
 predict(logistic_regression, new_data = test_data)
 predict(logistic_regression, new_data = test_data, type = "prob")
-
-
-
-
-### Random Forest
-
-rf_with_seed <- 
-  rand_forest(trees = 2000, mode = "classification") %>%
-  set_args(mtry = 5) %>% 
-  set_engine("randomForest", seed = 1978) %>%
-  fit(Match_Status ~ ., data = train)
-rf_with_seed
-
-
-
-#####################################################################
-# https://www.alexpghayes.com/blog/implementing-the-super-learner-with-tidymodels/
-
-prediction_train <- predict(limited.vif.model.kitchen.sink, newdata = train, 
-                            type = "response")
-
-
-
-
-# Estimate the stepwise matching probability
-prediction_test <- predict.lm(lm.fit2, newdata = test, 
-                              type = "response")
-back_step_prob <- predict(back_step_model, type = "response")
-solution_tree <- predict(t.model, newdata = test, type="class") 
-solution_tree <- predict(pruned.t.model, newdata = test, type = "class")
-solution_rf <- predict(caret_matrix, newdata = test, type = "raw")
-solution_boost <- predict(caret_boost, newdata = test, type = "raw")
 
