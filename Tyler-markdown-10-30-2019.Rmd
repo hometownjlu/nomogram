@@ -3,6 +3,14 @@ title: "A Model to Predict Chances of Matching into Obstetrics and Gynecology Re
 author: "Tyler Muffly, MD"
 date: "Department of Obstetrics and Gynecology, Denver Health, Denver, CO"
 output:
+  html_document:
+    code_folding: hide
+    dev: svg
+    df_print: paged
+    theme: united
+    toc_depth: 2
+  word_document:
+    toc_depth: '2'
   pdf_document:
     df_print: paged
     fig_caption: yes
@@ -11,14 +19,6 @@ output:
     pandoc_args:
     - --wrap=none
     - --top-level-division=chapter
-  word_document:
-    toc_depth: '2'
-  html_document:
-    code_folding: hide
-    dev: svg
-    df_print: paged
-    theme: united
-    toc_depth: 2
 fontsize: 12pt
 geometry: margin=1in
 header-includes:
@@ -75,25 +75,23 @@ A codebook is a technical description of the data that was collected for a parti
 16. `all_data$Visa_Sponsorship_Needed` - numerical variable
 17. `all_data$Medical_Degree` - Allopathic versus Osteopathic medical school education, 2 level categorical
 
-
 ```{r directory paths and packrat settings, include=FALSE}
 #Helpful, https://www.kaggle.com/pjmcintyre/titanic-first-kernel/code
-# library(packrat)
-# packrat::set_opts(local.repos = c("packrat/lib/x86_64-apple-darwin15.6.0/3.6.0/"))
-# packrat::packrat_mode(on = TRUE)
-# packrat::snapshot(infer.dependencies = TRUE)
+library(packrat)
+packrat::packrat_mode(on = TRUE)
+#packrat::snapshot(infer.dependencies = TRUE)
 # packrat::restore()
 ```
 
 
 ```{r, echo=FALSE, include = FALSE}
-source(file="~/Dropbox/Nomogram/nomogram/Additional_functions_nomogram.R")
+#May need to run this file by hand.  
+source(file="~/Dropbox/Nomogram/nomogram/Code/Additional_functions_nomogram.R", echo=TRUE, verbose=TRUE)
 ```
 ## Load and Tidy the Data
 `all_data` is a dataframe of the independent and the dependent variables for review. Each variable is contained in a column, and each row represents a single unique medical student. If students applied in more than one year the most contemporary data was used.
 ```{r Download cleaned data from Dropbox, echo=FALSE, include=FALSE, cache=FALSE}
-all_data<- 
-  Hmisc::upData(all_data)
+attach(all_data)
 dim(all_data)
 all_data <- na.omit(all_data)
 dim(all_data)
@@ -102,6 +100,7 @@ freq(data=all_data, plot = FALSE, na.rm = FALSE)
 
 tmp <- table(all_data$Match_Status)
 match_rate <- (tmp[[2]]/(tmp[[2]] + tmp[[1]]))*100
+match_rate
 ```
 We can see that these data have `r nrow(all_data)` of `r ncol(all_data)` variables, and that  about `r round(match_rate, digits = 1)` percent of medical students matched.   Let’s create a few diagnostic plots to get a sense of the data. Remember, the goal here will be to predict whether a given medical student will match into OB/GYN, based on the variables listed in the codebook.
 
@@ -143,7 +142,7 @@ inspectdf::inspect_types(all_data) %>% show_plot()
 ```
 
 ```{r Describe data, include=FALSE}
-describe(all_data)
+Hmisc::describe(all_data)
 ```
 A nice data summary is available from the `skim` package.   
 ```{r,include=TRUE, results='text'}
@@ -167,7 +166,7 @@ naniar::gg_miss_var(all_data)
 ```
 
 ```{r, include=FALSE}
-na.pattern(all_data)
+Hmisc::na.pattern(all_data)
 ```
 
 # Exploratory data analysis
@@ -366,12 +365,23 @@ Here, we will obtain a training sample with the first two years of the data (201
 ```{r, train vs test, warning=FALSE, echo=FALSE, message=FALSE, include=TRUE}
 #http://rpubs.com/josevilardy/crossvalidation
 
-train <- filter(all_data, Year %in% c("2015", "2016"))  #Train on years 2015, 2016
-nrow(train) 
-test <- filter(all_data, Year %in%  c("2017", "2018")) #Test on 2017, 2018 data
-nrow(test)
-test <- test %>% select(-"Year")
-train <- train %>% select(-"Year")
+# train <- filter(all_data, Year %in% c("2015", "2016"))  #Train on years 2015, 2016
+# nrow(train)
+# test <- filter(all_data, Year %in%  c("2017", "2018")) #Test on 2017, 2018 data
+# nrow(test)
+# test <- test %>% select(-"Year")
+# train <- train %>% select(-"Year")
+
+set.seed(seed = 1978) 
+all_data$Age <- as.numeric(all_data$Age)
+all_data <- all_data 
+data_split <- rsample::initial_split(data = all_data, 
+                                     strata = "Match_Status", 
+                                     prop = 0.8)
+data_split
+
+train <- data_split %>% training() %>% glimpse()  # Extract the training dataframe
+test  <- data_split %>% testing() %>% glimpse() # Extra
 ```
 
 Compare the datasets of `train` and `test`:  
@@ -412,7 +422,7 @@ colnames(train)
 train_correlation <- 
   train %>% 
   #select_if(is.numeric) %>% #selects only numeric columns to be used in the correlation plot, NICE!
-    mutate(white_non_white = as.integer(white_non_white),
+    dplyr::mutate(white_non_white = as.integer(white_non_white),
          Match_Status = as.integer(Match_Status),
          Gender = as.integer(Gender),
          Couples_Match = as.integer(Couples_Match),
@@ -425,6 +435,7 @@ train_correlation <-
   stats::cor(use="complete.obs") %>%
   corrplot::corrplot(type="lower", 
                      diag=FALSE, 
+                     addgrid.col = rgb(0, 0, 0, .05),
                      order = "hclust", 
                      tl.cex = 0.5, 
                      tl.col = "black", 
@@ -447,6 +458,28 @@ You can see that there is a natural separation between the Match status and USML
 
 The values of correlation range from -1 to 1.  If there is a value of 0 there is no correlation between the variables.  Perfect correlation is 1.  Perfect negative correlation is -1.  
 
+```{r, include=TRUE, echo=FALSE}
+library(correlationfunnel)
+
+all_data_binarized_tbl <- all_data %>%
+  correlationfunnel::binarize(n_bins = 4, thresh_infreq = 0.01)
+
+all_data_binarized_tbl %>% glimpse()
+
+
+all_data_correlated_tbl <- all_data_binarized_tbl %>%
+  correlationfunnel::correlate(target = Match_Status__Matched)
+
+all_data_correlated_tbl
+
+all_data_correlated_tbl %>%
+  correlationfunnel::plot_correlation_funnel(interactive = TRUE, limits = c(-0.4, 0.4))
+
+all_data_correlated_tbl %>%
+  correlationfunnel::plot_correlation_funnel(interactive = FALSE, limits = c(-0.4, 0.4))
+```
+
+
 ```{r, include = TRUE, fig.width=8, fig.height=4, fig.cap="Figure: Evaluation of the variable interactions in the train data set."}
 cor(1:5, 1:5) #Perfect positive correlation
 cor(1:5, 5:1) #Perfect negative correlation
@@ -463,12 +496,12 @@ train$Match_Status <- as.factor(train$Match_Status)
 class(train$Match_Status)  
 
 d <- 
-  datadist(train)
+  rms::datadist(train)
 
 options(datadist = "d")
 
 kitchen.sink <- 
-  lrm(Match_Status ~
+  rms::lrm(Match_Status ~
         white_non_white +
         Age +
         #rms::rcs(Age, 5) ## Removed splined variable
@@ -676,6 +709,8 @@ tm_chart_strength_of_variables(limited.vif.model.kitchen.sink)
 ```
 
 # Automatic Factor Selection
+#https://livebook.datascienceheroes.com/selecting-best-variables.html
+
 After splitting the model in training and validation data, it is necessary to evaluate the variables with a major predictive power. The best method is reviewing the p-values in the regression model, however there are many variables in the model so it will take considerable time to do so manually. In this case, the LASSO regularization algorithm is implemented to identify the variables to be significant on the model. 
 
 Start with Stepwise Regression  
@@ -1464,7 +1499,7 @@ DynNom::DynNom(model = DynNom.model.lrm, data = test,  clevel = 0.95)
 
 
 ```{r generalized logistic regression, include=FALSE, echo=FALSE, cache=FALSE}
-DynNom.model.glm  <-
+
 DynNom.model.glm <- glm(Match_Status ~
                           Age +
                           Alpha_Omega_Alpha +
@@ -1480,7 +1515,7 @@ DynNom.model.glm <- glm(Match_Status ~
                           white_non_white,
                         family = "binomial",  #Removed the relax cubic splines for age and USMLE step 1
                         data = test, x = TRUE, y= TRUE)
-#DynNom::DNbuilder(model = DynNom.model.glm, data = train)
+DynNom::DNbuilder(model = DynNom.model.glm, data = test)
 ```
 
 
