@@ -494,5 +494,181 @@ automl_models_h2o@leaderboard %>%
 
 
 
+# 3. LIME ----
+
+# 3.1 Making Predictions ----
+
+automl_leader <- automl_models_h2o@leader
+predictions_tbl <- automl_leader %>% 
+  h2o.predict(newdata = as.h2o(test_tbl)) %>%
+  as.tibble() %>%
+  bind_cols(
+    test_tbl %>%
+      select(Match_Status, Age, USMLE_Step_1_Score, US_or_Canadian_Applicant)
+  )
+predictions_tbl
+
+
+test_tbl %>%
+  dplyr::slice(5) %>%
+  glimpse()
+
+# 3.2 Single Explanation ----
+
+explainer <- train_tbl %>%
+  select(-Match_Status) %>%
+  lime(
+    model           = automl_leader,
+    bin_continuous  = TRUE,
+    n_bins          = 4,
+    quantile_bins   = TRUE
+  )
+explainer
+
+explanation <- test_tbl %>%
+  dplyr::slice(5) %>%
+  select(-Match_Status) %>%
+  lime::explain(
+    explainer = explainer,
+    n_labels   = 1,
+    n_features = 8,
+    n_permutations = 5000,
+    kernel_width   = 1
+  )
+
+explanation %>%
+  as.tibble() %>%
+  dplyr::select(feature:prediction) 
+
+plot_features(explanation = explanation, ncol = 1)
+
+
+# 3.3 Multiple Explanations ----
+
+explanation <- test_tbl %>%
+  dplyr::slice(1:20) %>%
+  dplyr::select(-Match_Status) %>%
+  lime::explain(
+    explainer = explainer,
+    n_labels   = 1,
+    n_features = 8,
+    n_permutations = 5000,
+    kernel_width   = 1
+  )
+
+explanation %>%
+  as.tibble()
+
+
+plot_features(explanation, ncol = 1)
+
+plot_explanations(explanation)
+
+
+# 4. Challenge Solutions ----
+
+# 4.1 Recreating plot_features() -----
+
+explanation %>%
+  as.tibble()
+
+case_1 <- explanation %>%
+  dplyr::filter(case == 1)
+
+case_1 %>%
+  plot_features()
+
+
+library(glue)
+
+# Transformation
+data_transformed <- case_1 %>%
+  as.tibble() %>%
+  dplyr::mutate(
+    feature_desc = as_factor(feature_desc) %>% 
+      fct_reorder(abs(feature_weight), .desc = FALSE),
+    key     = ifelse(feature_weight > 0, "Supports", "Contradicts") %>% 
+      fct_relevel("Supports"),
+    case_text    = glue("Case: {case}"),
+    label_text   = glue("Label: {label}"),
+    prob_text    = glue("Probability: {round(label_prob, 2)}"),
+    r2_text      = glue("Explanation Fit: {model_r2 %>% round(2)}")
+  ) %>%
+  dplyr::select(feature_desc, feature_weight, key, case_text:r2_text)
+
+data_transformed
+
+
+data_transformed %>%
+  ggplot(aes(feature_desc, feature_weight, fill = key)) +
+  geom_col() +
+  coord_flip() +
+  #theme_tq() +
+  scale_fill_tq() +
+  labs(y = "Weight", x = "Feature") +
+  facet_wrap(~ case_text + label_text + prob_text + r2_text,
+             ncol = 1, scales = "free")
+
+explanation %>%
+  dplyr::filter(case %in% 1) %>%
+  plot_features_tq(ncol = 2)
+
+explanation %>%
+  filter(case %in% 1:6) %>%
+  plot_features(ncol = 2)
+
+# 4.2 Recreating plot_explanations ----
+explanation %>%
+  as.tibble()
+
+plot_explanations(explanation)
+
+data_transformed <- explanation %>%
+  as.tibble() %>%
+  dplyr::mutate(
+    case    = as_factor(case),
+    order_1 = rank(feature) 
+  ) %>%
+  # select(case, feature, feature_value, order_1) %>%
+  # arrange(order_1)
+  dplyr::group_by(feature) %>%
+  dplyr::mutate(
+    order_2 = rank(feature_value)
+  ) %>%
+  dplyr::ungroup() %>%
+  # select(case, feature, feature_value, order_1, order_2) %>%
+  # arrange(order_1, order_2)
+  dplyr::mutate(
+    order = order_1 * 1000 + order_2
+  ) %>%
+  # select(case, feature, feature_value, order_1, order_2, order) %>%
+  # arrange(order)
+  dplyr::mutate(
+    feature_desc = as.factor(feature_desc) %>% 
+      fct_reorder(order, .desc =  T) 
+  ) %>%
+  dplyr::select(case, feature_desc, feature_weight, label)
+
+data_transformed %>%
+  ggplot(aes(case, feature_desc)) +
+  geom_tile(aes(fill = feature_weight)) +
+  facet_wrap(~ label) +
+  #theme_tq() +
+  scale_fill_gradient2(low = palette_light()[[2]], 
+                       mid = "white",
+                       high = palette_light()[[1]]) +
+  theme(
+    panel.grid = element_blank(),
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)
+  ) +
+  labs(y = "Feature", x = "Case", 
+       fill = glue("Feature
+                    Weight"))
+
+plot_explanations(explanation)
+
+plot_explanations_tq(explanation)
+
 
 
