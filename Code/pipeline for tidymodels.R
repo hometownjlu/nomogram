@@ -66,6 +66,36 @@ train %>%
   plot_hist_facet()  #Variables like age and Step 1 scores have different ranges.  Age has 25 to 60 years and Step 1 score has 180 to 280.  Algorithm needs all data on the same scale.  USMLE data would dominate Age because of different ranges.  
 # SVMs require centered and scaled data
 
+#--------------------------------------------------- Feature Analysis  -----------------------------------------------#
+#Feature Analysis, https://ryjohnson09.netlify.com/post/caret-and-tidymodels/
+#Graphing the Outcomes
+all_data %>%
+  count(Match_Status) %>% 
+  ggplot(aes(Match_Status, n, fill = Match_Status)) + 
+  geom_col(width = .5, show.legend = FALSE) + 
+  scale_y_continuous(labels = scales::comma) +
+  #scale_fill_manual(values = custom_palette[3:2]) +
+  #custom_theme + 
+  labs(
+    x = NULL,
+    y = NULL,
+    title = "Distribution of cases"
+  )
+
+# Create vector of predictors by removing column 19 that is Match_Status
+expl <- names(train_tbl)[-19]
+
+# Loop vector with map, moved here so we don't have to deal with dummy variables
+expl_plots_box <- map(expl, ~box_fun_plot(data = train_tbl, x = "Match_Status", y = .x) )
+cowplot::plot_grid(plotlist = expl_plots_box)  #Must view with zoom function
+
+# Loop vector with map
+expl_plots_density <- map(expl, ~density_fun_plot(data = train_tbl, x = "Match_Status", y = .x) )
+cowplot::plot_grid(plotlist = expl_plots_density) #Must view with zoom function
+
+#--------------------------------------------------- Preprocessing  -----------------------------------------------#
+
+
 # ML Preprocessing 
 
 # --------------------------------------------------
@@ -87,24 +117,6 @@ train %>%
 # 6) Normalization steps (center, scale, range, etc)
 # 7) Multivariate transformation (e.g. PCA, spatial sign, etc)
 
-recipe_simple <- function(dataset) { #No imputing required
-  recipe(Match_Status ~ ., data = dataset) %>%     
-    update_role(Match_Status, new_role = "outcome") %>%
-    #Using the formula sets the predictors and the outcome
-    recipes::step_zv(all_predictors()) %>%  
-    #removes zero variance functions where every value is the same for every observation
-    recipes::step_YeoJohnson(skewed_feature_names) %>%  
-    # The data is transformed for skewness (Age, Count of poster presentations)
-    step_center(all_numeric(), -all_outcomes()) %>%
-    step_scale(all_numeric(), -all_outcomes())
-  #center subtracts out the means for numerics
-  recipes::step_dummy(all_nominal(), -all_outcomes()) 
-}
-
-recipe_obj <- recipe(Match_Status ~ ., data = train) %>%
-  step_zv(all_predictors()) %>%
-  step_YeoJohnson(skewed_feature_names) %>%
-  step_num2factor(factor_names)
 
 recipe_simple <- recipe(Match_Status ~ ., data = train) %>%     
   update_role(Match_Status, new_role = "outcome") %>%
@@ -192,3 +204,5 @@ automl_models_h2o <- h2o.automl(
   stopping_metric = "AUC",
   verbosity = "info"
 )
+
+
