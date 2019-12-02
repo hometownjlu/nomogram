@@ -241,10 +241,11 @@ h2o.getModel("XGBoost_3_AutoML_20191201_231543") %>%
 h2o.getModel("GBM_1_AutoML_20191201_231543") %>%
   h2o.saveModel(path = "04_Modeling/h2omodels/")
 
-deeplearning_h2o <- h2o.loadModel("04_Modeling/h2o_models/StackedEnsemble_BestOfFamily_AutoML_20191201_231543")
+h2o.getModel("DRF_1_AutoML_20191201_231543") %>%
+  h2o.saveModel(path = "04_Modeling/h2omodels/")
 
-glm_h2o <- h2o.loadModel("04_Modeling/h2o_models/GLM_grid_1_AutoML_20191201_231543_model_1")
-
+h2o.getModel("GBM_2_AutoML_20191201_231543") %>%
+  h2o.saveModel(path = "04_Modeling/h2omodels/")
 
 # Making Predictions
 stacked_ensemble_h2o <- h2o.loadModel("04_Modeling/h2o_models/StackedEnsemble_BestOfFamily_AutoML_20191201_231543")
@@ -261,15 +262,15 @@ predictions_tbl
 # 3. Visualizing The Leaderboard ----
 data_transformed <- automl_models_h2o@leaderboard %>% 
   as.tibble() %>%
-  mutate(model_type = str_split(model_id, "_", simplify = T)[,1]) %>%
-  slice(1:10) %>%
+  dplyr::mutate(model_type = str_split(model_id, "_", simplify = T)[,1]) %>%
+  dplyr::slice(1:10) %>%
   rownames_to_column() %>%
-  mutate(
+  dplyr::mutate(
     model_id   = as_factor(model_id) %>% reorder(auc),
     model_type = as.factor(model_type)
   ) %>%
   tidyr::gather(key = key, value = value, -c(model_id, model_type, rowname), factor_key = T) %>%
-  mutate(model_id = paste0(rowname, ". ", model_id) %>% as_factor() %>% fct_rev()) 
+  dplyr::mutate(model_id = paste0(rowname, ". ", model_id) %>% as_factor() %>% fct_rev()) 
 
 data_transformed %>%
   ggplot(aes(value, model_id, color = model_type)) +
@@ -283,13 +284,12 @@ data_transformed %>%
        subtitle = paste0("Ordered by: auc"),
        y = "Model Postion, Model ID", x = "")
 
-h2o_leaderboard <- automl_models_h2o@leaderboard
 
+
+
+h2o_leaderboard <- automl_models_h2o@leaderboard
 automl_models_h2o@leaderboard %>%
   plot_h2o_leaderboard(order_by = "logloss")
-
-
-
 
 
 
@@ -305,16 +305,14 @@ h2o.getModel("XGBoost_3_AutoML_20191201_231543") %>%
 h2o.getModel("GBM_1_AutoML_20191201_231543") %>%
   h2o.saveModel(path = "04_Modeling/h2omodels/")
 
+h2o.getModel("DRF_1_AutoML_20191201_231543") %>%
+  h2o.saveModel(path = "04_Modeling/h2omodels/")
 
+h2o.getModel("GBM_2_AutoML_20191201_231543") %>%
+  h2o.saveModel(path = "04_Modeling/h2omodels/")
 
 # 4. Assessing Performance ----
 stacked_ensemble_h2o <- h2o.loadModel("04_Modeling/h2o_models/StackedEnsemble_BestOfFamily_AutoML_20191201_231543")
-
-deeplearning_h2o <- h2o.loadModel("04_Modeling/h2o_models/GLM_grid_1_AutoML_20191201_231543_model_1")
-
-glm_h2o <- h2o.loadModel("04_Modeling/h2o_models/XGBoost_3_AutoML_20191201_231543")
-
-
 
 performance_h2o <- h2o.performance(stacked_ensemble_h2o, newdata = as.h2o(test_tbl))
 
@@ -352,22 +350,6 @@ performance_tbl %>%
 
 
 # ROC Plot
-
-#path <- "04_Modeling/h2o_models/DeepLearning_0_AutoML_20180503_035824"
-
-load_model_performance_metrics <- function(path, test_tbl) {
-  
-  model_h2o <- h2o.loadModel(path)
-  perf_h2o  <- h2o.performance(model_h2o, newdata = as.h2o(test_tbl)) 
-  
-  perf_h2o %>%
-    h2o.metric() %>%
-    as.tibble() %>%
-    mutate(auc = h2o.auc(perf_h2o)) %>%
-    select(tpr, fpr, auc)
-  
-}
-
 model_metrics_tbl <- fs::dir_info(path = "04_Modeling/h2o_models/") %>%
   dplyr::select(path) %>%
   dplyr::mutate(metrics = map(path, load_model_performance_metrics, test_tbl)) %>%
@@ -485,7 +467,7 @@ h2o_leaderboard <- automl_models_h2o@leaderboard
 
 automl_models_h2o@leaderboard %>%
   plot_h2o_performance(newdata = test_tbl, order_by = "auc", 
-                       size = 1, max_models = 3)
+                       size = 1, max_models = 5)
 
 
 automl_models_h2o@leaderboard %>%
@@ -561,7 +543,6 @@ explanation %>%
 
 
 plot_features(explanation, ncol = 1)
-
 plot_explanations(explanation)
 
 
@@ -669,6 +650,5 @@ data_transformed %>%
 plot_explanations(explanation)
 
 plot_explanations_tq(explanation)
-
 
 
