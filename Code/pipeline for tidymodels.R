@@ -189,7 +189,7 @@ train_h2o <- split_h2o[[1]]
 valid_h2o <- split_h2o[[2]]
 test_h2o  <- as.h2o(test)
 
-y <- "Match_Status"
+y <- "Match_Status"  #Do not dummy the nominal variables early so that we can avoid changing the column names.  
 x <- setdiff(names(train_h2o), y)
 
 # # #Models run for 10 hours on 11/25/2019.
