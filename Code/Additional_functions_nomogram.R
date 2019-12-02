@@ -400,5 +400,3 @@ model_name %>%  #Plug in the model using the training data
   labs(
     title = paste('Confusion matrix using:', label, sep = " ")) }
 
-tm_confusion_matrix_graph(model_name = svm, label = "svm")
-
