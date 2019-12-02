@@ -653,5 +653,75 @@ load_model_performance_metrics <- function(path, test_tbl) {
 }
 
 
+plot_features_tq <- function(explanation, ncol) {
+  
+  data_transformed <- explanation %>%
+    as.tibble() %>%
+    mutate(
+      feature_desc = as_factor(feature_desc) %>% 
+        fct_reorder(abs(feature_weight), .desc = FALSE),
+      key     = ifelse(feature_weight > 0, "Supports", "Contradicts") %>% 
+        fct_relevel("Supports"),
+      case_text    = glue("Case: {case}"),
+      label_text   = glue("Label: {label}"),
+      prob_text    = glue("Probability: {round(label_prob, 2)}"),
+      r2_text      = glue("Explanation Fit: {model_r2 %>% round(2)}")
+    ) %>%
+    select(feature_desc, feature_weight, key, case_text:r2_text)
+  
+  
+  data_transformed %>%
+    ggplot(aes(feature_desc, feature_weight, fill = key)) +
+    geom_bar(stat = "identity") +
+    coord_flip() +
+    #theme_tq() +
+    scale_fill_tq() +
+    labs(y = "Weight", x = "Feature") +
+    theme(title = element_text(size = 9)) +
+    facet_wrap(~ case_text + label_text + prob_text + r2_text,
+               ncol = ncol, scales = "free")
+  
+}
 
+
+
+plot_explanations_tq <- function(explanation) {
+  
+  data_transformed <- explanation %>%
+    as.tibble() %>%
+    dplyr::mutate(
+      case    = as_factor(case),
+      order_1 = rank(feature) 
+    ) %>%
+    dplyr::group_by(feature) %>%
+    dplyr::mutate(
+      order_2 = rank(feature_value)
+    ) %>%
+    dplyr::ungroup() %>%
+    dplyr::mutate(
+      order = order_1 * 1000 + order_2
+    ) %>%
+    dplyr::mutate(
+      feature_desc = as.factor(feature_desc) %>% 
+        fct_reorder(order, .desc =  T) 
+    ) %>%
+    dplyr::select(case, feature_desc, feature_weight, label)
+  
+  data_transformed %>%
+    ggplot(aes(case, feature_desc)) +
+    geom_tile(aes(fill = feature_weight)) +
+    facet_wrap(~ label) +
+    #theme_tq() +
+    scale_fill_gradient2(low = palette_light()[[2]], mid = "white",
+                         high = palette_light()[[1]]) +
+    theme(
+      panel.grid = element_blank(),
+      legend.position = "right",
+      axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)
+    ) +
+    labs(y = "Feature", x = "Case", 
+         fill = glue("Feature
+                         Weight"))
+  
+}
 
