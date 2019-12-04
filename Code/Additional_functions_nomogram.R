@@ -17,8 +17,8 @@ data_file <- "all_years_filter_112.rds"
 .libPaths("/Users/tylermuffly/.exploratory/R/3.6")
 
 
-pkg <- (c('R.methodsS3', 'caret', 'readxl', 'XML', 'reshape2', 'devtools', 'purrr', 'readr', 'ggplot2', 'dplyr', 'magick', 'janitor', 'lubridate', 'hms', 'tidyr', 'stringr', 'openxlsx', 'forcats', 'RcppRoll', 'tibble', 'bit64', 'munsell', 'scales', 'rgdal', 'tidyverse', "foreach", "PASWR", "rms", "pROC", "ROCR", "nnet", "packrat", "DynNom", "export", "caTools", "mlbench", "randomForest", "ipred", "xgboost", "Metrics", "RANN", "AppliedPredictiveModeling", "nomogramEx", "shiny", "earth", "fastAdaboost", "Boruta", "glmnet", "ggforce", "tidylog", "InformationValue", "pscl", "scoring", "DescTools", "gbm", "Hmisc", "arsenal", "pander", "moments", "leaps", "MatchIt", "car", "mice", "rpart", "beepr", "fansi", "utf8", "zoom", "lmtest", "ResourceSelection", "rmarkdown", "rattle", "rmda", "funModeling", "tinytex", "caretEnsemble", "Rmisc", "corrplot", "GGally", "alluvial", "progress", "perturb", "vctrs", "highr", "labeling", "DataExplorer", "rsconnect", "inspectdf", "ggpubr", "esquisse", "stargazer", "tableone", "knitr", "drake", "visNetwork", "woeBinning", "OneR", "rpart.plot", "RColorBrewer", "kableExtra", "kernlab", "naivebayes", "e1071", "data.table", "skimr", "naniar", "english", "mosaic", "broom", "mltools", "tidymodels", "tidyquant", "plotly", "rsample", "yardstick", "parsnip", "tensorflow", "keras", "sparklyr", "dials", "cowplot"))
-#install.packages(pkg, dependencies = TRUE)
+pkg <- (c('R.methodsS3', 'caret', 'readxl', 'XML', 'reshape2', 'devtools', 'purrr', 'readr', 'ggplot2', 'dplyr', 'magick', 'janitor', 'lubridate', 'hms', 'tidyr', 'stringr', 'openxlsx', 'forcats', 'RcppRoll', 'tibble', 'bit64', 'munsell', 'scales', 'rgdal', 'tidyverse', "foreach", "PASWR", "rms", "pROC", "ROCR", "nnet", "packrat", "DynNom", "export", "caTools", "mlbench", "randomForest", "ipred", "xgboost", "Metrics", "RANN", "AppliedPredictiveModeling", "nomogramEx", "shiny", "earth", "fastAdaboost", "Boruta", "glmnet", "ggforce", "tidylog", "InformationValue", "pscl", "scoring", "DescTools", "gbm", "Hmisc", "arsenal", "pander", "moments", "leaps", "MatchIt", "car", "mice", "rpart", "beepr", "fansi", "utf8", "zoom", "lmtest", "ResourceSelection", "rmarkdown", "rattle", "rmda", "funModeling", "tinytex", "caretEnsemble", "Rmisc", "corrplot", "GGally", "alluvial", "progress", "perturb", "vctrs", "highr", "labeling", "DataExplorer", "rsconnect", "inspectdf", "ggpubr", "esquisse", "stargazer", "tableone", "knitr", "drake", "visNetwork", "woeBinning", "OneR", "rpart.plot", "RColorBrewer", "kableExtra", "kernlab", "naivebayes", "e1071", "data.table", "skimr", "naniar", "english", "mosaic", "broom", "mltools", "tidymodels", "tidyquant", "plotly", "rsample", "yardstick", "parsnip", "tensorflow", "keras", "sparklyr", "dials", "cowplot", "lime"))
+#install.packages(pkg, dependencies = TRUE, repos = "https://cloud.r-project.org")
 lapply(pkg, require, character.only = TRUE)
 
 #install.packages("dplR", dependencies = TRUE)
@@ -725,3 +725,121 @@ plot_explanations_tq <- function(explanation) {
   
 }
 
+
+plot_hist_facet <- function(data, fct_reorder = FALSE, fct_rev = FALSE, 
+                            bins = 10, fill = palette_light()[[3]], color = "white", ncol = 5, scale = "free") {
+  
+  data_factored <- data %>%
+    mutate_if(is.character, as.factor) %>%
+    mutate_if(is.factor, as.numeric) %>%
+    tidyr::gather(key = key, value = value, factor_key = TRUE) 
+  
+  if (fct_reorder) {
+    data_factored <- data_factored %>%
+      mutate(key = as.character(key) %>% as.factor())
+  }
+  
+  if (fct_rev) {
+    data_factored <- data_factored %>%
+      mutate(key = fct_rev(key))
+  }
+  
+  g <- data_factored %>%
+    ggplot(aes(x = value, group = key)) +
+    geom_histogram(bins = bins, fill = fill, color = color) +
+    facet_wrap(~ key, ncol = ncol, scale = scale) #+ 
+    #theme_tq()
+  
+  return(g)
+  
+}
+
+
+get_cor <- function(data, target, use = "pairwise.complete.obs",
+                    fct_reorder = FALSE, fct_rev = FALSE) {
+  
+  feature_expr <- enquo(target)
+  feature_name <- quo_name(feature_expr)
+  
+  data_cor <- data %>%
+    mutate_if(is.character, as.factor) %>%
+    mutate_if(is.factor, as.numeric) %>%
+    cor(use = use) %>%
+    as.tibble() %>%
+    mutate(feature = names(.)) %>%
+    select(feature, !! feature_expr) %>%
+    filter(!(feature == feature_name)) %>%
+    mutate_if(is.character, as_factor)
+  
+  if (fct_reorder) {
+    data_cor <- data_cor %>% 
+      mutate(feature = fct_reorder(feature, !! feature_expr)) %>%
+      arrange(feature)
+  }
+  
+  if (fct_rev) {
+    data_cor <- data_cor %>% 
+      mutate(feature = fct_rev(feature)) %>%
+      arrange(feature)
+  }
+  
+  return(data_cor)
+  
+}
+
+plot_cor <- function(data, target, fct_reorder = FALSE, fct_rev = FALSE, 
+                     include_lbl = TRUE, lbl_precision = 2, lbl_position = "outward",
+                     size = 2, line_size = 1, vert_size = 1, 
+                     color_pos = palette_light()[[1]], color_neg = palette_light()[[2]]) {
+  
+  feature_expr <- enquo(target)
+  feature_name <- quo_name(feature_expr)
+  
+  data_cor <- data %>%
+    get_cor(!! feature_expr, fct_reorder = fct_reorder, fct_rev = fct_rev) %>%
+    mutate(feature_name_text = round(!! feature_expr, lbl_precision)) %>%
+    mutate(Correlation = case_when(
+      (!! feature_expr) >= 0 ~ "Positive",
+      TRUE                   ~ "Negative") %>% as.factor())
+  
+  g <- data_cor %>%
+    ggplot(aes_string(x = feature_name, y = "feature", group = "feature")) +
+    geom_point(aes(color = Correlation), size = size) +
+    geom_segment(aes(xend = 0, yend = feature, color = Correlation), size = line_size) +
+    geom_vline(xintercept = 0, color = palette_light()[[1]], size = vert_size) +
+    expand_limits(x = c(-1, 1)) +
+    #theme_tq() +
+    scale_color_manual(values = c(color_neg, color_pos)) 
+  
+  if (include_lbl) g <- g + geom_label(aes(label = feature_name_text), hjust = lbl_position)
+  
+  return(g)
+  
+}
+
+
+# ggpairs: A lot of repetitive typing can be reduced 
+plot_ggpairs <- function(data, color = NULL, density_alpha = 0.5) {
+  
+  color_expr <- enquo(color)
+  
+  if (rlang::quo_is_null(color_expr)) {
+    
+    g <- data %>%
+      ggpairs(lower = "blank") 
+    
+  } else {
+    
+    color_name <- quo_name(color_expr)
+    
+    g <- data %>%
+      ggpairs(mapping = aes_string(color = color_name), 
+              lower = "blank", legend = 1,
+              diag = list(continuous = wrap("densityDiag", 
+                                            alpha = density_alpha))) +
+      theme(legend.position = "bottom")
+  }
+  
+  return(g)
+  
+}
