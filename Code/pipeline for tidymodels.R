@@ -1,5 +1,4 @@
 
-
 #Load for TIDYMODELS version of modeling
 gc()
 #setwd("~/Dropbox/Nomogram/nomogram/")
@@ -41,7 +40,6 @@ data_split
 train <- data_split %>% training() %>% glimpse()  # Extract the training dataframe
 test  <- data_split %>% testing() %>% glimpse() # Extra
 
-
 #https://university.business-science.io/courses/246843/lectures/5021219
 #Is skew present
 skewed_feature_names <- train %>%
@@ -53,10 +51,13 @@ skewed_feature_names <- train %>%
   pull(key) %>%
   as.character()
 
-train %>%
+
+png(filename="~/Dropbox/Nomogram/nomogram/Code/results/skewed_variables1.png")
+skewed_variables <- train %>%
   dplyr::select(skewed_feature_names) %>% #Look to make sure these variables are not factors
   #NB:  Skew is present in everything starting with count and age
   plot_hist_facet()
+plot(skewed_variables)
 
 #Centering and Scaling ----
 train %>%
@@ -81,14 +82,14 @@ all_data %>%
   )
 
 # Create vector of predictors by removing column 19 that is Match_Status
-expl <- names(train_tbl)[-19]
+expl <- names(train)[-19]
 
 # Loop vector with map, moved here so we don't have to deal with dummy variables
-expl_plots_box <- map(expl, ~box_fun_plot(data = train_tbl, x = "Match_Status", y = .x) )
+expl_plots_box <- map(expl, ~box_fun_plot(data = train, x = "Match_Status", y = .x) )
 cowplot::plot_grid(plotlist = expl_plots_box)  #Must view with zoom function
 
 # Loop vector with map
-expl_plots_density <- map(expl, ~density_fun_plot(data = train_tbl, x = "Match_Status", y = .x) )
+expl_plots_density <- map(expl, ~density_fun_plot(data = train, x = "Match_Status", y = .x) )
 cowplot::plot_grid(plotlist = expl_plots_density) #Must view with zoom function
 
 #--------------------------------------------------- Preprocessing  -----------------------------------------------#
@@ -144,8 +145,6 @@ recipe_obj %>%
 prepared_object <- recipe_obj %>%  
   recipes::prep()  #Does calculations to ready the data
 
-prepared_object$steps[[3]] #Shows all the means for centered data
-
 prepared_object %>%
   bake(new_data = train) %>% #Can also do one hot encoding
   dplyr::select(contains("Gender")) %>%
@@ -192,7 +191,6 @@ test_h2o  <- as.h2o(test)
 y <- "Match_Status"  #Do not dummy the nominal variables early so that we can avoid changing the column names.  
 x <- setdiff(names(train_h2o), y)
 
-# # #Models run for 10 hours on 11/25/2019.
 automl_models_h2o <- h2o.automl(
   x = x,
   y = y,
@@ -202,7 +200,7 @@ automl_models_h2o <- h2o.automl(
   max_runtime_secs = 30, #originally was 60 secs #36000
   nfolds = 10, #K-fold cross-validation: duplicate the train data into 10 sets.  9 of the 10 are used for training and 1 of the 10 is used for validation.  Different parameters are being evaluate but NOT using a different model.  AUC is generated to measure model effectiveness for each fold and mean is used.
   seed = 1978,
-  stopping_metric = "AUC",
+  max_models = 10, 
   verbosity = "info"
 )
 
@@ -212,6 +210,9 @@ typeof(automl_models_h2o)
 slotNames(automl_models_h2o)
 
 automl_models_h2o@leaderboard
+lb <- automl_models_h2o@leaderboard
+print(lb, n=nrow(lb)) #prints all rows instead of the standard 6 rows
+
 
 automl_models_h2o@leader
 
@@ -221,34 +222,34 @@ extract_h2o_model_name_by_position(automl_models_h2o@leaderboard, n=3, verbose =
 extract_h2o_model_name_by_position(automl_models_h2o@leaderboard, n=4, verbose = T)
 extract_h2o_model_name_by_position(automl_models_h2o@leaderboard, n=5, verbose = T)
 
-h2o.getModel("StackedEnsemble_BestOfFamily_AutoML_20191201_231543")
-h2o.getModel("GLM_grid_1_AutoML_20191201_231543_model_1")
-h2o.getModel("XGBoost_3_AutoML_20191201_231543")
-h2o.getModel("GBM_1_AutoML_20191201_231543")
+h2o.getModel("XGBoost_3_AutoML_20191203_160751")
+h2o.getModel("GLM_grid_1_AutoML_20191203_142939_model_1")
+h2o.getModel("XGBoost_grid_1_AutoML_20191203_142939_model_6")
+h2o.getModel("GBM_grid_1_AutoML_20191203_142939_model_4")
 
 
 # Saving & Loading
 
-h2o.getModel("StackedEnsemble_BestOfFamily_AutoML_20191201_231543") %>%
+h2o.getModel("XGBoost_3_AutoML_20191203_160751") %>%
   h2o.saveModel(path = "04_Modeling/h2o_models/")
 
-h2o.getModel("GLM_grid_1_AutoML_20191201_231543_model_1") %>%
+h2o.getModel("GLM_grid_1_AutoML_20191203_142939_model_1") %>%
   h2o.saveModel(path = "04_Modeling/h2o_models/")
 
-h2o.getModel("XGBoost_3_AutoML_20191201_231543") %>%
+h2o.getModel("XGBoost_grid_1_AutoML_20191203_142939_model_6") %>%
   h2o.saveModel(path = "04_Modeling/h2o_models/")
 
-h2o.getModel("GBM_1_AutoML_20191201_231543") %>%
+h2o.getModel("GBM_grid_1_AutoML_20191203_142939_model_4") %>%
   h2o.saveModel(path = "04_Modeling/h2omodels/")
-
-h2o.getModel("DRF_1_AutoML_20191201_231543") %>%
-  h2o.saveModel(path = "04_Modeling/h2omodels/")
-
-h2o.getModel("GBM_2_AutoML_20191201_231543") %>%
-  h2o.saveModel(path = "04_Modeling/h2omodels/")
+# 
+# h2o.getModel("DRF_1_AutoML_20191201_231543") %>%
+#   h2o.saveModel(path = "04_Modeling/h2omodels/")
+# 
+# h2o.getModel("GBM_2_AutoML_20191201_231543") %>%
+#   h2o.saveModel(path = "04_Modeling/h2omodels/")
 
 # Making Predictions
-stacked_ensemble_h2o <- h2o.loadModel("04_Modeling/h2o_models/StackedEnsemble_BestOfFamily_AutoML_20191201_231543")
+stacked_ensemble_h2o <- h2o.loadModel("04_Modeling/h2o_models/XGBoost_3_AutoML_20191203_160751")
 stacked_ensemble_h2o
 
 predictions <- h2o.predict(stacked_ensemble_h2o, newdata = as.h2o(test_tbl))
@@ -286,14 +287,13 @@ data_transformed %>%
 
 
 
-
 h2o_leaderboard <- automl_models_h2o@leaderboard
 automl_models_h2o@leaderboard %>%
   plot_h2o_leaderboard(order_by = "logloss")
 
 
 
-h2o.getModel("StackedEnsemble_BestOfFamily_AutoML_20191201_231543") %>%
+h2o.getModel("XGBoost_3_AutoML_20191203_160751") %>%
   h2o.saveModel(path = "04_Modeling/h2o_models/")
 
 h2o.getModel("GLM_grid_1_AutoML_20191201_231543_model_1") %>%
@@ -312,7 +312,7 @@ h2o.getModel("GBM_2_AutoML_20191201_231543") %>%
   h2o.saveModel(path = "04_Modeling/h2omodels/")
 
 # 4. Assessing Performance ----
-stacked_ensemble_h2o <- h2o.loadModel("04_Modeling/h2o_models/StackedEnsemble_BestOfFamily_AutoML_20191201_231543")
+stacked_ensemble_h2o <- h2o.loadModel("04_Modeling/h2o_models/XGBoost_3_AutoML_20191203_160751")
 
 performance_h2o <- h2o.performance(stacked_ensemble_h2o, newdata = as.h2o(test_tbl))
 
@@ -505,30 +505,55 @@ explainer <- train_tbl %>%
     n_bins          = 4,
     quantile_bins   = TRUE
   )
-explainer
-
+summary(explainer)
+ 
 explanation <- test_tbl %>%
   dplyr::slice(5) %>%
   select(-Match_Status) %>%
   lime::explain(
     explainer = explainer,
+    dist_fun = "gower", #Distance function
     n_labels   = 1,
     n_features = 8,
     n_permutations = 5000,
-    kernel_width   = 1
+    kernel_width   = 1,
+    feature_select = "highest_weights" #select features with ridge regression
   )
 
 explanation %>%
   as.tibble() %>%
   dplyr::select(feature:prediction) 
 
+#Graph of model reliability
+explanation %>%
+  ggplot(aes(x = model_r2, fill = label)) +
+  geom_density(alpha = 0.5) +
+  labs (title = "Model Reliability")
+
 plot_features(explanation = explanation, ncol = 1)
+
+# tune LIME algorithm #https://uc-r.github.io/lime
+explanation_tuned <- test_tbl %>%
+  dplyr::slice(5) %>%
+  select(-Match_Status) %>%
+  lime::explain(
+    explainer = explainer,
+    dist_fun = "manhattan", #Distance function
+    n_labels   = 1,
+    n_features = 8,
+    n_permutations = 5000,
+    kernel_width   = 3,
+    feature_select = "lasso_path" #Fit a lasso model and choose the n_features whose lars path converge to zero the latest.
+  )
+plot_features(explanation_tuned)
+#Tune increases explanation fit 1 point to 0.69
 
 
 # 3.3 Multiple Explanations ----
 
 explanation <- test_tbl %>%
-  dplyr::slice(1:20) %>%
+  dplyr::slice(1:10) %>%
+  dplyr::filter(Match_Status == "Matched") %>%
   dplyr::select(-Match_Status) %>%
   lime::explain(
     explainer = explainer,
@@ -540,10 +565,36 @@ explanation <- test_tbl %>%
 
 explanation %>%
   as.tibble()
+#https://engineering.linecorp.com/ja/blog/neural-networks-lime-yardstick/
+#https://www.r-bloggers.com/exploring-models-with-lime/
+lime::plot_features(explanation, ncol = 1) +
+  labs (title = " Feature Importance Visualization",
+        subtitle = "Hold Out (Test) Set, First 12 Cases Shown")
 
 
-plot_features(explanation, ncol = 1)
-plot_explanations(explanation)
+lime::plot_explanations(explanation) +
+  labs(title = "LIME Feature Importance Heatmap",
+       subtitle = "Hold Out (Test) Set, First 12 Cases Shown") # filtered only people who matched and this was clearer.  
+#You can easily show the most important variables for each of our selection methods above and we can see that they are all very consistent in the choice of the top 2-3 most influential variables in predicting matching.  
+
+#Cross-check the lime results with correllation plot
+all_data_binarized_tbl <- test_tbl %>%
+  correlationfunnel::binarize(n_bins = 4, thresh_infreq = 0.01)
+
+all_data_binarized_tbl %>% glimpse()
+
+
+all_data_correlated_tbl <- all_data_binarized_tbl %>%
+  correlationfunnel::correlate(target = Match_Status__Matched)
+
+all_data_correlated_tbl
+
+all_data_correlated_tbl %>%
+  correlationfunnel::plot_correlation_funnel(interactive = TRUE, limits = c(-0.6, 0.6))
+
+all_data_correlated_tbl %>%
+  correlationfunnel::plot_correlation_funnel(interactive = FALSE, limits = c(-0.5, 0.5))
+#https://www.r-bloggers.com/deep-learning-with-keras-to-predict-customer-churn/
 
 
 # 4. Challenge Solutions ----
