@@ -1,10 +1,19 @@
+# MACHINE LEARNING ----
+
+# Objectives:
+#   Size the problem
+#   Prepare the data for Binary Classification
+#   Build models with H2O: GLM, GBM, RF
+#   Inspect Features with LIME
+
 
 #Load for TIDYMODELS version of modeling
-gc()
-#setwd("~/Dropbox/Nomogram/nomogram/")
-source(file="~/Dropbox/Nomogram/nomogram/Code/Additional_functions_nomogram.R", echo=TRUE, verbose=TRUE)
+invisible(gc())
+dev.off()
+setwd("~/Dropbox/Nomogram/nomogram/")
+source(file="~/Dropbox/Nomogram/nomogram/Code/Additional_functions_nomogram.R", echo=TRUE, verbose=TRUE) #Must run by hand
 
-library(h2o)
+library(h2o) #Loaded in "Additional_functions_nomogram.R" but this is belt and suspenders
 library(recipes)
 library(readxl)
 library(tidyverse)
@@ -18,17 +27,16 @@ library(tidyverse)
 library(magrittr)
 library(tidymodels)
 
-path_data_definitions <- "~/Downloads/telco_data_definitions.xlsx"
+#path_data_definitions <- "~/Downloads/telco_data_definitions.xlsx"
 train_raw_tbl       <- train
 test_raw_tbl        <- test
-definitions_raw_tbl <- read_excel(path_data_definitions, sheet = 1, col_names = FALSE)
-
-# Processing Pipeline
-source("~/Dropbox/Nomogram/nomogram/00_Scripts/data_processing_pipeline.R")
 
 
+
+# SPLIT DATA ----
+# Resource: https://tidymodels.github.io/rsample/
 #Split the data using `rsample`.  
-# ------------------------------ Get data from source
+
 set.seed(seed = 1978) 
 all_data$Age <- as.numeric(all_data$Age)
 all_data <- all_data 
@@ -38,7 +46,21 @@ data_split <- rsample::initial_split(data = all_data, # rsample::initial_split()
 data_split
 
 train <- data_split %>% training() %>% glimpse()  # Extract the training dataframe
-test  <- data_split %>% testing() %>% glimpse() # Extra
+test  <- data_split %>% testing() %>% glimpse() 
+
+# Verify proportions have been maintained
+train %>%
+  count(Match_Status) %>%
+  mutate(prop = n / sum(n))
+
+test %>%
+  count(Match_Status) %>%
+  mutate(prop = n / sum(n))
+
+# 6.0 PREPROCESSING ----
+
+# Fix issues with data: 
+#   Skew
 
 #https://university.business-science.io/courses/246843/lectures/5021219
 #Is skew present
@@ -65,7 +87,6 @@ train %>%
   plot_hist_facet()  #Variables like age and Step 1 scores have different ranges.  Age has 25 to 60 years and Step 1 score has 180 to 280.  Algorithm needs all data on the same scale.  USMLE data would dominate Age because of different ranges.  
 # SVMs require centered and scaled data
 
-#--------------------------------------------------- Feature Analysis  -----------------------------------------------#
 #Feature Analysis, https://ryjohnson09.netlify.com/post/caret-and-tidymodels/
 #Graphing the Outcomes
 all_data %>%
@@ -92,10 +113,11 @@ cowplot::plot_grid(plotlist = expl_plots_box)  #Must view with zoom function
 expl_plots_density <- map(expl, ~density_fun_plot(data = train, x = "Match_Status", y = .x) )
 cowplot::plot_grid(plotlist = expl_plots_density) #Must view with zoom function
 
-#--------------------------------------------------- Preprocessing  -----------------------------------------------#
+
+# Recipes ----
+# Resource: https://tidymodels.github.io/recipes/
 
 
-# ML Preprocessing 
 
 # --------------------------------------------------
 #Recipe function - First, I create a recipe where I define the transformations I want to apply to my data. In this case I create a simple recipe to change all character variables to factors.
@@ -116,8 +138,8 @@ cowplot::plot_grid(plotlist = expl_plots_density) #Must view with zoom function
 # 6) Normalization steps (center, scale, range, etc)
 # 7) Multivariate transformation (e.g. PCA, spatial sign, etc)
 
-
-recipe_simple <- recipe(Match_Status ~ ., data = train) %>%     
+#recipe
+recipe_obj <- recipe(Match_Status ~ ., data = train) %>%     
   update_role(Match_Status, new_role = "outcome") %>%
   #Using the formula sets the predictors and the outcome
   recipes::step_zv(all_predictors()) #%>%  
@@ -132,11 +154,8 @@ recipe_simple <- recipe(Match_Status ~ ., data = train) %>%
 #dummying fixes factors with skew
 #Helps with factor variables
 
-recipe_obj <- recipe_simple
 
-
-#Prep and bake the data here.  
-
+# Prep the data here.  
 recipe_obj %>%  
   recipes::prep() %>%
   recipes::bake(new_data = train) %>%
@@ -150,7 +169,7 @@ prepared_object %>%
   dplyr::select(contains("Gender")) %>%
   plot_hist_facet(ncol = 3)
 
-
+# Finally bake the data
 train_tbl <- bake(prepared_object, new_data = train)
 train_tbl %>% glimpse()  #This is a well formed machine readable data set
 
@@ -169,90 +188,146 @@ train_tbl %>%
   plot_cor(target = Match_Status, fct_reorder = TRUE, fct_rev = FALSE)
 
 
+
+# MODELING -----
+# H2O Setup ----
+# H2O Docs: http://docs.h2o.ai
+
+# Setup instructions: 
+# - Please update to the latest version of h2o using install.packages("h2o") 
+#   to access the latest functionality and performance features
+#   h2o.init() starts H2O in R's current working directory. h2o.importFile() looks for files from the perspective of where H2O was started.
+
 # Finally, let's load H2O and start up an H2O cluster
-library(h2o)
-h2o.init()
+library(h2o) #http://localhost:54321/flow/index.html
+h2o.init(nthreads = -1, max_mem_size="8g")
 h2o.getVersion()
 h2o.clusterIsUp()
 h2o.getConnection()
 h2o.clusterStatus()
-
 h2o.no_progress()  # Turn off progress bars
 h2o.removeAll() # Cleans h2o cluster state.
+options("h2o.use.data.table" = TRUE) #helpful for larger datasets
 
 
 #Split the train_tbl into h2o training, grid search, and testing data sets.  
+# split_h2o <- h2o.splitFrame(as.h2o(train_tbl), ratios = c(0.85), seed = 1978)
+# 
+
+
+#No need to do split of train data into train and validations sets here because we are goig to run cross-validation
+# train_h2o <- split_h2o[[1]]
+# valid_h2o <- split_h2o[[2]]
+
 split_h2o <- h2o.splitFrame(as.h2o(train_tbl), ratios = c(0.85), seed = 1978)
 
-train_h2o <- split_h2o[[1]]
-valid_h2o <- split_h2o[[2]]
+train_h2o <- as.h2o(train)
 test_h2o  <- as.h2o(test)
 
-y <- "Match_Status"  #Do not dummy the nominal variables early so that we can avoid changing the column names.  
+# Take a look at the training set
+h2o.describe(train_h2o) #enum is a categorical variable
+h2o.hist(train_h2o$Age)
+h2o.hist(train_h2o$USMLE_Step_1_Score)
+
+# H2O AutoML Training ----
+y <- "Match_Status"  #Do not dummy the nominal variables early so that we can avoid changing the column names.  # Identify the response column
+
+# Identify the predictor columns (remove response and ID column)
 x <- setdiff(names(train_h2o), y)
 
+# Execute an AutoML run for 10 models
 automl_models_h2o <- h2o.automl(
   x = x,
   y = y,
   training_frame = train_h2o, #training data set
   validation_frame = valid_h2o, #grid tuning data set, done automatically by H2O.ai
-  leaderboard_frame = test_h2o, #test data set
-  max_runtime_secs = 30, #originally was 60 secs #36000
+  leaderboard_frame = test_h2o, #test data set, comment out to do cross-validation
+  max_runtime_secs = 20, #originally was 60 secs #0 is no limit to time
   nfolds = 10, #K-fold cross-validation: duplicate the train data into 10 sets.  9 of the 10 are used for training and 1 of the 10 is used for validation.  Different parameters are being evaluate but NOT using a different model.  AUC is generated to measure model effectiveness for each fold and mean is used.
   seed = 1978,
-  max_models = 10, 
-  verbosity = "info"
+  #max_models = 10,
+  verbosity = "info",
+  keep_cross_validation_predictions = TRUE, 
+  balance_classes = FALSE, 
+  sort_metric = "AUC", #"logloss"
+  project_name = "TylersLongModel"
 )
 
 # H2O MODELING -----
+h2o.ls()
 typeof(automl_models_h2o)
-
 slotNames(automl_models_h2o)
+
+# H2O AutoML Leaderboard ----
+# Next, we will view the AutoML Leaderboard.  Since we did not specify a `leaderboard_frame` in the `h2o.automl()` 
+# function for scoring and ranking the models, the AutoML leaderboard uses cross-validation metrics to rank the models.  
 
 automl_models_h2o@leaderboard
 lb <- automl_models_h2o@leaderboard
+
+# The leader model is stored at `automl_models_h2o@leader` and the leaderboard is stored at `automl_models_h2o@leaderboard`.
 print(lb, n=nrow(lb)) #prints all rows instead of the standard 6 rows
-
-
 automl_models_h2o@leader
 
 args(extract_h2o_model_name_by_position)
 extract_h2o_model_name_by_position(automl_models_h2o@leaderboard, n=1, verbose = T)
-extract_h2o_model_name_by_position(automl_models_h2o@leaderboard, n=3, verbose = T)
+extract_h2o_model_name_by_position(automl_models_h2o@leaderboard, n=2, verbose = T)
 extract_h2o_model_name_by_position(automl_models_h2o@leaderboard, n=4, verbose = T)
 extract_h2o_model_name_by_position(automl_models_h2o@leaderboard, n=5, verbose = T)
 
-h2o.getModel("XGBoost_3_AutoML_20191203_160751")
-h2o.getModel("GLM_grid_1_AutoML_20191203_142939_model_1")
-h2o.getModel("XGBoost_grid_1_AutoML_20191203_142939_model_6")
-h2o.getModel("GBM_grid_1_AutoML_20191203_142939_model_4")
-
-
 # Saving & Loading
+model_1st_position <- h2o.getModel(extract_h2o_model_name_by_position(automl_models_h2o@leaderboard, n=1, verbose = T))
+saveRDS(model_1st_position, "~/Dropbox/Nomogram/nomogram/04_Modeling/model_1st_position.rds")
 
-h2o.getModel("XGBoost_3_AutoML_20191203_160751") %>%
+h2o.getModel(extract_h2o_model_name_by_position(automl_models_h2o@leaderboard, n=1, verbose = T)) %>% 
   h2o.saveModel(path = "04_Modeling/h2o_models/")
+  
 
-h2o.getModel("GLM_grid_1_AutoML_20191203_142939_model_1") %>%
-  h2o.saveModel(path = "04_Modeling/h2o_models/")
+model_2nd_position <- h2o.getModel(extract_h2o_model_name_by_position(automl_models_h2o@leaderboard, n=2, verbose = T)) 
+  saveRDS(model_2nd_position, "~/Dropbox/Nomogram/nomogram/04_Modeling/model_2nd_position.rds")
+  
+h2o.getModel(extract_h2o_model_name_by_position(automl_models_h2o@leaderboard, n=2, verbose = T)) %>% 
+    h2o.saveModel(path = "04_Modeling/h2o_models/")
 
-h2o.getModel("XGBoost_grid_1_AutoML_20191203_142939_model_6") %>%
-  h2o.saveModel(path = "04_Modeling/h2o_models/")
 
-h2o.getModel("GBM_grid_1_AutoML_20191203_142939_model_4") %>%
-  h2o.saveModel(path = "04_Modeling/h2omodels/")
+
+model_4th_position <- h2o.getModel(extract_h2o_model_name_by_position(automl_models_h2o@leaderboard, n=4, verbose = T)) 
+   saveRDS(model_4th_position, "~/Dropbox/Nomogram/nomogram/04_Modeling/model_4th_position.rds")
+
+h2o.getModel(extract_h2o_model_name_by_position(automl_models_h2o@leaderboard, n=4, verbose = T)) %>% 
+     h2o.saveModel(path = "04_Modeling/h2o_models/")
+   
+   
+
+model_5th_position <- h2o.getModel(extract_h2o_model_name_by_position(automl_models_h2o@leaderboard, n=5, verbose = T)) 
+   saveRDS(model_5th_position, "~/Dropbox/Nomogram/nomogram/04_Modeling/model_5th_position.rds")
+   
+h2o.getModel(extract_h2o_model_name_by_position(automl_models_h2o@leaderboard, n=5, verbose = T)) %>% 
+     h2o.saveModel(path = "04_Modeling/h2o_models/")
+
 # 
-# h2o.getModel("DRF_1_AutoML_20191201_231543") %>%
-#   h2o.saveModel(path = "04_Modeling/h2omodels/")
+# h2o.getModel(extract_h2o_model_name_by_position(automl_models_h2o@leaderboard, 
+#                                                 n=12, verbose = T)) %>%
+#   h2o.saveModel(path = "04_Modeling/h2o_models/") %>%
+#   h2o.saveModelDetails(path = "04_Modeling/h2o_models/") 
 # 
-# h2o.getModel("GBM_2_AutoML_20191201_231543") %>%
-#   h2o.saveModel(path = "04_Modeling/h2omodels/")
+# h2o.getModel(extract_h2o_model_name_by_position(automl_models_h2o@leaderboard, 
+#                                                 n=13, verbose = T)) %>%
+#   h2o.saveModel(path = "04_Modeling/h2o_models/") %>%
+#   h2o.saveModelDetails(path = "04_Modeling/h2o_models/") 
+# 
+# h2o.getModel(extract_h2o_model_name_by_position(automl_models_h2o@leaderboard, 
+#                                                 n=17, verbose = T)) %>%
+#   h2o.saveModel(path = "04_Modeling/h2o_models/") %>%
+#   h2o.saveModelDetails(path = "04_Modeling/h2o_models/") 
+
+
 
 # Making Predictions
-stacked_ensemble_h2o <- h2o.loadModel("04_Modeling/h2o_models/XGBoost_3_AutoML_20191203_160751")
+stacked_ensemble_h2o <- h2o.loadModel("04_Modeling/h2o_models/StackedEnsemble_BestOfFamily_AutoML_20191210_201517")
 stacked_ensemble_h2o
 
-predictions <- h2o.predict(stacked_ensemble_h2o, newdata = as.h2o(test_tbl))
+predictions <- h2o.predict(object = stacked_ensemble_h2o, newdata = as.h2o(test_tbl))
 typeof(predictions)
 
 predictions_tbl <- predictions %>% as.tibble()
@@ -272,6 +347,7 @@ data_transformed <- automl_models_h2o@leaderboard %>%
   ) %>%
   tidyr::gather(key = key, value = value, -c(model_id, model_type, rowname), factor_key = T) %>%
   dplyr::mutate(model_id = paste0(rowname, ". ", model_id) %>% as_factor() %>% fct_rev()) 
+data_transformed
 
 data_transformed %>%
   ggplot(aes(value, model_id, color = model_type)) +
@@ -286,49 +362,28 @@ data_transformed %>%
        y = "Model Postion, Model ID", x = "")
 
 
-
+#dev.off()
 h2o_leaderboard <- automl_models_h2o@leaderboard
 automl_models_h2o@leaderboard %>%
   plot_h2o_leaderboard(order_by = "logloss")
 
 
-
-h2o.getModel("XGBoost_3_AutoML_20191203_160751") %>%
-  h2o.saveModel(path = "04_Modeling/h2o_models/")
-
-h2o.getModel("GLM_grid_1_AutoML_20191201_231543_model_1") %>%
-  h2o.saveModel(path = "04_Modeling/h2o_models/")
-
-h2o.getModel("XGBoost_3_AutoML_20191201_231543") %>%
-  h2o.saveModel(path = "04_Modeling/h2o_models/")
-
-h2o.getModel("GBM_1_AutoML_20191201_231543") %>%
-  h2o.saveModel(path = "04_Modeling/h2omodels/")
-
-h2o.getModel("DRF_1_AutoML_20191201_231543") %>%
-  h2o.saveModel(path = "04_Modeling/h2omodels/")
-
-h2o.getModel("GBM_2_AutoML_20191201_231543") %>%
-  h2o.saveModel(path = "04_Modeling/h2omodels/")
-
 # 4. Assessing Performance ----
-stacked_ensemble_h2o <- h2o.loadModel("04_Modeling/h2o_models/XGBoost_3_AutoML_20191203_160751")
-
-performance_h2o <- h2o.performance(stacked_ensemble_h2o, newdata = as.h2o(test_tbl))
+performance_h2o <- h2o.performance(model = stacked_ensemble_h2o, 
+                                   newdata = as.h2o(test_tbl), 
+                                   valid = FALSE)
 
 typeof(performance_h2o)
 performance_h2o %>% slotNames()
-
 performance_h2o@metrics
 
 # Classifier Summary Metrics
+h2o.auc(object = performance_h2o, train = T, valid = T, xval = F)
+h2o.giniCoef(object = performance_h2o, train = T, valid = T, xval = F)
+h2o.logloss(object = performance_h2o, train = T, valid = T, xval = F)
 
-h2o.auc(performance_h2o, train = T, valid = T, xval = T)
-h2o.giniCoef(performance_h2o)
-h2o.logloss(performance_h2o)
-
-h2o.confusionMatrix(stacked_ensemble_h2o)
-h2o.confusionMatrix(performance_h2o)
+h2o.confusionMatrix(object = stacked_ensemble_h2o)
+h2o.confusionMatrix(object = performance_h2o)
 
 # Precision vs Recall Plot
 
@@ -367,13 +422,13 @@ model_metrics_tbl %>%
   theme(legend.direction = "vertical") +
   labs(
     title = "ROC Plot",
-    subtitle = "Performance of 3 Top Performing Models"
+    subtitle = "Performance of Top Performing Models"
   )
 
 model_metrics_tbl <- fs::dir_info(path = "04_Modeling/h2o_models/") %>%
   dplyr::select(path) %>%
   dplyr::mutate(metrics = map(path, load_model_performance_metrics, test_tbl)) %>%
-  tidyr::unnest()
+  tidyr::unnest() 
 
 model_metrics_tbl %>%
   dplyr::mutate(
@@ -387,7 +442,7 @@ model_metrics_tbl %>%
   theme(legend.direction = "vertical") +
   labs(
     title = "Precision vs Recall Plot",
-    subtitle = "Performance of 3 Top Performing Models"
+    subtitle = "Performance of Top Performing Models"
   )
 
 # Gain & Lift
@@ -425,10 +480,10 @@ gain_lift_tbl <- performance_h2o %>%
   as.tibble()
 
 gain_transformed_tbl <- gain_lift_tbl %>% 
-  select(group, cumulative_data_fraction, cumulative_capture_rate, cumulative_lift) %>%
-  select(-contains("lift")) %>%
-  mutate(baseline = cumulative_data_fraction) %>%
-  rename(gain = cumulative_capture_rate) %>%
+  dplyr::select(group, cumulative_data_fraction, cumulative_capture_rate, cumulative_lift) %>%
+  dplyr::select(-contains("lift")) %>%
+  dplyr::mutate(baseline = cumulative_data_fraction) %>%
+  dplyr::rename(gain = cumulative_capture_rate) %>%
   tidyr::gather(key = key, value = value, gain, baseline)
 
 gain_transformed_tbl %>%
@@ -443,10 +498,10 @@ gain_transformed_tbl %>%
   )
 
 lift_transformed_tbl <- gain_lift_tbl %>% 
-  select(group, cumulative_data_fraction, cumulative_capture_rate, cumulative_lift) %>%
-  select(-contains("capture")) %>%
-  mutate(baseline = 1) %>%
-  rename(lift = cumulative_lift) %>%
+  dplyr::select(group, cumulative_data_fraction, cumulative_capture_rate, cumulative_lift) %>%
+  dplyr::select(-contains("capture")) %>%
+  dplyr::mutate(baseline = 1) %>%
+  dplyr::rename(lift = cumulative_lift) %>%
   tidyr::gather(key = key, value = value, lift, baseline)
 
 lift_transformed_tbl %>%
@@ -467,7 +522,7 @@ h2o_leaderboard <- automl_models_h2o@leaderboard
 
 automl_models_h2o@leaderboard %>%
   plot_h2o_performance(newdata = test_tbl, order_by = "auc", 
-                       size = 1, max_models = 5)
+                       size = 1, max_models = 3)
 
 
 automl_models_h2o@leaderboard %>%
@@ -476,6 +531,47 @@ automl_models_h2o@leaderboard %>%
 
 
 
+# Ensemble Exploration ----
+# https://github.com/business-science/presentations/blob/master/2019_02_13_Learning_Lab_Marketing_Analytics/marketing_h2o_automl.R
+
+# To understand how the ensemble works, let's take a peek inside the Stacked Ensemble "All Models" model.  
+# The "All Models" ensemble is an ensemble of all of the individual models in the AutoML run.  
+# This is often the top performing model on the leaderboard.
+
+# Get model ids for all models in the AutoML Leaderboard
+model_ids <- as.data.frame(automl_models_h2o@leaderboard$model_id)[,1]
+# Get the "All Models" Stacked Ensemble model
+se <- h2o.getModel(grep("StackedEnsemble_AllModels", model_ids, value = TRUE)[1])
+# Get the Stacked Ensemble metalearner model
+metalearner <- h2o.getModel(se@model$metalearner$name)
+
+# Examine the variable importance of the metalearner (combiner) algorithm in the ensemble.  
+# This shows us how much each base learner is contributing to the ensemble. The AutoML Stacked Ensembles 
+# use the default metalearner algorithm (GLM with non-negative weights), so the variable importance of the 
+# metalearner is actually the standardized coefficient magnitudes of the GLM. 
+h2o.varimp(metalearner)
+
+# We can also plot the base learner contributions to the ensemble.
+h2o.varimp_plot(metalearner)
+
+# Variable Importance ----
+
+# Now let's look at the variable importance on the training set using the top XGBoost model
+# (Stacked Ensembles don't have variable importance yet)
+xgb <- h2o.getModel(grep("XGBoost", model_ids, value = TRUE)[1])
+
+# Examine the variable importance of the top XGBoost model
+h2o.varimp(xgb)
+
+# We can also plot the base learner contributions to the ensemble.
+h2o.varimp_plot(xgb)
+
+
+
+
+
+
+#https://github.com/business-science/presentations/blob/master/2019_10_10_lab_20_explainable_machine_learning/Lab_20_-_Explaining_Machine_Learning.pdf
 # 3. LIME ----
 
 # 3.1 Making Predictions ----
@@ -583,18 +679,18 @@ all_data_binarized_tbl <- test_tbl %>%
 
 all_data_binarized_tbl %>% glimpse()
 
-
 all_data_correlated_tbl <- all_data_binarized_tbl %>%
   correlationfunnel::correlate(target = Match_Status__Matched)
 
 all_data_correlated_tbl
 
 all_data_correlated_tbl %>%
-  correlationfunnel::plot_correlation_funnel(interactive = TRUE, limits = c(-0.6, 0.6))
+  correlationfunnel::plot_correlation_funnel(interactive = TRUE, limits = c(-1, 1))
 
 all_data_correlated_tbl %>%
-  correlationfunnel::plot_correlation_funnel(interactive = FALSE, limits = c(-0.5, 0.5))
+  correlationfunnel::plot_correlation_funnel(interactive = FALSE, limits = c(-1, 1))
 #https://www.r-bloggers.com/deep-learning-with-keras-to-predict-customer-churn/
+
 
 
 # 4. Challenge Solutions ----
@@ -702,4 +798,10 @@ plot_explanations(explanation)
 
 plot_explanations_tq(explanation)
 
+
+
+
+### All done, shutdown H2O    
+#h2o.shutdown(prompt=FALSE)
+#dev.off()
 
