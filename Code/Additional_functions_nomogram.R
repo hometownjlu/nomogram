@@ -38,6 +38,10 @@ doMC::registerDoMC(cores = detectCores()-1) #Use multiple cores for processing
 ### Skimr set up
 skim_with(numeric = list(hist = NULL), integer = list(hist = NULL))
 
+## TinTex
+tinytex::tlmgr_update()  # update LaTeX packages
+options(tinytex.verbose = TRUE)
+
 #####  Functions for nomogram
 create_plot_num <- 
   function(data) {
@@ -160,14 +164,14 @@ all_data$Visa_Sponsorship_Needed <- relevel(all_data$Visa_Sponsorship_Needed, re
 knitr::opts_chunk$set(fig.width=7, 
                       fig.height=5,
                       fig.align="center",
-                      include=FALSE,
-                      echo=FALSE, # does not show R code
+                      include=TRUE,
+                      echo=TRUE, # does not show R code
                       warning=FALSE,  # does not show warnings during generation
                       message=FALSE, # shows no messages
                       tidy = TRUE, 
                       comment="",
                       align = 'left',
-                      cache = TRUE,
+                      cache = FALSE,  #keep as false so I don't get random error messages later on
                       dev = "png",   #Will need to change for manuscript
                       dpi = 200)   #Will need to change for manuscript
 
