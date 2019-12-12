@@ -1,4 +1,5 @@
 ##A Tidy Approach to a Classification Problem
+<<<<<<< HEAD
 
 #https://www.benjaminsorensen.me/post/modeling-with-parsnip-and-tidymodels/
 #https://rviews.rstudio.com/2019/06/19/a-gentle-intro-to-tidymodels/
@@ -11,11 +12,20 @@
 #https://tidymodels.github.io/parsnip/articles/articles/Classification.html
 #https://community.rstudio.com/t/permutation-variable-importance-using-auc/20573/5
 
+=======
+source(file="~/Dropbox/Nomogram/nomogram/Additional_functions_nomogram.R")
+
+#https://www.benjaminsorensen.me/post/modeling-with-parsnip-and-tidymodels/
+#https://rviews.rstudio.com/2019/06/19/a-gentle-intro-to-tidymodels/
+>>>>>>> 84ec5a149b8b5878838a6cbac9e548a5d50d47be
 
 #--------------------------------------------------- Splitting -----------------------------------------------#
 #Tidymodels - Splitting data by proportion not by year.  
 #Completing example from https://towardsdatascience.com/modelling-with-tidymodels-and-parsnip-bae2c01c131c
+<<<<<<< HEAD
 source(file="~/Dropbox/Nomogram/nomogram/Code/Additional_functions_nomogram.R", echo=TRUE, verbose=TRUE)
+=======
+>>>>>>> 84ec5a149b8b5878838a6cbac9e548a5d50d47be
 set.seed(seed = 1978) 
 all_data$Age <- as.numeric(all_data$Age)
 all_data <- all_data  %>% select(-Year)
@@ -24,8 +34,13 @@ data_split <- rsample::initial_split(data = all_data,
                                      prop = 0.8)
 data_split
 
+<<<<<<< HEAD
 train_tbl <- data_split %>% training() %>% glimpse()  # Extract the training dataframe
 test_tbl  <- data_split %>% testing() %>% glimpse() # Extract the testing dataframe
+=======
+train_tbl <- data_split %>% training() %>% glimpse()
+test_tbl  <- data_split %>% testing() %>% glimpse()
+>>>>>>> 84ec5a149b8b5878838a6cbac9e548a5d50d47be
 
 
 #--------------------------------------------------- Feature Analysis  -----------------------------------------------#
@@ -96,7 +111,11 @@ model_boost_trees <-
   parsnip::fit(Match_Status ~ ., data= train_baked)
 model_boost_trees
 
+<<<<<<< HEAD
 # Explanation of the boost_trees/xgboost model
+=======
+# Explanation
+>>>>>>> 84ec5a149b8b5878838a6cbac9e548a5d50d47be
 model_boost_trees$fit %>%
   xgb.importance(model = .) %>%
   xgb.plot.importance(main = "XGBoost Feature Importance")
@@ -107,18 +126,26 @@ set.seed(1978)
 decision_tree <- 
   parsnip::decision_tree(mode = "classification", cost_complexity = varying(), min_n = 20, tree_depth = 6) %>%
   #set_engine("C5.0") %>%
+<<<<<<< HEAD
   parsnip::set_engine("rpart") %>%   #Explain what engine we want: rpart so we can visualize tree using rpart.plot
+=======
+  parsnip::set_engine("rpart") %>%   #Explain what model we want
+>>>>>>> 84ec5a149b8b5878838a6cbac9e548a5d50d47be
   parsnip::set_args(cost_complexity = 0.01) %>%  #Can tinker with this variable  
   parsnip::fit(Match_Status ~ ., data = train_baked)  #Finally, to execute the model, the fit() function is used. 
 decision_tree
 
+<<<<<<< HEAD
 # Explanation of the decision_trees/CART model
+=======
+>>>>>>> 84ec5a149b8b5878838a6cbac9e548a5d50d47be
 decision_tree$fit%>%
   rpart.plot(
     yesno = 2, type = 5, extra = +100, fallen.leaves = TRUE, varlen = 0, faclen = 0, roundint = FALSE, clip.facs = TRUE, shadow.col = "gray", main = "Tree Model of Medical Students Matching into OBGYN Residency\n(Matched or Unmatched)", box.palette = c("red", "green"))  
 
 
 #--------------------------------------------- Model: Logistic Regression  -----------------------------------------------#
+<<<<<<< HEAD
 #But Wait we cannot simply blindly fit the logistic regression. We need to check the assumptions.Let’s check logistic regression assumption :-Features should be independent from each other, Residual should not be autocorrelated
 #https://vidyasagar.rbind.io/2019/06/learn-machine-learning-using-kaggle-competition-titanic-dataset/
 
@@ -191,10 +218,13 @@ cormatrix
 
 #What do I do with this now?
 
+=======
+>>>>>>> 84ec5a149b8b5878838a6cbac9e548a5d50d47be
 args(logistic_reg)  #Check what parameters exist with the model you want to use.  
 set.seed(1978)
 logistic_glm <-
   parsnip::logistic_reg(mode = "classification", penalty = 0) %>%   #Regression vs. classification
+<<<<<<< HEAD
   parsnip::set_engine("glm") %>%   #Explain what machine learning engine we want: R
   parsnip::fit(Match_Status ~ ., data = train_baked)  #Finally, to execute the model, the parsnip::fit() function is used. 
 logistic_glm
@@ -224,11 +254,18 @@ rs_obj$accuracy <- map_dbl(rs_obj$results, function(x) mean(x$correct)) #Now we 
 summary(rs_obj$accuracy)
 
 
+=======
+  parsnip::set_engine("glm") %>%   #Explain what machine learning tool we want
+  parsnip::fit(Match_Status ~ ., data = train_baked)  #Finally, to execute the model, the parsnip::fit() function is used. 
+logistic_glm
+
+>>>>>>> 84ec5a149b8b5878838a6cbac9e548a5d50d47be
 
 #--------------------------------------------------- Model: Random Forest  -----------------------------------------------#
 args(rand_forest)
 random_forest <-
   parsnip::rand_forest(mtry = floor(.preds() * 0.75), mode = "classification", trees = 2000, min_n = 3) %>%   
+<<<<<<< HEAD
   parsnip::set_engine("randomForest", seed = 1978) %>%   #Explain what engine we want: R
   parsnip::fit(Match_Status ~ ., data = train_baked)  #Finally, to execute the model, the fit() function is used. 
 random_forest
@@ -240,6 +277,12 @@ random_forest$fit
 random_forest$preproc
 random_forest$elapsed
 random_forest
+=======
+  parsnip::set_engine("randomForest", seed = 1978) %>%   #Explain what model we want
+  parsnip::fit(Match_Status ~ ., data = train_baked)  #Finally, to execute the model, the fit() function is used. 
+random_forest
+
+>>>>>>> 84ec5a149b8b5878838a6cbac9e548a5d50d47be
 
 #https://cdn.rawgit.com/ClaytonJY/tidymodels-talk/145e6574/slides.html#64
 #Training error
@@ -267,11 +310,19 @@ rset <- rset %>%
     metrics     = map(predictions, metrics, actual, predicted)
   )
   
+<<<<<<< HEAD
 #--------------------------------------------------- Model: Ranger Random Forest  ----------------------------------------#
 args(rand_forest)
 ranger_random_forest <-
   parsnip::rand_forest(mtry = floor(.preds() * 0.75), mode = "classification", trees = 2000, min_n = 3) %>%   
   parsnip::set_engine("ranger", seed = 1978) %>%   #Explain what engine we want to use
+=======
+#--------------------------------------------------- Model: Random Forest  -----------------------------------------------#
+args(rand_forest)
+ranger_random_forest <-
+  parsnip::rand_forest(mtry = floor(.preds() * 0.75), mode = "classification", trees = 2000, min_n = 3) %>%   
+  parsnip::set_engine("ranger", seed = 1978) %>%   #Explain what model we want
+>>>>>>> 84ec5a149b8b5878838a6cbac9e548a5d50d47be
   parsnip::fit(Match_Status ~ ., data = train_baked)  #Finally, to execute the model, the fit() function is used. 
 ranger_random_forest
 
@@ -287,11 +338,20 @@ svm
 #--------------------------------------------------- Model: MARS  -----------------------------------------------#
 args(mars)
 mars <- 
+<<<<<<< HEAD
   parsnip::mars(mode = "classification", prune_method = "backward") %>%
   parsnip::set_engine("earth", glm = list(family = binomial, maxit = 100)) %>%
   parsnip::fit(Match_Status ~ ., data=train_baked)
 mars
 
+=======
+  parsnip::mars(mode = "classification") %>%
+  parsnip::set_engine("earth") %>%
+  parsnip::fit(Match_Status ~ ., data=train_baked)
+mars
+
+
+>>>>>>> 84ec5a149b8b5878838a6cbac9e548a5d50d47be
 #--------------------------------------------------- Model: glmnet  -----------------------------------------------#
 args(multinom_reg)
 set.seed(1978)
@@ -306,8 +366,13 @@ args(mlp)
 mlp <- 
   parsnip::mlp(mode = "classification", hidden_units = 5, penalty = 0.01, dropout = 0, epochs = 20, activation = NULL) %>%
   parsnip::set_engine("nnet", seed = 1978) %>%
+<<<<<<< HEAD
   parsnip::fit(Match_Status ~ ., data=train_baked)
 mlp <- juice(mlp)
+=======
+  parsnip::fit(Match_Status ~ ., data=train_baked) 
+mlp
+>>>>>>> 84ec5a149b8b5878838a6cbac9e548a5d50d47be
 
 #--------------------------------------------------- Model: General Interface for K-Nearest Neighbor Models -------------#
 args(nearest_neighbor)
@@ -323,7 +388,11 @@ args(naive_Bayes)  #https://tidymodels.github.io/discrim/reference/index.html
 set.seed(1978)
 naive_Bayes <- 
   naive_Bayes(mode = "classification") %>%
+<<<<<<< HEAD
   parsnip::set_engine("klaR") %>%  # I needed to install the wrapper library discrim to do naive Bayes with tidymodels
+=======
+  parsnip::set_engine("klaR") %>%
+>>>>>>> 84ec5a149b8b5878838a6cbac9e548a5d50d47be
   parsnip::fit(Match_Status ~ ., data=train_baked) 
 naive_Bayes
 
@@ -335,6 +404,7 @@ tibble_of_model_names <- as_tibble(c("model_boost_trees", "decision_tree", "logi
 
 #Per classifier metrics - It is easy to obtain the probability for each possible predicted value by setting the type argument to prob. That will return a tibble with as many variables as there are possible predicted values. Their name will default to the original value name, prefixed with .pred_.
 
+<<<<<<< HEAD
 
 #Measuring Model Performance
 confusion_matrix_graph_model_boost_trees <- tm_confusion_matrix_graph(model_name = model_boost_trees, label = "model_boost_trees")
@@ -456,17 +526,71 @@ colnames(dt_probs)
 #https://tidymodels.github.io/rsample/articles/Working_with_rsets.html
 #https://www.alexpghayes.com/blog/implementing-the-super-learner-with-tidymodels/
 
+=======
+#Model validation
+tm_model_metrics <- random_forest %>%  #Plug in the model using the training data
+  stats::predict(new_data = test_baked) %>%  #Predict the test_data with the new model
+  bind_cols(test_baked) %>%
+  yardstick::metrics(truth = Match_Status, estimate = .pred_class) %>%
+  select(-.estimator) 
+tm_model_metrics
+
+#Measuring Model Performance
+confusion_matrix_graph <- random_forest %>%  #Plug in the model using the training data
+  stats::predict(new_data = test_baked) %>%  #Predict the test_data with the new model
+  bind_cols(test_baked) %>%
+  conf_mat(Match_Status, .pred_class) %>%
+  purrr::pluck(1) %>%
+  tibble::as_tibble() %>%
+  ggplot2::ggplot(aes(Prediction, Truth, alpha = n)) +  #Not plotting
+  ggplot2::geom_tile(show.legend = FALSE) +
+  ggplot2::geom_text(aes(label = n), colour = "white", alpha = 1, size = 8) +
+  labs(
+    title = "Confusion matrix using randomForest model"
+  )
+plot(confusion_matrix_graph)
+
+
+
+# Estimate the stepwise matching probability
+prediction_test <- predict.lm(lm.fit2, newdata = test, 
+                              type = "response")
+back_step_prob <- predict(back_step_model, type = "response")
+solution_tree <- predict(t.model, newdata = test, type="class") 
+solution_tree <- predict(pruned.t.model, newdata = test, type = "class")
+solution_rf <- predict(caret_matrix, newdata = test, type = "raw")
+solution_boost <- predict(caret_boost, newdata = test, type = "raw")
+
+# Training set performance summary
+x <- caret::postResample(pred = .pred_class, obs = as.factor(train$Match_Status))
+
+#https://tidymodels.github.io/rsample/articles/Working_with_rsets.html
+>>>>>>> 84ec5a149b8b5878838a6cbac9e548a5d50d47be
 #Cross-validation - To further refine the model’s predictive power, I am implementing a 10-fold cross validation using vfold_cv from rsample, which splits again the initial training data.
 
 set.seed(1978)
 # First, let’s make the splits of the data:
 rs_obj <- rsample::vfold_cv(train_tbl, 
+<<<<<<< HEAD
                             v = 10, repeats = 10, 
                             strata = "Match_Status")
+=======
+                                   v = 10, repeats = 10, 
+                                   strata = "Match_Status")
+>>>>>>> 84ec5a149b8b5878838a6cbac9e548a5d50d47be
 
 #Now let’s write a function (tm_holdout_results) that will, for each resample:obtain the analysis data set (i.e. the 90% used for modeling)fit a logistic regression model predict the assessment data (the other 10% not used for the model) using the broom package determine if each sample was predicted correctly.
 ## splits will be the `rsplit` object with the 90/10 partition
 
+<<<<<<< HEAD
+=======
+#Example of how splits will be handled.  
+example <- tm_holdout_results(rs_obj$splits[[1]],  Match_Status ~ .)  #Use function called tm_holdout_results
+dim(example)
+dim(assessment(rs_obj$splits[[1]]))
+example[1:10, setdiff(names(example), names(attrition))]
+
+>>>>>>> 84ec5a149b8b5878838a6cbac9e548a5d50d47be
 #Handle all split data at once with map.  
 rs_obj$results <- purrr::map(rs_obj$splits,  #Applies the function against all the splits
                              tm_holdout_results,
@@ -477,6 +601,7 @@ rs_obj$accuracy <- map_dbl(rs_obj$results, function(x) mean(x$correct)) #Now we 
 summary(rs_obj$accuracy)
 
 
+<<<<<<< HEAD
 
 data("iris")
 #https://www.alexpghayes.com/blog/implementing-the-super-learner-with-tidymodels/
@@ -747,3 +872,124 @@ pred %>%
 
 #------------------------------------------------------------------------------------------------------------------------
 # http://www.datannery.com/2018/12/24/tidy-titanic/
+=======
+--------------------------------------------------------------------------------------
+test_results <- 
+  test %>%
+  select(Match_Status) %>%
+  as_tibble() %>%
+  mutate(
+    nnet_class = predict(nnet_fit, new_data = test_normalized) %>% 
+      pull(.pred_class),
+    nnet_prob  = predict(nnet_fit, new_data = test_normalized, type = "prob") %>% 
+      pull(.pred_Matched)
+  )
+
+test_results %>% roc_auc(truth = Match_Status, nnet_prob)
+
+test_results %>% accuracy(truth = Match_Status, nnet_class)
+test_results %>% conf_mat(truth = Match_Status, nnet_class)
+
+
+
+
+#youtube.com data preprocessing using recipes
+#Original usage of lm model
+install.packages("AmesHousing")
+library(AmesHousing)
+ames <- make_ames()
+levels(ames$Alley)
+modl <- lm(log(Sale_Price) ~ Alley + Lot_Area, data = ames, subset = Year_Sold > 2000)
+
+#recipes() is a specification of intent
+#prepare() is estimation to prepare the data
+#back() and juice() is equivalent to apply, juice()
+
+library (recipes)
+library(tidyverse)
+library(rsample)
+
+ames_train <- filter(all_data, Year %in% c("2015", "2016"))  #Train on years 2015, 2016
+nrow(train) 
+ames_test <- filter(all_data, Year %in%  c("2017", "2018")) #Test on 2017, 2018 data
+nrow(test)
+test <- test %>% select(-"Year")
+train <- train %>% select(-"Year")
+
+
+set.seed(4595)
+# data_split <- initial_split(ames, prop = 3/4)
+# ames_train <- training(data_split)
+# ames_test <- testing(data_split)
+
+rec <- recipe(Match_Status ~ ., data = ames_train) %>% 
+  #step_log(starts_with ("Count_of_")) %>%
+  #step_log(Age) %>%
+  step_log(all_numeric()) %>%
+  step_dummy(all_nominal())
+
+#Retain = TRUE keeps the processed training set that is created during the estimation phase
+rec_trained <- prep(rec, training = ames_train, retain=TRUE, verbose = TRUE) #%>%
+  #step_center(all_numeric()) %>%
+  #step_scale(all_numeric())
+
+# Get the processed training set:
+design_mat <- juice(rec_trained)
+
+#Apply to other data sets:
+rec_test <- bake (rec_trained, new_data = ames_test)
+
+library(sparklyr)
+rf_3 <- ml_random_forest(
+  dat, 
+  intercept = FALSE, 
+  response = "y", 
+  features = names(dat)[names(dat) != "y"], 
+  col.sample.rate = 12,
+  num.trees = 2000
+)
+
+#https://towardsdatascience.com/modelling-with-tidymodels-and-parsnip-bae2c01c131c
+
+
+# https://github.com/tidymodels/parsnip/issues/152
+suppressPackageStartupMessages({
+  library("yardstick")
+  library("parsnip")
+  library("dials")
+  library("recipes")
+  library("rsample")
+  library("readr")
+  library("ggplot2")
+  library("dplyr")
+  library("purrr")
+  library("mice")
+})
+
+titanic <- all_data
+
+# splits
+train_test_split <- initial_split(titanic, prop = 0.9)
+titanic_train <- training(train_test_split)
+titanic_test <- testing(train_test_split)
+
+# Don't dummy the outcome!
+rec <- recipe(Match_Status ~ ., data = titanic_train) %>%
+  step_dummy(all_nominal(), -Match_Status)
+
+# Prep ONLY on the training data
+# Use juice() to extract the prepped training data
+# Use bake() on the test data, but with the prepped recipe from the training data
+prepped_rec <- prep(rec, titanic_train)
+train_data <- juice(prepped_rec)
+test_data <- bake(prepped_rec, new_data = titanic_test)
+
+# We can now try basic logistic regression
+logistic_regression <- logistic_reg() %>% 
+  set_engine("glm") %>% 
+  fit(Match_Status ~ ., data = train_data)
+
+predict(logistic_regression, new_data = test_data)
+predict(logistic_regression, new_data = test_data, type = "prob")
+
+>>>>>>> 84ec5a149b8b5878838a6cbac9e548a5d50d47be

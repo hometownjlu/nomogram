@@ -3,14 +3,6 @@ title: "A Model to Predict Chances of Matching into Obstetrics and Gynecology Re
 author: "Tyler Muffly, MD"
 date: "Department of Obstetrics and Gynecology, Denver Health, Denver, CO"
 output:
-  html_document:
-    code_folding: hide
-    dev: svg
-    df_print: paged
-    theme: united
-    toc_depth: 2
-  word_document:
-    toc_depth: '2'
   pdf_document:
     df_print: paged
     fig_caption: yes
@@ -19,6 +11,14 @@ output:
     pandoc_args:
     - --wrap=none
     - --top-level-division=chapter
+  word_document:
+    toc_depth: '2'
+  html_document:
+    code_folding: hide
+    dev: svg
+    df_print: paged
+    theme: united
+    toc_depth: 2
 fontsize: 12pt
 geometry: margin=1in
 header-includes:
@@ -30,6 +30,8 @@ header-includes:
 fontfamily: mathpazo
 spacing: double
 always_allow_html: yes
+editor_options: 
+  chunk_output_type: console
 ---
 
 *Tyler M. Muffly, Merdith Alston, Jill Liss, Georg Kropat, Janet Corral, Christine Raffaelli, J. Eric Jelovsek*
@@ -88,17 +90,20 @@ library(knitr)
 
 ```{r, echo=FALSE, include = FALSE}
 #May need to run this file by hand.  
+#KNITR THROWS SOME MESSED UP MESSAGE
+
+
 source(file="~/Dropbox/Nomogram/nomogram/Code/Additional_functions_nomogram.R", echo=TRUE, verbose=TRUE)
 ```
 ## Load and Tidy the Data
 `all_data` is a dataframe of the independent and the dependent variables for review. Each variable is contained in a column, and each row represents a single unique medical student. If students applied in more than one year the most contemporary data was used.
 ```{r Download cleaned data from Dropbox, echo=FALSE, include=FALSE, cache=FALSE}
-attach(all_data)
+all_data
 dim(all_data)
 all_data <- na.omit(all_data)
 dim(all_data)
 data.table::data.table(all_data)
-freq(data=all_data, plot = FALSE, na.rm = FALSE)
+funModeling::freq(data=all_data, plot = FALSE, na.rm = FALSE)
 
 tmp <- table(all_data$Match_Status)
 match_rate <- (tmp[[2]]/(tmp[[2]] + tmp[[1]]))*100
@@ -147,8 +152,8 @@ inspectdf::inspect_types(all_data) %>% show_plot()
 Hmisc::describe(all_data)
 ```
 A nice data summary is available from the `skim` package.   
-```{r,include=TRUE, results='text'}
-skim(all_data)
+```{r,include=TRUE}
+#skimr::skim(all_data)
 ```
 
 ## Evaluate for missing data in multiple manners
@@ -163,7 +168,7 @@ The new data set in `all_data`, includes `r nrow(all_data)` rows and `r ncol(all
 #Cool but a little overkill for checking if we have missing data.  
 #all_data <- na.omit(all_data)
 colSums(is.na(all_data))
-map_df(all_data, ~ sum(is.na(.)))
+purrr::map_df(all_data, ~ sum(is.na(.)))
 naniar::gg_miss_var(all_data)
 ```
 
@@ -176,8 +181,8 @@ After the data check was completed, an exploratory data analysis (EDA) was condu
 
 Description of `all_data$Match_Status` variable.  
 ```{r data check, include=TRUE, out.width="50%"}
-describe(as.factor(all_data$Match_Status))
-ggplot(all_data[!is.na(all_data$Match_Status),], aes(x = Match_Status, fill = Match_Status)) +
+Hmisc::describe(as.factor(all_data$Match_Status))
+ggplot2::ggplot(all_data[!is.na(all_data$Match_Status),], aes(x = Match_Status, fill = Match_Status)) +
   geom_bar(stat='count') +
   labs(x = 'How many people matched into OBGYN?') +
         geom_label(stat='count',aes(label=..count..), size=7) +
@@ -422,11 +427,11 @@ Using the training sample, we will provide numerical summaries of each predictor
 ```{r}
 #Is skew present?
 skewed_feature_names <- train %>%
-  select_if(is.numeric) %>%
+  dplyr::select_if(is.numeric) %>%
   map_df(PerformanceAnalytics::skewness) %>% #returns a single row tibble 
   tidyr::gather(factor_key = TRUE) %>% #transposes into a long data column
-  arrange(desc(value)) %>% #Look for low and high values, high values have a fat tail on right, low has fat tail on left side
-  filter(value>2.0) %>% #eyeballed cutoff for value cut off
+  dplyr::arrange(desc(value)) %>% #Look for low and high values, high values have a fat tail on right, low has fat tail on left side
+  dplyr::filter(value>2.0) %>% #eyeballed cutoff for value cut off
   pull(key) %>%
   as.character()
 ```
@@ -436,29 +441,32 @@ skewed_feature_names <- train %>%
 ```{r, warning= FALSE, message=FALSE, echo=FALSE, include=TRUE}
 colnames(train)
 
-train_correlation <- 
-  train %>% 
-  #select_if(is.numeric) %>% #selects only numeric columns to be used in the correlation plot, NICE!
-    dplyr::mutate(white_non_white = as.integer(white_non_white),
-         Match_Status = as.integer(Match_Status),
-         Gender = as.integer(Gender),
-         Couples_Match = as.integer(Couples_Match),
-         US_or_Canadian_Applicant = as.integer(US_or_Canadian_Applicant),
-         Medical_Education_Interrupted = as.integer(Medical_Education_Interrupted),
-         Alpha_Omega_Alpha = as.integer(Alpha_Omega_Alpha),
-         Military_Service_Obligation = as.integer(Military_Service_Obligation),
-         Visa_Sponsorship_Needed = as.integer(Visa_Sponsorship_Needed),
-         Medical_Degree = as.integer(Medical_Degree))%>% 
-  stats::cor(use="complete.obs") %>%
-  corrplot::corrplot(type="lower", 
-                     diag=FALSE, 
-                     addgrid.col = rgb(0, 0, 0, .05),
-                     order = "hclust", 
-                     tl.cex = 0.5, 
-                     tl.col = "black", 
-                     sig.level = "0.01", 
-                     insig = "blank", #Insignficant values are left blank
-                     pch = TRUE)
+
+####Not working!!!
+
+# train_correlation <- 
+#   train %>% 
+#   #select_if(is.numeric) %>% #selects only numeric columns to be used in the correlation plot, NICE!
+#     dplyr::mutate(white_non_white = as.integer(white_non_white),
+#          Match_Status = as.integer(Match_Status),
+#          Gender = as.integer(Gender),
+#          Couples_Match = as.integer(Couples_Match),
+#          US_or_Canadian_Applicant = as.integer(US_or_Canadian_Applicant),
+#          Medical_Education_Interrupted = as.integer(Medical_Education_Interrupted),
+#          Alpha_Omega_Alpha = as.integer(Alpha_Omega_Alpha),
+#          Military_Service_Obligation = as.integer(Military_Service_Obligation),
+#          Visa_Sponsorship_Needed = as.integer(Visa_Sponsorship_Needed),
+#          Medical_Degree = as.integer(Medical_Degree))%>% 
+#   stats::cor(use="complete.obs") %>%
+#   corrplot::corrplot(type="lower", 
+#                      diag=FALSE, 
+#                      addgrid.col = rgb(0, 0, 0, .05),
+#                      order = "hclust", 
+#                      tl.cex = 0.5, 
+#                      tl.col = "black", 
+#                      sig.level = "0.01", 
+#                      insig = "blank", #Insignficant values are left blank
+#                      pch = TRUE)
 ```
 In this correlation plot we want to look for the bright, large circles which immediately show the strong correlations (size and shading depends on the absolute values of the coefficients; color depends on direction).  This shows whether two features are connected so that one changes with a predictable trend if you change the other. The closer this coefficient is to zero the weaker is the correlation. Anything that you would have to squint to see is usually not worth seeing! 
 
@@ -476,13 +484,10 @@ You can see that there is a natural separation between the Match status and USML
 The values of correlation range from -1 to 1.  If there is a value of 0 there is no correlation between the variables.  Perfect correlation is 1.  Perfect negative correlation is -1.  
 
 ```{r, include=TRUE, echo=FALSE}
-library(correlationfunnel)
-
 all_data_binarized_tbl <- all_data %>%
   correlationfunnel::binarize(n_bins = 4, thresh_infreq = 0.01)
 
-all_data_binarized_tbl %>% glimpse()
-
+all_data_binarized_tbl %>% tibble::glimpse()
 
 all_data_correlated_tbl <- all_data_binarized_tbl %>%
   correlationfunnel::correlate(target = Match_Status__Matched)
@@ -545,7 +550,7 @@ kitchen.sink <-
 
 kitchen.sink
 anova(kitchen.sink, test="Chisq")
-gc()
+invisible(gc())
 ```
 This is a nice view of the model formula:  
 `r kitchen.sink[[26]]`
@@ -558,12 +563,14 @@ tm_nomogram_prep(kitchen.sink)
 ```{r}
 #???
 train$Match_Status <- as.factor(train$Match_Status)
+
+
 ###Not working!!!
-prediction_test <- stats::predict(kitchen.sink, newdata = test, 
-                            type = "response")
-prediction_categories <- ifelse(prediction_test > 0.5, 1, 0)
-confusion <- table(prediction_categories, test$Match_Status)
-(confusion.limited.vif.model.kitchen.sink <- caret::confusionMatrix(confusion, positive = "1"))
+# prediction_test <- stats::predict(kitchen.sink, newdata = test, 
+#                             type = "response")
+# prediction_categories <- ifelse(prediction_test > 0.5, 1, 0)
+# confusion <- table(prediction_categories, test$Match_Status)
+# (confusion.limited.vif.model.kitchen.sink <- caret::confusionMatrix(confusion, positive = "1"))
 ```
 
 ```{r, warning=FALSE, echo=FALSE, include = TRUE}
@@ -634,7 +641,7 @@ summary.lmfit2<- summary(lm.fit2) #Do this so that we can pull out the r squared
 ```
 
 ```{r, include = TRUE}
-glance(lm.fit2)
+broom::glance(lm.fit2)
 ```
 
 
@@ -674,7 +681,7 @@ I removed variables one at a time from `kitchen.sink` until VIF is <5.  Here I r
 limited.vif.model.kitchen.sink <- glm(Match_Status ~ . - Medical_Degree,   #Nice trick to remove one variable at a time
                  family = "binomial", data = train)
 
-vif(limited.vif.model.kitchen.sink)
+rms::vif(limited.vif.model.kitchen.sink)
 ```
 
 Perform In Sample Prediction - Run train model on the `train` data
@@ -954,12 +961,12 @@ vif(limited.to.lasso.variables)
 print(variables)  # Include these variables into the new model called lrm.with.lasso.variables
 
 d <- 
-  datadist(test)
+  rms::datadist(test)
 
 options(datadist = "d")
 
 lrm.with.lasso.variables <- 
-  lrm(Match_Status ~ 
+  rms::lrm(Match_Status ~ 
                                     white_non_white + 
                                     Age +
                                     Gender +
@@ -1021,7 +1028,7 @@ Build both a glm (train.glm.with.lasso.variables) and a lrm model (train.lrm.wit
 test$Match_Status
 
 train.glm.with.lasso.variables  <- 
-  glm(Match_Status ~ 
+  stats::glm(Match_Status ~ 
                                     white_non_white + 
                                     Age +
                                     Gender +
@@ -1142,12 +1149,12 @@ Exploratory random forest was also performed. The variable importance for the ra
 
 Here we intentionally grow a large and complex tree then prune it to be smaller and more efficient later on.
 ```{r rpart EDA}
-train <- filter(all_data, Year %in% c("2015", "2016"))  #Train on years 2015, 2016
-nrow(train) 
-test <- filter(all_data, Year %in%  c("2017", "2018")) #Test on 2017, 2018 data
-nrow(test)
-test <- test %>% select(-"Year")
-train <- train %>% select(-"Year")
+# train <- filter(all_data, Year %in% c("2015", "2016"))  #Train on years 2015, 2016
+# nrow(train) 
+# test <- filter(all_data, Year %in%  c("2017", "2018")) #Test on 2017, 2018 data
+# nrow(test)
+# test <- test %>% select(-"Year")
+# train <- train %>% select(-"Year")
 
 t.model <-
   rpart(as.factor(Match_Status) ~.,
@@ -1210,7 +1217,13 @@ caret_svm
 caret_svm$results
 caret_svm$finalModel
 ```
-The accuracy of the supported vector machine model is `r round(caret_svm$results[[2]], digits=2)`.  
+The in-sample accuracy of the supported vector machine model is `r round(caret_svm$results[[2]], digits=2)`.  
+
+```{r}
+#using the model to make Survival predictions on the test set
+solution_svm <- predict(caret_svm, newdata = test, type = "raw")
+mean(solution_svm == test$Match_Status)
+```
 
 
 **(4) Random Forest model**
@@ -1287,10 +1300,12 @@ nbwoe
 ```
 
 ```{r NB model accuracy, align = 'center'}
-train.nbwoe <- predict(nbwoe, newdata = test[,-which(names(train)=="Match_Status")])
-cat("\n","----- Performance of nbwoe on train set -----","\n")
-nb.accuracy <- postResample(pred = train.nbwoe, obs = as.factor(train$Match_Status))
-nb.accuracy[1]
+#Not working!!!
+
+# train.nbwoe <- predict(nbwoe, newdata = test[,-which(names(train)=="Match_Status")])
+# cat("\n","----- Performance of nbwoe on train set -----","\n")
+# nb.accuracy <- postResample(pred = train.nbwoe, obs = as.factor(train$Match_Status))
+# nb.accuracy[1]
 ```
 
 \pagebreak
@@ -1304,12 +1319,12 @@ How can we convert these categories to a matrix? One way to do this is using one
 
 ```{r}
 # get the subset of the dataframe that doesn't have labels about match_status
-train <- filter(all_data, Year %in% c("2015", "2016"))  #Train on years 2015, 2016
-nrow(train) 
-test <- filter(all_data, Year %in%  c("2017", "2018")) #Test on 2017, 2018 data
-nrow(test)
-test <- test %>% select(-"Year")
-train <- train %>% select(-"Year")
+# train <- filter(all_data, Year %in% c("2015", "2016"))  #Train on years 2015, 2016
+# nrow(train) 
+# test <- filter(all_data, Year %in%  c("2017", "2018")) #Test on 2017, 2018 data
+# nrow(test)
+# test <- test %>% select(-"Year")
+# train <- train %>% select(-"Year")
 
 train$Match_Status <- as.factor(train$Match_Status)
 model_04_xgboost <- parsnip::boost_tree(mode = "classification", 
@@ -1324,10 +1339,11 @@ model_04_xgboost <- parsnip::boost_tree(mode = "classification",
 
 model_04_xgboost
 
-?calc_metrics
-model_04_xgboost %>% calc_metrics(test, truth = Match_Status) #Not working!!!!
+calc_metrics
+### Not working !!!
+#model_04_xgboost %>% calc_metrics(test, truth = Match_Status) #Not working!!!!
 
-model_04_xgboost %>% plot_predictions(new_data = test_tbl)
+#model_04_xgboost %>% plot_predictions(new_data = test_tbl)
 
 # Explanation
 model_04_xgboost$fit %>%
@@ -1345,7 +1361,7 @@ Given the fact that all three models have decent public scores, especially the c
 #https://www.kaggle.com/kernels/scriptcontent/7086189/download
 #adding model predictions to test dataframe
 test$RF <- as.numeric(solution_rf)-1
-test$SVM <- as.numeric(solution_svm)-1
+test$SVM <- as.numeric(solution_svm)-1 #NOT WORKING
 test$Boost <- as.numeric(solution_boost)-1
 test$tree <- as.numeric(solution_tree)-1
 

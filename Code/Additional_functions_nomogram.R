@@ -17,7 +17,12 @@ data_file <- "all_years_filter_112.rds"
 .libPaths("/Users/tylermuffly/.exploratory/R/3.6")
 
 
-pkg <- (c('R.methodsS3', 'caret', 'readxl', 'XML', 'reshape2', 'devtools', 'purrr', 'readr', 'ggplot2', 'dplyr', 'magick', 'janitor', 'lubridate', 'hms', 'tidyr', 'stringr', 'openxlsx', 'forcats', 'RcppRoll', 'tibble', 'bit64', 'munsell', 'scales', 'rgdal', 'tidyverse', "foreach", "PASWR", "rms", "pROC", "ROCR", "nnet", "packrat", "DynNom", "export", "caTools", "mlbench", "randomForest", "ipred", "xgboost", "Metrics", "RANN", "AppliedPredictiveModeling", "nomogramEx", "shiny", "earth", "fastAdaboost", "Boruta", "glmnet", "ggforce", "tidylog", "InformationValue", "pscl", "scoring", "DescTools", "gbm", "Hmisc", "arsenal", "pander", "moments", "leaps", "MatchIt", "car", "mice", "rpart", "beepr", "fansi", "utf8", "zoom", "lmtest", "ResourceSelection", "rmarkdown", "rattle", "rmda", "funModeling", "tinytex", "caretEnsemble", "Rmisc", "corrplot", "GGally", "alluvial", "progress", "perturb", "vctrs", "highr", "labeling", "DataExplorer", "rsconnect", "inspectdf", "ggpubr", "esquisse", "stargazer", "tableone", "knitr", "drake", "visNetwork", "woeBinning", "OneR", "rpart.plot", "RColorBrewer", "kableExtra", "kernlab", "naivebayes", "e1071", "data.table", "skimr", "naniar", "english", "mosaic", "broom", "mltools", "tidymodels", "tidyquant", "plotly", "rsample", "yardstick", "parsnip", "tensorflow", "keras", "sparklyr", "dials", "cowplot", "lime"))
+pkg <- (c('R.methodsS3', 'caret', 'readxl', 'XML', 'reshape2', 'devtools', 'purrr', 'readr', 'ggplot2', 'dplyr', 'magick', 'janitor', 'lubridate', 'hms', 'tidyr', 'stringr', 'openxlsx', 'forcats', 'RcppRoll', 'tibble', 'bit64', 'munsell', 'scales', 'rgdal', 'tidyverse', "foreach", "PASWR", "rms", "pROC", "ROCR", "nnet", "packrat", "DynNom", "export", "caTools", "mlbench", "randomForest", "ipred", "xgboost", "Metrics", "RANN", "AppliedPredictiveModeling", "nomogramEx", "shiny", "earth", "fastAdaboost", "Boruta", "glmnet", "ggforce", "tidylog", "InformationValue", "pscl", "scoring", "DescTools", "gbm", "Hmisc", "arsenal", "pander", "moments", "leaps", "MatchIt", "car", "mice", "rpart", "beepr", "fansi", "utf8", "zoom", "lmtest", "ResourceSelection", "rmarkdown", "rattle", "rmda", "funModeling", "tinytex", "caretEnsemble", "Rmisc", "corrplot", "GGally", "alluvial", "progress", "perturb", "vctrs", "highr", "labeling", "DataExplorer", "rsconnect", "inspectdf", "ggpubr", "esquisse", "stargazer", "tableone", "knitr", "drake", "visNetwork", "woeBinning", "OneR", "rpart.plot", "RColorBrewer", "kableExtra", "kernlab", "naivebayes", "e1071", "data.table", "skimr", "naniar", "english", "mosaic", "broom", "mltools", "tidymodels", "tidyquant", "plotly", "rsample", "yardstick", "parsnip", "tensorflow", "keras", "sparklyr", "dials", "cowplot", "lime", "flexdashboard", "shiny", "shinyjs", "shinyWidgets", "plotly", "odbc", "lightgbm"))
+
+# Database
+library("odbc")
+library("RSQLite")
+
 #install.packages(pkg, dependencies = TRUE, repos = "https://cloud.r-project.org")
 lapply(pkg, require, character.only = TRUE)
 
@@ -25,13 +30,6 @@ lapply(pkg, require, character.only = TRUE)
 #library(dplR)
 #devtools::install_github("tidymodels/discrim") #for naive bayes with tidymodels
 library(discrim)
-
-#install.packages("tensorflow") #https://appdividend.com/2019/01/29/how-to-install-tensorflow-on-mac-tutorial-from-scratch/
-#library(tensorflow)
-#install_tensorflow()
-sess = tf$Session()
-hello <- tf$constant('Hello Tyler and TensorFlow!')
-sess$run(hello)
 
 #pacman::p_install_gh("cran/doMC")
 library("doMC")
@@ -156,7 +154,7 @@ all_data$Military_Service_Obligation <- relevel(all_data$Military_Service_Obliga
 all_data$Medical_Degree <- relevel (all_data$Medical_Degree, ref = "MD")
 all_data$Visa_Sponsorship_Needed <- relevel(all_data$Visa_Sponsorship_Needed, ref = "No")
 
-write_csv(all_data, "~/all_data.csv")
+#write_csv(all_data, "~/all_data.csv")
 
 #### https://stirlingcodingclub.github.io/Manuscripts_in_Rmarkdown/Rmarkdown_notes.html
 knitr::opts_chunk$set(fig.width=7, 
@@ -358,7 +356,7 @@ predict_func <- function(split, model){
 }
 
 # Will calculate accuracy of classification
-perf_metrics <- yardstick::metric_set(accuracy)
+#perf_metrics <- yardstick::metric_set(accuracy)
 
 # Create a function that will take the prediction and compare to truth
 rf_metrics <- function(pred_df){
@@ -843,3 +841,4 @@ plot_ggpairs <- function(data, color = NULL, density_alpha = 0.5) {
   return(g)
   
 }
+
