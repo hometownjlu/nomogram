@@ -1,6 +1,6 @@
 ---
 title: "A Model to Predict Chances of Matching into Obstetrics and Gynecology Residency"
-author: "Tyler Muffly, MD"
+author: "Tyler M. Muffly, MD"
 date: "Department of Obstetrics and Gynecology, Denver Health, Denver, CO"
 output:
   html_document:
@@ -55,7 +55,7 @@ editor_options:
 *Objective:  *
 *We sought to construct and validate a model that predict a medical student's chances of matching into an obstetrics and gynecology residency.*
 
-ERAS is a centralized solution to the residency application and documents distribution process. The data source to be used for the project is the Electronic Residency Application Service data that was in discrete fields in the application.  No hand-searching of data was done. The data was exported from the ERAS Program Director Work Station under the Archives menu.The data is collected by the University of Colorado OBGYN residency that has both a categorical and a preliminary position.  Medical students who applied to the preliminary position were considered to be unmatched. The data set of years 2015, 2016, 2017, and 2018 applicants to the University of Colorado OBGYN residency. The data is contained in a data frame called 'all_data'. In advance, we might anticipate that USMLE_Step_1_Score and US_or_Canadian_Applicant will be key predictors.  Match_Status is the Dependent Variable and shows the medical students who applied to the OBGYN residency. 
+ERAS is a centralized solution to the medical residency application and documents distribution process. The data source to be used for the project is the Electronic Residency Application Service data that was in discrete fields in the application.  No hand-searching of data was done. The data was exported from the ERAS Program Director Work Station under the Archives menu.The data is collected by the University of Colorado OBGYN residency that has both a categorical and a preliminary position.  Medical students who applied to the preliminary position were considered to be unmatched. The data set of years 2015, 2016, 2017, and 2018 applicants to the University of Colorado OBGYN residency. The data is contained in a data frame called 'all_data'. In advance, we might anticipate that USMLE Step 1 Score and US or Canadian Applicant will be key predictors.  Match Status is the dependent Variable and shows the medical students who applied to the OBGYN residency. 
 
 ## Codebook
 A codebook is a technical description of the data that was collected for a particular purpose. It describes how the data are arranged in the computer file or files, what the various numbers and letters mean, and any special instructions on how to use the data properly.
@@ -70,7 +70,7 @@ A codebook is a technical description of the data that was collected for a parti
 7. `all_data$Medical_Education_Interrupted` - Taking breaks, 2 level categorical
 8. `all_data$Alpha_Omega_Alpha` - Membership in AOA, 3 level categorical
 9. `all_data$Military_Service_Obligation`
-10. `all_data$USMLE_Step_1_Score` - I did not use Step 2 score because most students will not have those, numerical variable
+10. `all_data$USMLE_Step_1_Score` - I did not use Step 2 score because most students will not have those numbers at the time they apply, numerical variable
 11. `all_data$Count_of_Poster_Presentation` - numerical variable
 12. `all_data$Count_of_Oral_Presentation` - numerical variable
 13. `all_data$Count_of_Articles_Abstracts` - numerical variable
@@ -79,23 +79,25 @@ A codebook is a technical description of the data that was collected for a parti
 16. `all_data$Visa_Sponsorship_Needed` - numerical variable
 17. `all_data$Medical_Degree` - Allopathic versus Osteopathic medical school education, 2 level categorical
 
+This data was cleaned in a separate R script with the help of exploratory.io.  
+
+Packrat is in use to control package versions and a packrat.lock file is posted to my github repository.  This will allow for easier reproducibility.  Packrat records the exact package versions you depend on, and ensures those exact versions are the ones that get installed wherever you go.  We can also control the environment by deploying the project inside a Docker container as needed.  The project was created in R version 3.6.1 and run inside RStudio 1.2.5019.  
 ```{r directory paths and packrat settings, include=FALSE}
 #Helpful, https://www.kaggle.com/pjmcintyre/titanic-first-kernel/code
-library(packrat)
-# packrat::packrat_mode(on = TRUE)
-# packrat::snapshot(infer.dependencies = TRUE)
-# packrat::restore()
-options(tinytex.verbose = TRUE)
+library(packrat) #packrate director for Tyler: ~/Dropbox/Nomogram/nomogram/packrat/lib
+packrat::packrat_mode(on = TRUE)
+packrat::status()
+options(tinytex.verbose = FALSE)
 library(knitr)
 ```
 
+Package installation, data download from Dropbox.com, and functions written for this project are all loaded in a separate "Additional_functions_nomogram.R" file.
 ```{r, echo=TRUE, include = FALSE}
 #May need to run this file by hand.  
 #KNITR THROWS SOME MESSED UP MESSAGE
-
-
 source(file="~/Dropbox/Nomogram/nomogram/Code/Additional_functions_nomogram.R", echo=TRUE, verbose=TRUE)
 ```
+
 ## Ingest Data:  Load and Tidy the Data
 `all_data` is a dataframe of the independent and the dependent variables for review. Each variable is contained in a column, and each row represents a single unique medical student. If students applied in more than one year the most contemporary data was used.
 ```{r Download cleaned data from Dropbox, echo=TRUE, include=FALSE, cache=FALSE}
@@ -110,7 +112,7 @@ tmp <- table(all_data$Match_Status)
 match_rate <- (tmp[[2]]/(tmp[[2]] + tmp[[1]]))*100
 match_rate
 ```
-We can see that these data have `r nrow(all_data)` of `r ncol(all_data)` variables, and that  about `r round(match_rate, digits = 1)` percent of medical students matched.   Let’s create a few diagnostic plots to get a sense of the data. Remember, the goal here will be to predict whether a given medical student will match into OB/GYN, based on the variables listed in the codebook.
+We can see that these data have `r nrow(all_data)` of `r ncol(all_data)` variables, and thatabout `r round(match_rate, digits = 1)` percent of medical students applying to OB/GYN residency matched.   Let’s create a few plots to get a sense of the data. Remember, the goal here will be to predict whether a given medical student will match into OB/GYN residency, based on the variables listed in the codebook.
 
 ```{r Using the Drake package here for efficiency, echo=TRUE, include=FALSE}
 # Using the Drake package here for efficiency.  
@@ -154,7 +156,7 @@ Hmisc::describe(all_data)
 ```
 A nice data summary is available from the `skim` package.   
 ```{r,include=TRUE}
-#skimr::skim(all_data)
+skimr::skim(all_data)
 ```
 
 ## Evaluate for missing data in multiple manners
@@ -208,11 +210,11 @@ inspectdf::inspect_num(all_data) %>% show_plot()
 expl <- names(all_data)[-19]
 
 # Loop vector with map
-expl_plots_box <- map(expl, ~box_fun_plot(data = all_data, x = "Match_Status", y = .x) )
+expl_plots_box <- purrr::map(expl, ~box_fun_plot(data = all_data, x = "Match_Status", y = .x) )
 cowplot::plot_grid(plotlist = expl_plots_box)
 
 # Loop vector with map
-expl_plots_density <- map(expl, ~density_fun_plot(data = all_data, x = "Match_Status", y = .x) )
+expl_plots_density <- purrr::map(expl, ~density_fun_plot(data = all_data, x = "Match_Status", y = .x) )
 cowplot::plot_grid(plotlist = expl_plots_density)
 ```
 
@@ -368,11 +370,10 @@ Overfitting is one of the biggest challenges in the machine learning process. Ov
 Two well known strategies to overcome the problem of overfitting are the train/validation split and cross-validation.
 
 # Identify training and test samples
-Here, we will obtain a training sample with the first two years of the data (2015 and 2016), and have the remaining years in a test sample, and properly labeled so that the results can be replicated later. We will then use this training sample.  I will call the training sample `train` and the test sample `test`.  *Creative!*  Another option is dplyr::sample_n if you want to instead specify the exact number of observations to be selected. There are `r nrow(train)` medical students in the training data set and `r nrow(test)` in the test data set.  
+I will call the training sample `train` and the test sample `test`.  *Creative!*  Another option is dplyr::sample_n if you want to instead specify the exact number of observations to be selected. There are `r nrow(train)` medical students in the training data set and `r nrow(test)` in the test data set.  
 
 ```{r, train vs test, warning=FALSE, echo=TRUE, message=FALSE, include=TRUE}
 #http://rpubs.com/josevilardy/crossvalidation
-
 # train <- filter(all_data, Year %in% c("2015", "2016"))  #Train on years 2015, 2016
 # nrow(train)
 # test <- filter(all_data, Year %in%  c("2017", "2018")) #Test on 2017, 2018 data
@@ -394,17 +395,17 @@ test  <- data_split %>% testing() %>% glimpse() # Extra
 plot_hist_facet(data=test)
 ```
 
-Compare the datasets of `train` and `test`:  
+Compare the datasets of `train` and `test`using arsenal package:  
 ```{r, results="asis", include=FALSE, echo=FALSE}
 summary(arsenal::comparedf(train, test))
 ```
 
-`train` data characteristics:
+`train` data characteristics are all reported with medians and IQR.  
 ```{r, include = TRUE, results="asis"}
 tm_arsenal_table(df=train, by=train$Match_Status)
 ```
 
-`test` data characteristics:
+`test` data characteristics are all reported with medians and IQR. 
 ```{r, include = TRUE, results="asis"}
 tm_arsenal_table(df = test, by = test$Match_Status)
 ```
@@ -426,7 +427,7 @@ Summarize the outcome and the predictors
 Using the training sample, we will provide numerical summaries of each predictor variable and the outcome, as well as graphical summaries of the outcome variable. Our results should now show no missing values in any variable. We’ll need to determine whether there are any evident problems, such as substantial skew in the outcome variable.
 
 ```{r}
-#Is skew present?
+#Is feature skew present?
 skewed_feature_names <- train %>%
   dplyr::select_if(is.numeric) %>%
   map_df(PerformanceAnalytics::skewness) %>% #returns a single row tibble 
@@ -436,7 +437,6 @@ skewed_feature_names <- train %>%
   pull(key) %>%
   as.character()
 ```
-
 
 # Scatterplot Matrix and Correlation
 ```{r, warning= FALSE, message=FALSE, echo=TRUE, include=TRUE}
@@ -496,16 +496,16 @@ all_data_correlated_tbl <- all_data_binarized_tbl %>%
 all_data_correlated_tbl
 
 all_data_correlated_tbl %>%
-  correlationfunnel::plot_correlation_funnel(interactive = TRUE, limits = c(-0.4, 0.4))
+  correlationfunnel::plot_correlation_funnel(interactive = TRUE, limits = c(-1, 1))
 
 all_data_correlated_tbl %>%
-  correlationfunnel::plot_correlation_funnel(interactive = FALSE, limits = c(-0.4, 0.4))
+  correlationfunnel::plot_correlation_funnel(interactive = FALSE, limits = c(-1, 1))
 ```
 
 
 ```{r, include = TRUE, fig.width=8, fig.height=4, fig.cap="Figure: Evaluation of the variable interactions in the train data set."}
-cor(1:5, 1:5) #Perfect positive correlation
-cor(1:5, 5:1) #Perfect negative correlation
+#cor(1:5, 1:5) #Perfect positive correlation
+#cor(1:5, 5:1) #Perfect negative correlation
 #https://jamesmarquezportfolio.com/correlation_matrices_in_r.html
 psych::pairs.panels(train[, c(2, 9:15, 18)], bg=c("red","blue")[as.factor(train$Match_Status)], pch=21, jiggle = TRUE, scale = TRUE)
 ```
@@ -566,7 +566,6 @@ tm_nomogram_prep(kitchen.sink)
 #???
 train$Match_Status <- as.factor(train$Match_Status)
 
-
 ###Not working!!!
 # prediction_test <- stats::predict(kitchen.sink, newdata = test, 
 #                             type = "response")
@@ -585,7 +584,7 @@ knitr::kable(tmp,
              digits=2)
 ```
 
-This `kitchen.sink` model accounts for just over `r kitchen.sink$stats[[10]]*100`% (r.squared) of the variation in sbp_diff in our training sample of `r nrow(train)` medical students in `train`.  The C-statistic is `r round(kitchen.sink$stats[[6]], digit =2)`.  The c-statistic, also known as the concordance statistic, is equal to to the AUC (area under curve) and has the following interpretations:
+This `kitchen.sink` model accounts for just over `r kitchen.sink$stats[[10]]*100`% (r.squared) of the variation in Match_Status in our training sample of `r nrow(train)` medical students in `train`.  The C-statistic is `r round(kitchen.sink$stats[[6]], digit =2)`.  The c-statistic, also known as the concordance statistic, is equal to to the AUC (area under curve) and has the following interpretations:
 * A value below 0.5 indicates a poor model.
 * A value of 0.5 indicates that the model is no better out classifying outcomes than random chance.
 * The closer the value is to 1, the better the model is at correctly classifying outcomes.
@@ -605,7 +604,7 @@ Specify the size, magnitude and meaning of all coefficients, and identify approp
 ```
 
 
-???This is messy (and maybe unncecessary) but I have to create a linear model using stats::lm to pull out values like R squared into the Rmarkdown inline values.
+## This is messy (and maybe unncecessary) but I have to create a linear model using stats::lm to pull out values like R squared into the Rmarkdown inline values.
 ```{r, echo=TRUE, include=FALSE}
 ## Fitting a linear model of the kitchen sink using lm from the stats package
 train$Match_Status
@@ -1148,7 +1147,9 @@ Exploratory random forest was also performed. The variable importance for the ra
 
 **(2) Regression Tree model**
   
-# 2)  Model: A CART model was fit using the rpart package. Trees cqn handle both factors and continuous variables and do not need to create dummy variables.   Use the divide-and-conquer (aka recursive partinioning e.g. rpart) technique to create two homogenous groups.  Leaf nodes are at the bottom and denote final decisions on matching success. Random Forest is a more powerful algorithm over just a single tree. However, the Decision Tree classification preserve the interpretability which the random forest algorithm lacks.  A simple decision tree model was used for exploration. The Decision Tree does not require feature scaling but can overfit data by fitting the noise instead of the whole data.  It is very important to evaluate decision trees on data it has not seen before.
+# 2)  Model: A CART model was fit using the rpart package. T
+
+rees cqn handle both factors and continuous variables and do not need to create dummy variables.   Use the divide-and-conquer (aka recursive partinioning e.g. rpart) technique to create two homogenous groups.  Leaf nodes are at the bottom and denote final decisions on matching success. Random Forest is a more powerful algorithm over just a single tree. However, the Decision Tree classification preserve the interpretability which the random forest algorithm lacks.  A simple decision tree model was used for exploration. The Decision Tree does not require feature scaling but can overfit data by fitting the noise instead of the whole data.  It is very important to evaluate decision trees on data it has not seen before.
 
 Here we intentionally grow a large and complex tree then prune it to be smaller and more efficient later on.
 ```{r rpart EDA}
@@ -1319,7 +1320,7 @@ nbwoe
 
 **(6) xgboost model**
 
-## 7) Model: XGboost model
+# 7) Model: XGboost model
 XGBoost (which stands for eXtreme Gradient Boosting) is an especialy efficent implimentation of gradient boosting. In practice, XGBoost is a very powerful tool for classification and regression. 
 
 Data prep for xgboost
@@ -1416,7 +1417,7 @@ tm_nomogram_prep(train.lrm.with.lasso.variables)
 Annotation:  Manuscript Figure 1:  The first row called points assigned to each variable's measurement from rows 2-12, which are variables included in predictive model.  Assigned points for all variables are then summed and total can be located on line 13 (total points).  Once total points are located, draw a vertical line down to the bottom line to obtain the predicted probability of matching.  For non-linear variables (count of oral presentations, etc.) values should be erad from left to right.
 
 
-#Calibration of the model based on the test data.
+# Calibration of the model based on the test data.
 The ticks across the x-axis represent the frequency distribution (may be called a rug plot) of the predicted probabilities. This is a way to see where there is sparsity in your predictions and where there is a relative abundance of predictions in a given area of predicted probabilities.
 
 The "Apparent" line is essentially the in-sample calibration.
@@ -1514,7 +1515,7 @@ Needed
 References
 ===============================================================================
 
-# Appendix, DynNom Model for Shiny Upload
+# DynNom Model for Shiny Upload
 ```{r DynNom logistic regression model}
 library(dplR)
 DynNom.model.lrm  <-
@@ -1534,8 +1535,6 @@ DynNom.model.lrm  <-
                    data = test,
            x = TRUE,
            y= TRUE)
-
-
 
 #### Turn this on to start the shiny model.  
 #DynNom::DynNom(model = DynNom.model.lrm, data = test,  clevel = 0.95)
