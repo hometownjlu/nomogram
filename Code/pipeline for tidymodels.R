@@ -212,14 +212,9 @@ options("h2o.use.data.table" = TRUE) #helpful for larger datasets
 
 #Split the train_tbl into h2o training, grid search, and testing data sets.  
 # split_h2o <- h2o.splitFrame(as.h2o(train_tbl), ratios = c(0.85), seed = 1978)
-# 
-
-
 #No need to do split of train data into train and validations sets here because we are goig to run cross-validation
 # train_h2o <- split_h2o[[1]]
-# valid_h2o <- split_h2o[[2]]
-
-split_h2o <- h2o.splitFrame(as.h2o(train_tbl), ratios = c(0.85), seed = 1978)
+# valid_h2o <- split_h2o[[2]]]
 
 train_h2o <- as.h2o(train)
 test_h2o  <- as.h2o(test)
@@ -242,7 +237,7 @@ automl_models_h2o <- h2o.automl(
   training_frame = train_h2o, #training data set
   validation_frame = valid_h2o, #grid tuning data set, done automatically by H2O.ai
   leaderboard_frame = test_h2o, #test data set, comment out to do cross-validation
-  max_runtime_secs = 20, #originally was 60 secs #0 is no limit to time
+  max_runtime_secs = 3600, #originally was 60 secs #0 is no limit to time
   nfolds = 10, #K-fold cross-validation: duplicate the train data into 10 sets.  9 of the 10 are used for training and 1 of the 10 is used for validation.  Different parameters are being evaluate but NOT using a different model.  AUC is generated to measure model effectiveness for each fold and mean is used.
   seed = 1978,
   #max_models = 10,
@@ -797,8 +792,6 @@ data_transformed %>%
 plot_explanations(explanation)
 
 plot_explanations_tq(explanation)
-
-
 
 
 ### All done, shutdown H2O    
