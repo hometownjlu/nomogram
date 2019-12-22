@@ -63,6 +63,7 @@ train_raw_tbl       <- train
 test_raw_tbl        <- test
 ```
 
+# Tidymodels approach
 # Split data ----
 ```{r pressure, echo=FALSE}
 # Resource: https://tidymodels.github.io/rsample/
@@ -91,7 +92,7 @@ test %>%
   mutate(prop = n / sum(n))
 ```
 
-# Preprocessing ----
+# Preprocessing for tidymodels----
 ```{r}
 # Fix issues with data: Skew
 #https://university.business-science.io/courses/246843/lectures/5021219
@@ -120,7 +121,7 @@ train %>%
   plot_hist_facet()  #Variables like age and Step 1 scores have different ranges.  Age has 25 to 60 years and Step 1 score has 180 to 280.  Algorithm needs all data on the same scale.  USMLE data would dominate Age because of different ranges.  
 ```
 
-# Feature Analysis ----
+# Feature Analysis for tidymodels----
 ```{r}
 #https://ryjohnson09.netlify.com/post/caret-and-tidymodels/
 #Graphing the Outcomes
@@ -138,7 +139,7 @@ all_data %>%
   )
 ```
 
-# Plot characteristics ----
+# Plot characteristics for tidymodels ----
 ```{r}
 # Create vector of predictors by removing column 19 that is Match_Status
 expl <- names(train)[-19]
@@ -153,7 +154,7 @@ cowplot::plot_grid(plotlist = expl_plots_density) #Must view with zoom function
 ```
 
 
-# Recipes ----
+# Recipes for tidymodels----
 ```{r}
 # Resource: https://tidymodels.github.io/recipes/
 
@@ -227,7 +228,7 @@ train_tbl %>%
 ```
 
 
-# Modeling -----
+# h2o approach -----
 ```{r}
 # H2O Setup ----
 # H2O Docs: http://docs.h2o.ai
@@ -292,7 +293,7 @@ automl_models_h2o <- h2o.automl(
 )
 
 automl_time <- Sys.time() - start
-print(paste("Took", round(automl_time, digits = 2), units(gbm_time), "to build a automl model."))
+print(paste("Took", round(automl_time, digits = 2), units(automl_time), "to build a automl model."))
 ```
 
 ```{r}
@@ -765,7 +766,7 @@ all_data_correlated_tbl %>%
 ```
 
 ```{r}
-h2o.shutdown(prompt = FALSE)
+#h2o.shutdown(prompt = FALSE)
 ```
 
 
@@ -780,7 +781,7 @@ automl_models_h2o <- h2o.automl(
   training_frame = train_h2o, #training data set
   #validation_frame = valid_h2o, #grid tuning data set, done automatically by H2O.ai
   leaderboard_frame = test_h2o, #test data set, comment out to do cross-validation
-  max_runtime_secs = 30, #originally was 60 secs #0 is no limit to time
+  max_runtime_secs = 0, #originally was 60 secs #0 is no limit to time
   nfolds = 10, #K-fold cross-validation: duplicate the train data into 10 sets.  9 of the 10 are used for training and 1 of the 10 is used for validation.  Different parameters are being evaluate but NOT using a different model.  AUC is generated to measure model effectiveness for each fold and mean is used.
   seed = 1978,
   max_models = 10,
@@ -862,6 +863,7 @@ data.glm <- h2o.glm(y = myY, x = myX, training_frame = data.train, validation_fr
 glm_time <- Sys.time() - start
 print(paste("Took", round(glm_time, digits = 2), units(glm_time), "to build logistic regression model."))
 
+h2o.confusionMatrix(data.glm, valid=TRUE)
 summary(data.glm)
 data.glm@model$validation_metrics     ## A more direct way to access the validation 
                                  ##  metrics. Performance metrics depend on 
@@ -869,6 +871,33 @@ data.glm@model$validation_metrics     ## A more direct way to access the validat
                                  ##  multinomial classification, we will primarily
                                  ##  look at the confusion matrix, and overall
                                  ##  accuracy via hit_ratio @ k=1.
+dev.off()
+fpr = data.glm@model$training_metrics@metrics$thresholds_and_metric_scores$fpr
+tpr = data.glm@model$training_metrics@metrics$thresholds_and_metric_scores$tpr
+fpr_val = data.glm@model$validation_metrics@metrics$thresholds_and_metric_scores$fpr
+tpr_val = data.glm@model$validation_metrics@metrics$thresholds_and_metric_scores$tpr
+plot(fpr,tpr, type='l')
+title('Area Under the Curve\n for the GLM Model')
+lines(fpr_val,tpr_val,type='l',col='red')
+legend("bottomright",c("Train", "Validation"),col=c("black","red"),lty=c(1,1),lwd=c(3,3))
+
+h2o.auc(data.glm,valid=FALSE) # on train    
+print(paste("The AUC is:", round(h2o.auc(data.glm,valid=FALSE), digits = 2), "on the train data for the GBM model."))
+h2o.auc(data.glm,valid=TRUE)  # on test
+print(paste("The AUC is:", round(h2o.auc(data.glm,valid=TRUE), digits = 2), "on the test data for the GBM model."))
+
+data.glm@model$training_metrics@metrics$max_criteria_and_metric_scores
+
+plot(data.glm@model$coefficients, xaxt = "n", xlab = "Coefficients", ylab = "Values")
+
+barplot(data.glm@model$coefficients, main = "Coefficients from Logistic Regression\n of Medical Student Matching Data")
+
+myLabels = c(data.glm@model$x, "Intercept")
+plot(data.glm@model$coefficients, xaxt = "n", xlab = "Coefficients", ylab = "Values")
+axis(1, at = 1:length(myLabels), labels = myLabels)
+abline(h = 0, col = 2, lty = 2)
+title("Coefficients from Logistic Regression\n of Medical Students Applying to OBGYN Data")
+barplot(data.glm@model$coefficients, main = "Coefficients from Logistic Regression\n of Medical Students Applying to OBGYN Data")
 ```
 
 # Build GBM Model
@@ -907,50 +936,80 @@ h2o.auc(data.gbm,valid=FALSE) # on train
 print(paste("The AUC is:", round(h2o.auc(data.gbm,valid=FALSE), digits = 2), "on the train data for the GBM model."))
 h2o.auc(data.gbm,valid=TRUE)  # on test
 print(paste("The AUC is:", round(h2o.auc(data.gbm,valid=TRUE), digits = 2), "on the test data for the GBM model."))
-```
 
-# GBM2
-```{r}
-###############################################################################
-gbm2 <- h2o.gbm(
-  training_frame = train,     ##
-  validation_frame = valid,   ##
-  y = myY, x = myX, 
-  ntrees = 20,                ## decrease the trees, mostly to allow for run time
-                              ##  (from 50)
-  learn_rate = 0.2,           ## increase the learning rate (from 0.1)
-  max_depth = 10,             ## increase the depth (from 5)
-  stopping_rounds = 2,        ## 
-  stopping_tolerance = 0.01,  ##
-  score_each_iteration = T,   ##
-  model_id = "gbm_covType2",  ##
-  seed = 2000000)             ##
-
-summary(data.gbm) #Original
-summary(gbm2)
-h2o.hit_ratio_table(data.gbm,valid = T)[1,2]    ## review the first model's accuracy
-#h2o.hit_ratio_table(gbm2,train = FALSE, valid = FALSE)[2,1]  ## review the new model's accuracy
-###############################################################################
+data.gbm@model$training_metrics@metrics$max_criteria_and_metric_scores
 ```
 
 
 # Build Random Forest Model
 ```{r}
 start    <- Sys.time()
-data.drf <- h2o.randomForest(y = myY, x = myX, training_frame = data.train, validation_frame = data.test, ntrees = 150,
-                             max_depth = 5, model_id = "drf_model", balance_classes = T)
+## run our first predictive model
+data.drf <- h2o.randomForest(         ## h2o.randomForest function
+  training_frame = train,        ## the H2O frame for training
+  validation_frame = valid,      ## the H2O frame for validation (not required)
+  y = myY,                       ## the predictor columns, by column index
+  x = myX,                       ## the target index (what we are predicting)
+  model_id = "drf_model",        ## name the model in H2O
+                                 ##   not required, but helps use Flow
+  ntrees = 200,                  ## use a maximum of 200 trees to create the
+                                 ##  random forest model. The default is 50.
+                                 ##  I have increased it because I will let 
+                                 ##  the early stopping criteria decide when
+                                 ##  the random forest is sufficiently accurate
+  #stopping_rounds = 2,          ## Stop fitting new trees when the 2-tree
+                                 ##  average is within 0.001 (default) of 
+                                 ##  the prior two 2-tree averages.
+                                 ##  Can be thought of as a convergence setting
+  score_each_iteration = T,      ## Predict against training and validation for
+                                 ##  each tree. Default will skip several.
+  seed = 1000000,                ## Set the random seed so that this can be
+                                 ##  reproduced.
+  max_depth = 20,
+  balance_classes = TRUE)                
+
 drf_time <- Sys.time() - start
 print(paste("Took", round(drf_time, digits = 2), units(drf_time), "to build a Random Forest model."))
 
+h2o.confusionMatrix(data.drf, valid=TRUE)
+print(data.drf)
 summary(data.drf)
-data.drf@model$validation_metrics 
+data.drf@model$validation_metrics     ## A more direct way to access the validation 
+                                 ##  metrics. Performance metrics depend on 
+                                 ##  the type of model being built. With a
+                                 ##  multinomial classification, we will primarily
+                                 ##  look at the confusion matrix, and overall
+                                 ##  accuracy via hit_ratio @ k=1.
+dev.off()
+fpr = data.drf@model$training_metrics@metrics$thresholds_and_metric_scores$fpr
+tpr = data.drf@model$training_metrics@metrics$thresholds_and_metric_scores$tpr
+fpr_val = data.drf@model$validation_metrics@metrics$thresholds_and_metric_scores$fpr
+tpr_val = data.drf@model$validation_metrics@metrics$thresholds_and_metric_scores$tpr
+plot(fpr,tpr, type='l')
+title('Area Under the Curve\n for the Random Forest Model')
+lines(fpr_val,tpr_val,type='l',col='red')
+legend("bottomright",c("Train", "Validation"),col=c("black","red"),lty=c(1,1),lwd=c(3,3))
+
+h2o.auc(data.drf,valid=FALSE) # on train    
+print(paste("The AUC is:", round(h2o.auc(data.drf,valid=FALSE), digits = 2), "on the train data for the Random Forest model."))
+h2o.auc(data.drf,valid=TRUE)  # on test
+print(paste("The AUC is:", round(h2o.auc(data.drf,valid=TRUE), digits = 2), "on the test data for the Random Forest model."))
+
+data.drf@model$training_metrics@metrics$max_criteria_and_metric_scores
 ```
 
 # Build Deep Learning Model
 ```{r}
 start   <- Sys.time()
-data.dl <- h2o.deeplearning(y = myY, x = myX, training_frame = data.train, validation_frame = data.test, hidden=c(10, 10),
-                            epochs = 5, balance_classes = T, loss = "Automatic", variable_importances = T)
+data.dl <- h2o.deeplearning(y = myY, 
+                            x = myX, 
+                            training_frame = data.train, 
+                            validation_frame = data.test, 
+                            hidden=c(10, 10),
+                            epochs = 5, 
+                            balance_classes = T, 
+                            loss = "Automatic", 
+                            variable_importances = T)
 dl_time <- Sys.time() - start
 print(paste("Took", round(dl_time, digits = 2), units(dl_time), "to build a Deep Learning model."))
 summary(data.dl)
@@ -961,7 +1020,30 @@ data.dl@model$validation_metrics     ## A more direct way to access the validati
                                  ##  look at the confusion matrix, and overall
                                  ##  accuracy via hit_ratio @ k=1.
 
+h2o.confusionMatrix(data.dl, valid=TRUE)
+summary(data.dl)
+data.dl@model$validation_metrics     ## A more direct way to access the validation 
+                                 ##  metrics. Performance metrics depend on 
+                                 ##  the type of model being built. With a
+                                 ##  multinomial classification, we will primarily
+                                 ##  look at the confusion matrix, and overall
+                                 ##  accuracy via hit_ratio @ k=1.
+dev.off()
+fpr = data.dl@model$training_metrics@metrics$thresholds_and_metric_scores$fpr
+tpr = data.dl@model$training_metrics@metrics$thresholds_and_metric_scores$tpr
+fpr_val = data.dl@model$validation_metrics@metrics$thresholds_and_metric_scores$fpr
+tpr_val = data.dl@model$validation_metrics@metrics$thresholds_and_metric_scores$tpr
+plot(fpr,tpr, type='l')
+title('Area Under the Curve\n for the Deep Learning Model')
+lines(fpr_val,tpr_val,type='l',col='red')
+legend("bottomright",c("Train", "Validation"),col=c("black","red"),lty=c(1,1),lwd=c(3,3))
 
+h2o.auc(data.dl,valid=FALSE) # on train    
+print(paste("The AUC is:", round(h2o.auc(data.dl,valid=FALSE), digits = 2), "on the train data for the Deep Learning model."))
+h2o.auc(data.dl,valid=TRUE)  # on test
+print(paste("The AUC is:", round(h2o.auc(data.dl,valid=TRUE), digits = 2), "on the test data for the Deep Learning model."))
+
+data.dl@model$training_metrics@metrics$max_criteria_and_metric_scores
 ```
 
 # Variable Importance - For feature selection
@@ -978,120 +1060,43 @@ data.dl@model$variable_importances %>% as_tibble()
 ```
 
 
-
-
-#Leave one out
+# Prediction
 ```{r}
-print("Run GBM without Target Encoding as Baseline")
-myX <- setdiff(colnames(train), c("Match_Status"))
+print(paste("The AUC is:", round(h2o.auc(data.dl,valid=FALSE), digits = 2), "on the train data for the Deep Learning model."))
+print(paste("The AUC is:", round(h2o.auc(data.dl,valid=TRUE), digits = 2), "on the test data for the Deep Learning model."))
 
-# Since we are not creating any target encoding, we will use both the `train`` and `te_holdout`` frames to train our model
-full_train <- h2o.rbind(train, te_holdout)
-default_gbm <- h2o.gbm(x = myX, y = "Match_Status",
-                       training_frame = full_train, validation_frame = valid,
-                       ntrees = 1000, score_tree_interval = 10, model_id = "default_gbm",
-                       # Early Stopping
-                       stopping_rounds = 5, stopping_metric = "AUC", stopping_tolerance = 0.001,
-                       seed = 1)
+print(paste("The AUC is:", round(h2o.auc(data.drf,valid=FALSE), digits = 2), "on the train data for the Random Forest model."))
+print(paste("The AUC is:", round(h2o.auc(data.drf,valid=TRUE), digits = 2), "on the test data for the Random Forest model."))
 
-print("Perform Leave One Out Target Encoding on US_or_Canadian_Applicant")
+print(paste("The AUC is:", round(h2o.auc(data.gbm,valid=FALSE), digits = 2), "on the train data for the GBM model."))
+print(paste("The AUC is:", round(h2o.auc(data.gbm,valid=TRUE), digits = 2), "on the test data for the GBM model."))
 
-##???
-#te_cols <- list(c("US_or_Canadian_Applicant")) #onlu works with one variable at a time right now.  Could try: x = list(c("job"), c("job", "marital")), from documentation.    
-te_cols <- list(c("USMLE_Step_1_Score"), c("USMLE_Step_1_Score", "Age"), c("USMLE_Step_1_Score", "Age", "Medical_Degree")) 
+print(paste("The AUC is:", round(h2o.auc(data.glm,valid=FALSE), digits = 2), "on the train data for the GBM model."))
+print(paste("The AUC is:", round(h2o.auc(data.glm,valid=TRUE), digits = 2), "on the test data for the GBM model."))
 
-# For this model we will calculate LOO Target Encoding on the full train
-# There is possible data leakage since we are creating the encoding map on the training and applying it to the training
-# To mitigate the effect of data leakage without creating a holdout data, we remove the existing value of the row (holdout_type = LeaveOneOut)
+## We have witheld an extra test set to ensure that after all the parameter
+##  tuning we have done, repeatedly applied to the validation data, that our
+##  model produces similar results against the third data set. 
 
-loo_train <- full_train
-loo_valid <- valid
-loo_test <- test
 
-# Create Leave One Out Encoding Map
-encoding_map <- h2o.target_encode_create(full_train, te_cols, "Match_Status")
-head(encoding_map)
+## Create predictions using our latest RF model against the test set.
+finalRf_predictions <- h2o.predict(
+  object = data.glm,
+  newdata = test_h2o)
 
-# Apply Leave One Out Encoding Map on Training, Validation, Testing Data
-loo_train <- h2o.target_encode_apply(loo_train, x = te_cols,  y = "Match_Status", encoding_map, holdout_type = "LeaveOneOut", seed = 1234)
-loo_valid <- h2o.target_encode_apply(loo_valid, x = te_cols, y = "Match_Status", encoding_map, holdout_type = "None", noise_level = 0)
-loo_test <- h2o.target_encode_apply(loo_test, x = te_cols, y = "Match_Status", encoding_map, holdout_type = "None", noise_level = 0)
+## Glance at what that prediction set looks like
+## We see a final prediction in the "predict" column,
+##  and then the predicted probabilities per class.
+finalRf_predictions
 
-print("Run GBM with Leave One Out Target Encoding")
-myX <- setdiff(colnames(loo_test), c(te_cols, "Match_Status", "Match_Status_REC"))
-loo_gbm <- h2o.gbm(x = myX, y = "Match_Status",
-                   training_frame = loo_train, validation_frame = loo_valid,
-                   ntrees = 1000, score_tree_interval = 10, model_id = "loo_gbm",
-                   # Early Stopping
-                   stopping_rounds = 5, stopping_metric = "AUC", stopping_tolerance = 0.001,
-                   seed = 1)
+## Compare these predictions to the accuracy we got from our experimentation
+a <- h2o.hit_ratio_table(data.glm,valid = F, train = F, xval = FALSE)#[1,2] 
+class(a)
+describe(a)
+## validation set accuracy
+mean(finalRf_predictions$predict==test_h2o$Match_Status)  ## test set accuracy
 
-h2o.varimp_plot(loo_gbm)
-
-print("Perform Target Encoding on USMLE_Step_1_Score, Age, and Medical_Degree with Cross Validation Holdout")
-
-te_cols <- list(c("USMLE_Step_1_Score"), c("USMLE_Step_1_Score", "Age"), c("USMLE_Step_1_Score", "Age", "Medical_Degree")) #onlu works with one variable at a time right now.  Could try: x = list(c("USMLE_Step_1_Score"), c("job", "marital")), from documentation.   
-
-# For this model we will calculate Target Encoding mapping on the full training data with cross validation holdout
-# There is possible data leakage since we are creating the encoding map on the training and applying it to the training 
-# To mitigate the effect of data leakage without creating a holdout data, we remove the existing value of the row (holdout_type = LeaveOneOut)
-
-cv_train <- full_train
-cv_valid <- valid
-cv_test <- test
-cv_train$fold <- h2o.kfold_column(cv_train, nfolds = 5, seed = 1234)
-
-# Create Encoding Map
-encoding_map <- h2o.target_encode_create(cv_train, te_cols, "Match_Status", "fold")
-
-# Apply Encoding Map on Training, Validation, Testing Data
-cv_train <- h2o.target_encode_apply(cv_train, x = te_cols,  y = "Match_Status", encoding_map, holdout_type = "KFold", fold_column = "fold", seed = 1234)
-cv_valid <- h2o.target_encode_apply(cv_valid, x = te_cols, y = "Match_Status", encoding_map, holdout_type = "None", fold_column = "fold", noise_level = 0)
-cv_test <- h2o.target_encode_apply(cv_test, x = te_cols, y = "Match_Status", encoding_map, holdout_type = "None", fold_column = "fold", noise_level = 0)
-
-print("Run GBM with Cross Validation Target Encoding")
-cvte_gbm <- h2o.gbm(x = myX, y = "Match_Status",
-                    training_frame = cv_train, validation_frame = cv_valid,
-                    ntrees = 1000, score_tree_interval = 10, model_id = "cv_te_gbm",
-                    # Early Stopping
-                    stopping_rounds = 5, stopping_metric = "AUC", stopping_tolerance = 0.001,
-                    seed = 1)
-
-h2o.varimp_plot(cvte_gbm)
-
-print("Perform Target Encoding on cabin, embarked, and home.dest on Separate Holdout Data")
-
-# For this model we will calculate the Target Encoding mapping on the te_holdout data
-# Since we are creating the encoding map on the te_holdout data and applying it to the training data, 
-# we do not need to take data leakage precautions (set `holdout_type = None`)
-
-holdout_train <- train
-holdout_valid <- valid
-holdout_test <- test
-
-# Create Leave One Out Encoding Map
-encoding_map <- h2o.target_encode_create(te_holdout, te_cols, "Match_Status")
-
-# Apply Encoding Map on Training, Validation, and Testing Data
-holdout_train <- h2o.target_encode_apply(holdout_train, x = te_cols, y = "Match_Status", encoding_map, holdout_type = "None", noise_level = 0)
-holdout_valid <- h2o.target_encode_apply(holdout_valid, x = te_cols, y = "IsDepDelayed", encoding_map, holdout_type = "None", noise_level = 0)
-holdout_test <- h2o.target_encode_apply(holdout_test, x = te_cols, y = "IsDepDelayed", encoding_map, holdout_type = "None", noise_level = 0)
-
-print("Run GBM with Target Encoding on Holdout")
-holdout_gbm <- h2o.gbm(x = myX, y = "IsDepDelayed",
-                       training_frame = holdout_train, validation_frame = holdout_valid,
-                       ntrees = 1000, score_tree_interval = 10, model_id = "holdout_gbm",
-                       # Early Stopping
-                       stopping_rounds = 5, stopping_metric = "AUC", stopping_tolerance = 0.001,
-                       seed = 1)
-
-h2o.varimp_plot(holdout_gbm)
-
-print("Compare AUC of GBM with different types of target encoding")
-print(paste0("Default GBM AUC: ", round(h2o.auc(h2o.performance(default_gbm, test)), 3)))
-print(paste0("LOO GBM AUC: ", round(h2o.auc(h2o.performance(loo_gbm, loo_test)), 3)))
-print(paste0("CV TE GBM AUC: ", round(h2o.auc(h2o.performance(cvte_gbm, cv_test)), 3)))
-print(paste0("Holdout GBM AUC: ", round(h2o.auc(h2o.performance(holdout_gbm, holdout_test)), 3)))
-
+## We have very similar error rates on both sets, so it would not seem
+##  that we have overfit the validation set through our experimentation.
 ```
 
