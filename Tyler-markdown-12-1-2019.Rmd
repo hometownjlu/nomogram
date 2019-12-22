@@ -5,9 +5,10 @@ date: "Department of Obstetrics and Gynecology, Denver Health, Denver, CO"
 output:
   html_document:
     toc: true
+    toc_float: true
     toc_depth: 2
     self_contained: true
-    code_folding: hide
+    code_folding: show
     dev: svg
     df_print: paged
     theme: united
@@ -37,6 +38,7 @@ editor_options:
 ---
 
 *Tyler M. Muffly, Merdith Alston, Jill Liss, Georg Kropat, Janet Corral, Christine Raffaelli, J. Eric Jelovsek*
+*Authorship order will be determined by the amount of work done.*
 - name: Tyler M. Muffly, MD
   affiliation: Denver Health
 - name: Meredith Alston, MD
@@ -57,7 +59,7 @@ editor_options:
 
 ERAS is a centralized solution to the medical residency application and documents distribution process. The data source to be used for the project is the Electronic Residency Application Service data that was in discrete fields in the application.  No hand-searching of data was done. The data was exported from the ERAS Program Director Work Station under the Archives menu.The data is collected by the University of Colorado OBGYN residency that has both a categorical and a preliminary position.  Medical students who applied to the preliminary position were considered to be unmatched. The data set of years 2015, 2016, 2017, and 2018 applicants to the University of Colorado OBGYN residency. The data is contained in a data frame called 'all_data'. In advance, we might anticipate that USMLE Step 1 Score and US or Canadian Applicant will be key predictors.  Match Status is the dependent Variable and shows the medical students who applied to the OBGYN residency. 
 
-## Codebook
+# Codebook
 A codebook is a technical description of the data that was collected for a particular purpose. It describes how the data are arranged in the computer file or files, what the various numbers and letters mean, and any special instructions on how to use the data properly.
 
 * Predictors under consideration:
@@ -84,21 +86,21 @@ This data was cleaned in a separate R script with the help of exploratory.io.
 Packrat is in use to control package versions and a packrat.lock file is posted to my github repository.  This will allow for easier reproducibility.  Packrat records the exact package versions you depend on, and ensures those exact versions are the ones that get installed wherever you go.  We can also control the environment by deploying the project inside a Docker container as needed.  The project was created in R version 3.6.1 and run inside RStudio 1.2.5019.  
 ```{r directory paths and packrat settings, include=FALSE}
 #Helpful, https://www.kaggle.com/pjmcintyre/titanic-first-kernel/code
-library(packrat) #packrate director for Tyler: ~/Dropbox/Nomogram/nomogram/packrat/lib
-packrat::packrat_mode(on = TRUE)
-packrat::status()
+#packrate director for Tyler: ~/Dropbox/Nomogram/nomogram/packrat/lib
+#packrat::packrat_mode(on = TRUE)
+#packrat::status()
 options(tinytex.verbose = FALSE)
 library(knitr)
 ```
 
 Package installation, data download from Dropbox.com, and functions written for this project are all loaded in a separate "Additional_functions_nomogram.R" file.
 ```{r, echo=TRUE, include = FALSE}
-#May need to run this file by hand.  
-#KNITR THROWS SOME MESSED UP MESSAGE
+#May need to run this file line-by-line (CRTL+Enter) by hand.  
+
 source(file="~/Dropbox/Nomogram/nomogram/Code/Additional_functions_nomogram.R", echo=TRUE, verbose=TRUE)
 ```
 
-## Ingest Data:  Load and Tidy the Data
+# Ingest Data:  Load and Tidy the Data
 `all_data` is a dataframe of the independent and the dependent variables for review. Each variable is contained in a column, and each row represents a single unique medical student. If students applied in more than one year the most contemporary data was used.
 ```{r Download cleaned data from Dropbox, echo=TRUE, include=FALSE, cache=FALSE}
 all_data
@@ -133,7 +135,7 @@ drake::vis_drake_graph(config)
 
 drake::make(plan)
 ```
-## Description of the Data
+# Description of the Data
 * A summary of the variables are listed below:
 1. Eleven of the variables were a factor.  All factors had two levels except for Alpha_Omega_Alpha had three levels.  The target variable is `all_data$Match_Status`.  
 2. Eight of the variables were integers. 
@@ -159,7 +161,7 @@ A nice data summary is available from the `skim` package.
 skimr::skim(all_data)
 ```
 
-## Evaluate for missing data in multiple manners
+# Evaluate for missing data in multiple manners
 ```{r,EDA, results="asis", echo=TRUE, include=TRUE, out.width="50%"}
 #plot_str(all_data) #COOL BUT USELESS HERE
 DataExplorer::plot_missing(all_data)
@@ -192,7 +194,7 @@ ggplot2::ggplot(all_data[!is.na(all_data$Match_Status),], aes(x = Match_Status, 
         theme_grey(base_size = 18)
 ```
 
-## Data Description and *Univariate* analysis of variables. 
+# Data Description and *Univariate* analysis of variables. 
 Categorical and numerical variable plots:
 ```{r DataExplorer, results='asis', echo=TRUE, include=TRUE, align = 'left', cache=FALSE, out.width="75%"}
 #General Data Description
@@ -259,7 +261,7 @@ s <-
 s
 ```
 
-Cross plots of predictors by outcome
+# Cross plots of predictors by outcome
 ```{r funModeling4, echo=TRUE, message=FALSE, warning=TRUE, include=TRUE, out.width="75%"}
 DataExplorer::plot_boxplot(all_data, by = "Match_Status", nrow = 2L, ncol = 2L)
 #Shows the variable frequency charted by matching status
@@ -607,7 +609,7 @@ Specify the size, magnitude and meaning of all coefficients, and identify approp
 ## This is messy (and maybe unncecessary) but I have to create a linear model using stats::lm to pull out values like R squared into the Rmarkdown inline values.
 ```{r, echo=TRUE, include=FALSE}
 ## Fitting a linear model of the kitchen sink using lm from the stats package
-train$Match_Status
+#train$Match_Status
 class(train$Match_Status) #For lm models you MUST have the outcome be numeric class and a number!!!!
 train$Match_Status <- as.numeric(train$Match_Status) - 1  #To make lm work you need to change the Match_status to 1 vs. 0
 train$Match_Status
@@ -712,7 +714,7 @@ Create a confusion matrix
 ```{r}
 ## Creating confusion matrix
 test$Match_Status <- as.numeric(test$Match_Status)  -1 
-test$Match_Status
+#test$Match_Status
 
 confusion <- table(prediction_categories, test$Match_Status)
 knitr::kable(confusion, caption = "Confusion Matrix of non-colinear Variables", digits=2)
@@ -810,13 +812,13 @@ myControl <-
     verboseIter = FALSE)
 
 dim(train)
-train$Match_Status
+#train$Match_Status
 train$Match_Status <-
   as.factor(train$Match_Status)
 
 test$Match_Status <-
   as.factor(test$Match_Status)
-test$Match_Status
+#test$Match_Status
 
 #Levels of the target outcome variable for glmnet need to be words and not numbers.
 # They also need to be fucking words with no spaces.  Jesus Christ.  
@@ -826,7 +828,7 @@ levels(train$Match_Status) <-
 levels(test$Match_Status) <-
   c("No.Match", "Matched")
 
-train$Match_Status
+#train$Match_Status
 levels(train$Match_Status)
 class(train$Match_Status)
 
@@ -1027,7 +1029,7 @@ Shift Gears: Test Accuracy of Model on Training Data, Use glmnet model on 207 an
 Build both a glm (train.glm.with.lasso.variables) and a lrm model (train.lrm.with.lasso.variables) here with the same predictor variables.  
 
 ```{r, echo=TRUE, warning=FALSE}
-test$Match_Status
+#test$Match_Status
 
 train.glm.with.lasso.variables  <- 
   stats::glm(Match_Status ~ 
@@ -1072,9 +1074,7 @@ prob <-
   predict(train.glm.with.lasso.variables, newdata = test, type="response")
 dim(test)
 
-test$Match_Status
 #test$Match_Status <- as.numeric(test$Match_Status) -1
-test$Match_Status
 
 pred <- 
   prediction(prob, test$Match_Status)  #removed na.omit
@@ -1491,15 +1491,17 @@ To add in.
 
 Materials and Methods
 ===========================================================================================
-This was an institutional review board exempt retrospective cohort analysis of medical students who applied to Obstetrics and Gynecology (OBGYN) residency from 2015 to 2018.  Guidelines for transparent reporting of a multivariable prediction model for individual outcomes were used in this study.(https://www.equator-network.org/reporting-guidelines/tripod-statement/).  Eligible students were identified if they applied to OBGYN residency during the study period.  The outcome of the model was defined as matching or not matching into residency for the specific application year.  Individual predictors of successfully* matching were compiled from a literature review, expert opinion, and judgment then collected from the Electronic Residency Application Service materials.
+This was an institutional review board exempt retrospective cohort analysis of medical students who applied to Obstetrics and Gynecology (OBGYN) residency from 2015 to 2018.  Guidelines for transparent reporting of a multivariable prediction model for individual outcomes were used in this study.(https://www.equator-network.org/reporting-guidelines/tripod-statement/).  Eligible participants were identified if they applied to OBGYN residency during the study period of 2015 to 2018.  The outcome of the model was defined as matching or not matching into residency for the specific application year.  Individual predictors of successfully* matching were compiled from a literature review, expert opinion, and judgment then collected from the Electronic Residency Application Service materials.
 
-Once the data set was complete it was divided into a model training and test set.  *When an external validation data set is unavailable to test a new model but an existing modeling data set is sufficiently large, as in this case, it is recommended to split by time and develop the model using data from one period and evaluate its performance from data from a future period.  We arbitrarily chose to divide the cohort into a training set of 2015 to 2017 data and a training set of 2018 data.
+Once the data set was complete it was divided into a model training and test set.  *When an external validation data set is unavailable to test a new model but an existing modeling data set is sufficiently large, as in this case, it is recommended to split by time and develop the model using data from one period and evaluate its performance from data from a future period.  There was a large case imbalance with matching rates split by year therefore we split the data randomly.
 
-In all, ?? candidate risk factors were considered for fitting on the training data set (supplmental table).  Variable selection was done using a peenalized logistic regression called least absolute shrinkage and selection operator (LASSO).  The LASSO model is a regression analysis method that performs both variable selection and regularization in order to enhance the prediction accuracy and interpretability of the statistical model it produces.  We elected to use LASSO to choose which covariates to include over stepwise selection because the latter only improves prediction accuracy in certain cases, such as when only a few covariates have a strong relationship with the outcome.
+In all, 18 candidate risk factors were considered for fitting on the training data set (supplmental table).  Variable selection was done using a penalized logistic regression called least absolute shrinkage and selection operator (LASSO).  The LASSO model is a regression analysis method that performs both variable selection and regularization in order to enhance the prediction accuracy and interpretability of the statistical model it produces.  We elected to use LASSO to choose which covariates to include over stepwise selection because the latter only improves prediction accuracy in certain cases, such as when only a few covariates have a strong relationship with the outcome.
 
 The logistic model’s discriminative ability was measured by the area under the curve (AUC) for the receiver operating characteristic curve based on the sensitivity and specificity of the model.  An AUC value closer to 1 indicates a better prediction of the outcome and an AUC value of 0.5 indicates that the model predicts no better than chance. The AUC is also a representation of the concordance index and measures the model’s ability to generate a higher predicted probability of a successful match* occurring in a medical student who has a ????.   For example, if we have a pair of medical students, in which one medical student matches and the other does not, the concordance index measures the model’s ability to assign a higher risk of not matching to the medical student who successfully matches. All concordance indices and receiver operating characteristic curves were internally validated using a 1,000 bootstrap resample to correct for bias and overfitting within the model. The bootstrapping method of validation has been shown to be superior to other approaches to estimate internal validity. Calibration curves were also plotted to depict the relationship between the model’s predicted outcomes against the cohort’s observed outcome, where a perfectly calibrated model follows a 45° line.
 
-After the best model was selected and internally validated, the model was compared with the best currently available method of estimating risk, that is, an expert medical educator’s predictions. To perform these comparisons, a subset of 50 participants was randomly selected for comparing the probability of matching between the model and the panel of experts. These ?? participants were used to compare predictions of the models with experts’ predictions and not as a true independent validation subset. The model was rebuilt using the remaining participants in the data set excluding the 50 randomly selected participants. The candidate risk factors of these 50 participants were given to 20 “expert” medical educators with representation from each of the *** for review resulting in 1,000 expert predictions and 50 model predictions for each outcome. All medical educators were considered to be experienced in counseling medical students regarding OBGYN matching. Each of the 20 experts were asked to consider each medical student’s data from all ??? variables among the 50 randomly selected students and provide their best estimated outcome by answering the following question: “Out of 100 medical students with these exact characteristics, estimate the number of medical students who would not matching into OBGYN during the 2019 application year.” Individual medical educators’ predictions were not averaged to yield a single value because incorporating each medical educator’s predictions substantially increased statistical power. The model’s predictions were compared with the experts’ predictions, which included all risk factors, to determine which was most accurate. The difference in accuracy was determined by using a bootstrap method from their respective receiver operating characteristic curves. All analyses were performed using R 3.5.
+After the best model was selected and internally validated, the model was compared with the best currently available method of estimating risk, that is, an expert medical educator’s predictions. To perform these comparisons, a subset of 50 participants was randomly selected for comparing the probability of matching between the model and the panel of experts. These ?? participants were used to compare predictions of the models with experts’ predictions and not as a true independent validation subset. The model was rebuilt using the remaining participants in the data set excluding the 50 randomly selected participants. The candidate risk factors of these 50 participants were given to 20 “expert” medical educators with representation from each of the *** for review resulting in 1,000 expert predictions and 50 model predictions for each outcome. All medical educators were considered to be experienced in counseling medical students regarding OBGYN matching. Each of the 20 experts were asked to consider each medical student’s data from all ??? variables among the 50 randomly selected students and provide their best estimated outcome by answering the following question: “Out of 100 medical students with these exact characteristics, estimate the number of medical students who would not matching into OBGYN during the 2019 application year.” Individual medical educators’ predictions were not averaged to yield a single value because incorporating each medical educator’s predictions substantially increased statistical power. The model’s predictions were compared with the experts’ predictions, which included all risk factors, to determine which was most accurate. The difference in accuracy was determined by using a bootstrap method from their respective receiver operating characteristic curves. 
+
+All analyses were performed using R 3.6.1.  However, considering the large amount of data, processing the data was taking too long and that was compromising the efficiency of the study. So, the platform h2o.ai was used, integrated with R, to explore the grid mode and parallel processing models. The grid allowed to combine different parameters to build different models. The parallel processing allowed those models to be built at the same time. This efficiency increase made it possible to build more models, with better tuning parameters.
 
 Results
 ===========================================================================================
@@ -1557,23 +1559,23 @@ DynNom.model.glm <- glm(Match_Status ~
                           white_non_white,
                         family = "binomial",  #Removed the relax cubic splines for age and USMLE step 1
                         data = test, x = TRUE, y= TRUE)
+summary(DynNom.model.glm)
 
 #### Turn this on to start the shiny model.  
-#DynNom::DNbuilder(model = DynNom.model.glm, data = test)
-```
-
-```{r rsconnect for uploading shinyapps, include = FALSE}
-# put credentials here to upload file to shinyapps.io
-# Tutorial: https://docs.rstudio.com/shinyapps.io/getting-started.html#CreateAccount
- # rsconnect::setAccountInfo(name='georgkropat',
- #                           token='F4ECA8D490AB629FB79416DF01048F3F',
- #                           secret='TriCqLW2h1XRf12m7bPMZbIh7ZZgSjVg8nHUVbTZ')
-
-
-#
-#rsconnect::deployApp('DynNomapp/')
+# DynNom::DNbuilder(model = DynNom.model.glm, data = test, clevel = 0.95, DNtitle = "DRAFT: A Model to Predict Chances of Matching into Obstetrics and Gynecology Residency")
 ```
 
 ```{r sessionInfo, include=FALSE, echo=TRUE, cache=FALSE}
 sessionInfo()
 ```
+
+```{r rsconnect for uploading shinyapps, include = FALSE}
+# put credentials here to upload file to shinyapps.io
+# rsconnect::setAccountInfo(name='mufflyt',
+# 			  token='D8846CA8B32E6A5EAEA94BFD02EEEA39',
+# 			  secret='dIXWOv+ud/z6dTPN2xOF9M4BKJtWKROc2cOsZS4U')
+# 
+# library(rsconnect)
+# rsconnect::deployApp('DynNomapp/')
+```
+
