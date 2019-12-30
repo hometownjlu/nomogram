@@ -113,6 +113,9 @@ funModeling::freq(data=all_data, plot = FALSE, na.rm = FALSE)
 tmp <- table(all_data$Match_Status)
 match_rate <- (tmp[[2]]/(tmp[[2]] + tmp[[1]]))*100
 match_rate
+
+vars <- as.character(colnames(all_data))
+vars
 ```
 We can see that these data have `r nrow(all_data)` of `r ncol(all_data)` variables, and thatabout `r round(match_rate, digits = 1)` percent of medical students applying to OB/GYN residency matched.   Let’s create a few plots to get a sense of the data. Remember, the goal here will be to predict whether a given medical student will match into OB/GYN residency, based on the variables listed in the codebook.
 
@@ -150,6 +153,7 @@ all_data$Count_of_Oral_Presentation <- as.numeric(all_data$Count_of_Oral_Present
 all_data$Count_of_Other_than_Published <- as.numeric(all_data$Count_of_Other_than_Published)
 all_data$Count_of_Peer_Reviewed_Book_Chapter <- as.numeric(all_data$Count_of_Peer_Reviewed_Book_Chapter)
 all_data$Count_of_Online_Publications <- as.numeric(all_data$Count_of_Online_Publications)
+    all_data$Rank <- as.factor(all_data$Rank)
 inspectdf::inspect_types(all_data) %>% show_plot()
 ```
 
@@ -256,7 +260,8 @@ s <-
             white_non_white + 
             Visa_Sponsorship_Needed +
             cut2(Count_of_Articles_Abstracts, 0:3) + 
-            cut2(Count_of_Other_than_Published, 0:3), 
+            cut2(Count_of_Other_than_Published, 0:3) +#, 
+            Rank,
           data = all_data)
 s
 ```
@@ -545,6 +550,7 @@ kitchen.sink <-
         Count_of_Peer_Reviewed_Book_Chapter +
         Count_of_Other_than_Published +
         Count_of_Online_Publications +
+          Rank +
         Visa_Sponsorship_Needed +
         Medical_Degree, 
       data = train, 
@@ -636,6 +642,7 @@ lm.fit2 <-
         Count_of_Other_than_Published + 
         Count_of_Online_Publications + 
         Visa_Sponsorship_Needed + 
+          Rank + 
         Medical_Degree),  
      data = train)
 
