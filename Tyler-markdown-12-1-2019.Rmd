@@ -110,12 +110,13 @@ dim(all_data)
 data.table::data.table(all_data)
 funModeling::freq(data=all_data, plot = FALSE, na.rm = FALSE)
 
+# orginal response distribution
 tmp <- table(all_data$Match_Status)
 match_rate <- (tmp[[2]]/(tmp[[2]] + tmp[[1]]))*100
 match_rate
 
-vars <- as.character(colnames(all_data))
 vars
+all_data[,vars]
 ```
 We can see that these data have `r nrow(all_data)` of `r ncol(all_data)` variables, and thatabout `r round(match_rate, digits = 1)` percent of medical students applying to OB/GYN residency matched.   Let’s create a few plots to get a sense of the data. Remember, the goal here will be to predict whether a given medical student will match into OB/GYN residency, based on the variables listed in the codebook.
 
@@ -379,6 +380,8 @@ Two well known strategies to overcome the problem of overfitting are the train/v
 # Identify training and test samples
 I will call the training sample `train` and the test sample `test`.  *Creative!*  Another option is dplyr::sample_n if you want to instead specify the exact number of observations to be selected. There are `r nrow(train)` medical students in the training data set and `r nrow(test)` in the test data set.  
 
+## Shows four different ways to split the data  
+
 ```{r, train vs test, warning=FALSE, echo=TRUE, message=FALSE, include=TRUE}
 #http://rpubs.com/josevilardy/crossvalidation
 # train <- filter(all_data, Year %in% c("2015", "2016"))  #Train on years 2015, 2016
@@ -394,6 +397,32 @@ all_data <- all_data
 data_split <- rsample::initial_split(data = all_data, 
                                      strata = "Match_Status", 
                                      prop = 0.8)
+
+# Using base R
+set.seed(123)  # for reproducibility
+index_1 <- sample(1:nrow(all_data), round(nrow(all_data) * 0.8))
+train_1 <- all_data[index_1, ]
+test_1  <- all_data[-index_1, ]
+
+# Using caret package
+set.seed(123)  # for reproducibility
+index_2 <- caret::createDataPartition(all_data$Match_Status, p = 0.8, 
+                               list = FALSE)
+train_2 <- all_data[index_2, ]
+test_2  <- all_data[-index_2, ]
+
+# Using rsample package
+set.seed(123)  # for reproducibility
+split_1  <- initial_split(all_data, prop = 0.8)
+train_3  <- training(split_1)
+test_3   <- testing(split_1)
+
+# Using h2o package
+all_data.h2o <- as.h2o(all_data)
+split_2 <- h2o.splitFrame(all_data.h2o, ratios = 0.8, 
+                          seed = 123)
+train_4 <- split_2[[1]]
+test_4  <- split_2[[2]]
 data_split
 
 train <- data_split %>% training() %>% glimpse()  # Extract the training dataframe
@@ -417,7 +446,7 @@ tm_arsenal_table(df=train, by=train$Match_Status)
 tm_arsenal_table(df = test, by = test$Match_Status)
 ```
 
-Check Proportions of Matched students in the test and train data sets.  
+Check Proportions of Matched students in the test and train data sets.  Orginal response distribution and then showing consistent response ratio between train & test data sets.  
 ```{r, results="asis", echo=TRUE, include=TRUE}
 # Examine the proportions of the Match_Status class lable across the datasets.
 crude_summary <- 
@@ -481,7 +510,7 @@ In this correlation plot we want to look for the bright, large circles which imm
 Observations:  Match_Status is most correlated to US_or_Canadian_Applicant and then to Age.  Visa_Sponsorship_Needed, Medical_Education_Interrupted, and white_non_white are all variables that might play a secondary role.  The other features are pretty weak.  
 
 ```{r, echo=TRUE, include = TRUE}
-inspectdf::inspect_cor(train, method = "pearson", alpha = 0.05) %>% show_plot()
+inspectdf::inspect_cor(train, method = "pearson", alpha = 0.05) %>% show_plot()  
 ```
 Correlation was found with Count_of_Poster_Presentation, Age, and USMLE_Step_1_Score in the train data set.  The lower the age (correlation -0.33)  the patient the more likely they are to match.  The higher the USMLE_Step_1 scores the more likely they are to match (correlation 0.344).  The younger you are the more likely that you get a higher USMLE_Step_1 score.  The number of posters and the number of abstract articles are positively correleated as well.  The strongest positive correlation was between the count of articles and the count of posters.  No shocker there.  Strong negative correlations were between Age and USMLE step 1 score.  Also match status and age were negatively correlated (the younger you are the more likely you are to match).   
 
@@ -806,7 +835,13 @@ Also, I like lasso because some people will find that using predictors of age, r
 
 Here, we use Lasso for simplicity and interpretability. The aim is to avoid over-parametrization and unnecessary model bias by carrying feature selection on-the-go. Key to this task will be cross-validation.  Start by creating a custom train control providing the number of cross-validations and setting the classProbs to TRUE for logistic regression. 
 
+# Regularized Regression
+Regularization methods provide a means to constrain or regularize the estimated coefficients, which can reduce the variance and decrease out of sample error.
+
+The glmnet package is extremely efficient and fast, even on very large data sets (mostly due to its use of Fortran to solve the lasso problem via coordinate descent); note, however, that it only accepts the non-formula XY interface so prior to modeling we need to separate our feature and target sets.
+
 ```{r, echo=TRUE}
+# https://bradleyboehmke.github.io/HOML/regularized-regression.html#attrition-data
 # Create custom trainControl: myControl
 set.seed(1978)
 myControl <- 
@@ -848,7 +883,11 @@ sum(is.na(train))
 
 Create the LASSO using glmnet within the caret package.  Here we are solely using the train dataset to determine what varaiables predict the outcome.  
 
+The alpha parameter tells glmnet to perform a ridge (alpha = 0), lasso (alpha = 1), or elastic net (0 < alpha < 1) model. 
+
 ```{r}
+# https://bradleyboehmke.github.io/HOML/regularized-regression.html
+
 # Train glmnet with custom trainControl and tuning: model
 set.seed(1978)
 glm.kitchen.sink <- glm(Match_Status ~ ., family = "binomial", train)
@@ -879,15 +918,17 @@ coef(best, s=lasso.mod$bestTune$lambda) ###Look for the largest coefficient
 ```
 Final model is more of a ridge and less of a LASSO model:  `r lasso.mod$bestTune `
 
-Plot the results of the lasso.mod so we can see if this is more ridge or more lasso.  0 = ridge regression and 1 = LASSO regression, here ridge is better
+Plot the results of the lasso.mod so we can see if this is more ridge or more lasso.  0 = ridge regression and 1 = LASSO regression, here ridge is better.
 
 ```{r, fig.width=7, fig.asp=1, fig.cap="Figure: Plotting the results of ridge or lasso in regression"}
 plot(lasso.mod)
 ```
   
-Plot LASSO factors - Plot the individual variables by lambda.  Saves the lasso.mod to an RDS file for later use.  
+Plot LASSO factors - Plot the individual variables by lambda.  Saves the lasso.mod to an RDS file for later use.  Coefficients for our ridge regression model as λ grows from  0 → ∞
+ 
 ```{r,  fig.asp=1}
 plot(lasso.mod$finalModel, xvar = 'lambda', label = TRUE)
+print("Coefficients for our ridge regression model as λ grows from  0 → ∞")
 #legend("topright", lwd = 1, col = 1:5, legend = colnames(train), cex = .6)
 #https://www.datacamp.com/community/tutorials/tutorial-ridge-lasso-elastic-net
 colnames(train[1:17])
@@ -902,12 +943,14 @@ predict(lasso.mod, newx = x[1:5,], type = "prob", s = c(0.05, 0.01))
 
 ## Factor Selection: GLMNet to do factor selection with the previously made LASSO model
 
-And we use the glmnet library to determine the optimal penalization parameter. Note that this must be assigned through cross validation; here, we use 50-fold cross validation (only suitable in small datasets).  GLMnet accepts data in a matrix format so the data format was changed before giving it to glmnet.cv. 
+And we use the glmnet library to determine the optimal penalization parameter. Note that this must be assigned through cross validation; here, we use 50-fold cross validation (only suitable in small datasets).  GLMnet accepts data in a matrix format so the data format was changed before giving it to glmnet.cv. Match_Status ~ . is shorthand for all predictors.
 
 ```{r, echo=TRUE, message=FALSE, include=TRUE, fig.cap="Figure: Determining optimal penalization parameters for factor selection with the least absolute shrinkage and selection operator (LASSO) model."}
 `%nin%`<-Negate(`%in%`)
 # save the outcome for the glmnet model, could use dummyVars with fullRan=FALSE can remove collinearity by removing male.gender so you are either male or female
 
+# Create training  feature matrices
+# we use model.matrix(...)[, -1] to discard the intercept
 x <- model.matrix(train$Match_Status~., data=train)
 
 class(x)
@@ -915,16 +958,137 @@ class(x)
 x <- x[,-1]  #Removes intercept
 
 set.seed(356)
-
 glmnet1 <- 
-  cv.glmnet(x=x,y=train$Match_Status,nfolds=10,alpha=.5, family="binomial")
+  cv.glmnet(x=x,
+            y=train$Match_Status,
+            nfolds=10,
+            alpha=.5, 
+            family="binomial")
 
 plot(glmnet1,main = "Misclassification Error")
 ```
-
 The left vertical line represents the minimum error, and the right vertical line represents the cross-validated error within 1 standard error of the minimum. LASSO, least absolute shrinkage and selection operator
 
 If you look at this graph we ran the model with a range of values for lambda and saw which returned the lowest cross-validated error. You'll see that our cross-validated error remains consistent until we hit the dotted lines, where we start to see our model perform very poorly due to underfitting with misclassification error.  Cross validation is an essential step in studies to help up us not only calibrate the parameters of our model but estimate the prediction accuracy with unseen data.
+
+CV ridge regression with alpha at 0.0
+
+Coefficients for our ridge regression model as λ  grows from 0 → ∞.
+```{r}
+# https://bradleyboehmke.github.io/HOML/regularized-regression.html
+# Apply CV ridge regression to Matching data
+ridge <- cv.glmnet(
+  x = x,
+  y=train$Match_Status,
+  alpha = 0, 
+  family="binomial")
+
+plot(ridge, xvar = "lambda")
+```
+
+We can also access the coefficients for a particular model using coef(). glmnet stores all the coefficients for each model in order of largest to smallest λ. 
+```{r}
+# lambdas applied to penalty parameter
+ridge$lambda %>% head()
+```
+
+
+CV lasso regression with alpha at 1.0
+```{r}
+# Apply CV lasso regression to Matching data
+lasso <- cv.glmnet(
+  x = x,
+  y=train$Match_Status,
+  alpha = 1,
+  family="binomial")
+
+# plot results
+par(mfrow = c(1, 2))
+plot(ridge, main = "Ridge penalty\n\n")
+plot(lasso, main = "Lasso penalty\n\n")
+```
+
+```{r}
+# Ridge model
+min(ridge$cvm)       # minimum MSE
+ridge$lambda.min     # lambda for this min MSE
+
+ridge$cvm[ridge$lambda == ridge$lambda.1se]  # 1-SE rule
+ridge$lambda.1se  # lambda for this MSE
+
+# Lasso model
+min(lasso$cvm)       # minimum MSE
+lasso$lambda.min     # lambda for this min MSE
+
+lasso$cvm[lasso$lambda == lasso$lambda.1se]  # 1-SE rule
+lasso$lambda.1se  # lambda for this MSE
+```
+
+Coefficients for our ridge and lasso models. First dotted vertical line in each plot represents the λ with the smallest MSE and the second represents the λ with an MSE within one standard error of the minimum MSE.
+```{r}
+# Ridge model
+ridge_min <- glmnet(
+  x = x,
+  y=train$Match_Status,
+  alpha = 0,
+  family="binomial")
+
+# Lasso model
+lasso_min <- glmnet(
+  x = x,
+  y=train$Match_Status,
+  alpha = 1,
+  family="binomial")
+
+par(mfrow = c(1, 2))
+# plot ridge model
+plot(ridge_min, xvar = "lambda", main = "Ridge penalty\n\n")
+abline(v = log(ridge$lambda.min), col = "red", lty = "dashed")
+abline(v = log(ridge$lambda.1se), col = "blue", lty = "dashed")
+
+# plot lasso model
+plot(lasso_min, xvar = "lambda", main = "Lasso penalty\n\n")
+abline(v = log(lasso$lambda.min), col = "red", lty = "dashed")
+abline(v = log(lasso$lambda.1se), col = "blue", lty = "dashed")
+```
+
+```{r}
+# for reproducibility
+set.seed(123)
+
+# grid search across 
+cv_glmnet <- caret::train(
+  x = x,
+  y=train$Match_Status,
+  family = "binomial",
+  method = "glmnet",
+  preProc = c("zv", "center", "scale"),
+  trControl = trainControl(method = "cv", number = 10),
+  tuneLength = 10
+)
+
+# model with lowest RMSE
+cv_glmnet$bestTune
+
+# plot cross-validated RMSE
+ggplot(cv_glmnet)
+print("The 10-fold cross valdation RMSE across 10 alpha values (x-axis) and 10 lambda values (line color)")
+```
+
+```{r}
+# predict matching_status on training data
+pred <- stats::predict(cv_glmnet, x)
+pred
+```
+
+# Feature Interpretation
+Variable importance for regularized models provides a similar interpretation as in logistic regression. Importance is determined by magnitude of the standardized coefficients and we can see in figure below.  
+
+```{r}
+library(vip)
+vip::vip(cv_glmnet, num_features = 20, bar = FALSE)
+```
+
 
 ## Factor Selection: Variable selection using LASSO in the train dataset
 ```{r, echo=TRUE, warning=FALSE, message=FALSE}
@@ -1010,6 +1174,29 @@ tm_chart_strength_of_variables(lrm.with.lasso.variables)
 ```{r, include=F}
 summary(lrm.with.lasso.variables)
 ```
+
+#MARS model (Multivariate Adaptive Regression Splines)
+MARS allows for non-linear models.  
+https://bradleyboehmke.github.io/HOML/mars.html
+```{r}
+# Fit a basic MARS model
+mars1 <- earth(
+  Match_Status ~ .,  
+  data = train   
+)
+
+# Print model summary
+print(mars1)
+
+summary(mars1) %>% .$coefficients %>% head(20)
+```
+
+```{r}
+plot(mars1, which = 1)
+```
+
+
+
 # Odds ratios of the `train` dataset
 
 Odds ratios in graph form in the train dataset.  
