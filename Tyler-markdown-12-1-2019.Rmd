@@ -115,8 +115,8 @@ tmp <- table(all_data$Match_Status)
 match_rate <- (tmp[[2]]/(tmp[[2]] + tmp[[1]]))*100
 match_rate
 
-vars
-all_data[,vars]
+# vars
+# all_data[,vars]
 ```
 We can see that these data have `r nrow(all_data)` of `r ncol(all_data)` variables, and thatabout `r round(match_rate, digits = 1)` percent of medical students applying to OB/GYN residency matched.   Let’s create a few plots to get a sense of the data. Remember, the goal here will be to predict whether a given medical student will match into OB/GYN residency, based on the variables listed in the codebook.
 
@@ -1195,6 +1195,77 @@ summary(mars1) %>% .$coefficients %>% head(20)
 plot(mars1, which = 1)
 ```
 
+In addition to pruning the number of knots, earth::earth() allows us to also assess potential interactions between different hinge functions. The following illustrates this by including a degree = 2 argument. 
+
+You can see that now our model includes interaction terms between a maximum of two hinge functions (e.g., h(Age-34.1890410958904)*US_or_Canadian_Applicantinternational represents an interaction effect for those applicants less than 34 and was not a US_or_Canadian_Applicant).
+```{r}
+# Fit a basic MARS model
+mars2 <- earth(
+  Match_Status ~ .,  
+  data = train,
+  degree = 2
+)
+
+# check out the first 10 coefficient terms
+summary(mars2) %>% .$coefficients %>% head(10)
+```
+
+
+There are two important tuning parameters associated with our MARS model: the maximum degree of interactions and the number of terms retained in the final model. We need to perform a grid search to identify the optimal combination of these hyperparameters that minimize prediction error (the above pruning process was based only on an approximation of CV model performance on the training data rather than an exact k-fold CV process). As in previous chapters, we’ll perform a CV grid search to identify the optimal hyperparameter mix. Below, we set up a grid that assesses 30 different combinations of interaction complexity (degree) and the number of terms to retain in the final model (nprune).
+```{r}
+# https://bradleyboehmke.github.io/HOML/mars.html
+# create a tuning grid
+hyper_grid <- expand.grid(
+  degree = 1:3, 
+  nprune = seq(2, 100, length.out = 10) %>% floor()
+)
+
+head(hyper_grid)
+```
+
+#Cross-validated RMSE for the 30 different hyperparameter combinations in our grid search. The optimal model retains 45 terms and includes up to 3rd degree interactions.
+
+The  grid search helps to focus where we can further refine our model tuning. As a next step, we could perform a grid search that focuses in on a refined grid space for nprune (e.g., comparing 5–20 terms retained).
+```{r}
+# Cross-validated model
+set.seed(123)  # for reproducibility
+cv_mars <- caret::train(
+  x = subset(train, select = -Match_Status),
+  y = train$Match_Status,
+  method = "earth",
+  metric = "Accuracy",
+  trControl = trainControl(method = "cv", number = 10),
+  tuneGrid = hyper_grid
+)
+
+# View results
+cv_mars$bestTune
+##    nprune degree
+## 22     12      3  #The model that provides the optimal combination includes third degree interaction effects and retains 12 terms.
+ggplot(cv_mars)
+```
+
+GCV = Generalized cross-validation (GCV) procedure,
+RSS = residual sums of squares
+
+Variable importance based on impact to GCV (left) and RSS (right) values as predictors are added to the model. Both variable importance measures will usually give you very similar results.
+```{r}
+# variable importance plots
+p1 <- vip(cv_mars, num_features = 40, bar = FALSE, value = "gcv") + ggtitle("GCV")
+p2 <- vip(cv_mars, num_features = 40, bar = FALSE, value = "rss") + ggtitle("RSS")
+
+gridExtra::grid.arrange(p1, p2, ncol = 2)
+```
+
+Its important to realize that variable importance will only measure the impact of the prediction error as features are included; however, it does not measure the impact for particular hinge functions created for a given feature.
+```{r}
+# extract coefficients, convert to tidy data frame, and
+# filter for interaction terms
+cv_mars$finalModel %>%
+  coef() %>%  
+  broom::tidy() %>%  
+  filter(stringr::str_detect(names, "\\*")) 
+```
 
 
 # Odds ratios of the `train` dataset
@@ -1341,19 +1412,13 @@ Exploratory random forest was also performed. The variable importance for the ra
 
 **(2) Regression Tree model**
   
-# 2)  Model: A CART model was fit using the rpart package. T
+# 2)  Model: A CART model was fit using the rpart package. 
 
-rees cqn handle both factors and continuous variables and do not need to create dummy variables.   Use the divide-and-conquer (aka recursive partinioning e.g. rpart) technique to create two homogenous groups.  Leaf nodes are at the bottom and denote final decisions on matching success. Random Forest is a more powerful algorithm over just a single tree. However, the Decision Tree classification preserve the interpretability which the random forest algorithm lacks.  A simple decision tree model was used for exploration. The Decision Tree does not require feature scaling but can overfit data by fitting the noise instead of the whole data.  It is very important to evaluate decision trees on data it has not seen before.
+Trees cqn handle both factors and continuous variables and do not need to create dummy variables.   Use the divide-and-conquer (aka recursive partinioning e.g. rpart) technique to create two homogenous groups.  Leaf nodes are at the bottom and denote final decisions on matching success. Random Forest is a more powerful algorithm over just a single tree. However, the Decision Tree classification preserve the interpretability which the random forest algorithm lacks.  A simple decision tree model was used for exploration. The Decision Tree does not require feature scaling but can overfit data by fitting the noise instead of the whole data.  It is very important to evaluate decision trees on data it has not seen before.
 
 Here we intentionally grow a large and complex tree then prune it to be smaller and more efficient later on.
 ```{r rpart EDA}
-# train <- filter(all_data, Year %in% c("2015", "2016"))  #Train on years 2015, 2016
-# nrow(train) 
-# test <- filter(all_data, Year %in%  c("2017", "2018")) #Test on 2017, 2018 data
-# nrow(test)
-# test <- test %>% select(-"Year")
-# train <- train %>% select(-"Year")
-
+#https://bradleyboehmke.github.io/HOML/DT.html
 t.model <-
   rpart(as.factor(Match_Status) ~.,
         data = train,    #Do not use binned data for God's sake.  
@@ -1382,9 +1447,61 @@ round(mean(solution_tree_class == test$Match_Status), digits = 3)
 ```
 The accuracy or correct classification rate of the decision tree called `t.model` is `r round(mean(solution_tree_probability == test$Match_Status), digits = 3)`.  
 
-Look at pruning the tree branches to determine the optimal complexity vs. accuracy point for stopping branch growth.  
+Look at pruning the tree branches to determine the optimal complexity vs. accuracy point for stopping branch growth.  Pruning complexity parameter (cp) plot illustrating the relative cross validation error (y-axis) for various cp values (lower x-axis). Smaller cp values lead to larger trees (upper x-axis). Using the 1-SE rule, a tree size of 10-12 provides optimal cross validation results.
 ```{r}
 plotcp(t.model)
+```
+
+The figure shows the pruning complexity parameter plot for a fully grown tree. Significant reduction in the cross validation error is achieved with tree sizes 88-100 and then the cross validation error levels off with minimal or no additional improvements.
+```{r}
+t.model2 <- rpart(
+    formula = Match_Status ~ .,
+    data    = train,
+    method  = "anova", 
+    control = list(cp = 0, xval = 10)
+)
+
+plotcp(t.model2)
+abline(v = 34, lty = "dashed")  #Not sure if 11 is ideal.  
+#https://bradleyboehmke.github.io/HOML/DT.html
+```
+
+```{r}
+# rpart cross validation results
+t.model2$cptable
+
+# caret cross validation results
+t.model3 <- caret::train(
+  Match_Status ~ .,
+  data = train,
+  method = "rpart",
+  trControl = trainControl(method = "cv", number = 10),
+  tuneLength = 20
+)
+
+ggplot(t.model3)
+```
+
+Feature interpretation of Decision Trees
+Variable importance based on the total reduction in accuracy for the Match_Status decision tree.
+```{r}
+vip(t.model3, num_features = 40, bar = T)
+```
+
+```{r}
+# Construct partial dependence plots
+p1 <- pdp::partial(t.model3, pred.var = "Age") %>% autoplot() #Not working
+p2 <- pdp::partial(t.model3, pred.var = "USMLE_Step_1_Score") %>% autoplot()
+p3 <- partial(t.model3, pred.var = c("Gr_Liv_Area", "Year_Built")) %>% 
+  plotPartial(levelplot = FALSE, zlab = "yhat", drape = TRUE, 
+              colorkey = TRUE, screen = list(z = -20, x = -60))
+
+# Display plots side by side
+gridExtra::grid.arrange(p1, p2, p3, ncol = 3)
+```
+
+
+```{r}
 pruned.t.model <- rpart::prune(t.model, cp = 0.005) #Set the cp where the complexity to accuraty rate plateaued.  
 tm_rpart_plot(pruned.t.model)
 ```
@@ -1427,10 +1544,190 @@ solution_svm <- predict(caret_svm, newdata = test, type = "raw")
 mean(solution_svm == test$Match_Status)
 ```
 
+```{r}
+#https://bradleyboehmke.github.io/HOML/svm.html
+
+# Tune an SVM with radial basis kernel
+set.seed(1854)  # for reproducibility
+churn_svm <- train(
+  Match_Status ~ ., 
+  data = train,
+  method = "svmRadial",               
+  preProcess = c("center", "scale"),  
+  trControl = trainControl(method = "cv", number = 10),
+  tuneLength = 10
+)
+```
+
+```{r}
+# Plot results
+#https://bradleyboehmke.github.io/HOML/svm.html
+ggplot(churn_svm) + theme_light()
+```
+
+```{r}
+# Print results
+#https://bradleyboehmke.github.io/HOML/svm.html
+churn_svm$results
+```
+
+```{r}
+#https://bradleyboehmke.github.io/HOML/svm.html
+class.weights = c("No" = 1, "Yes" = 10)
+```
+
+```{r}
+#https://bradleyboehmke.github.io/HOML/svm.html
+# Control params for SVM
+ctrl <- trainControl(
+  method = "cv", 
+  number = 10, 
+  classProbs = TRUE,                 
+  summaryFunction = twoClassSummary  # also needed for AUC/ROC
+)
+
+# Tune an SVM
+set.seed(5628)  # for reproducibility
+churn_svm_auc <- train(
+  Match_Status ~ ., 
+  data = train,
+  method = "svmRadial",               
+  preProcess = c("center", "scale"),  
+  metric = "ROC",  # area under ROC curve (AUC)       
+  trControl = ctrl,
+  tuneLength = 10
+)
+
+# Print results
+churn_svm_auc$results
+```
+
+```{r}
+#https://bradleyboehmke.github.io/HOML/svm.html
+confusionMatrix(churn_svm_auc)
+```
+
+Feature interpretation
+```{r}
+#https://bradleyboehmke.github.io/HOML/svm.html
+prob_yes <- function(object, newdata) {
+  predict(object, newdata = newdata, type = "prob")[, "Yes"]
+}
+```
+
+```{r}
+#https://bradleyboehmke.github.io/HOML/svm.html
+# Variable importance plot
+set.seed(2827)  # for reproducibility
+vip(churn_svm_auc, method = "permute", nsim = 5, train = churn_train, 
+    target = "Attrition", metric = "auc", reference_class = "Yes", 
+    pred_wrapper = prob_yes)
+```
+
+
 
 # 4) Model: Random Forest model
   
 A random forest model is a forest of decision trees. Think of random forest as an ensemble of multiple trees.  
+
+```{r}
+# train a default random forest model
+#https://bradleyboehmke.github.io/HOML/random-forest.html
+# number of features
+n_features <- length(setdiff(names(train), "Match_Status"))
+
+train_rf1 <- ranger(
+  Match_Status ~ ., 
+  data = train,
+  mtry = floor(n_features / 3),
+  respect.unordered.factors = "order",
+  seed = 123
+)
+
+# get OOB RMSE
+(default_rmse <- sqrt(train_rf1$prediction.error))
+```
+
+Tuning
+```{r}
+# create hyperparameter grid
+#https://bradleyboehmke.github.io/HOML/random-forest.html
+hyper_grid <- expand.grid(
+  mtry = floor(n_features * c(.05, .15, .25, .333, .4)),
+  min.node.size = c(1, 3, 5, 10), 
+  replace = c(TRUE, FALSE),                               
+  sample.fraction = c(.5, .63, .8),                       
+  rmse = NA                                               
+)
+
+# execute full cartesian grid search
+for(i in seq_len(nrow(hyper_grid))) {
+  # fit model for ith hyperparameter combination
+  fit <- ranger(
+    formula         = Match_Status ~ ., 
+    data            = train, 
+    num.trees       = n_features * 10,
+    mtry            = hyper_grid$mtry[i],
+    min.node.size   = hyper_grid$min.node.size[i],
+    replace         = hyper_grid$replace[i],
+    sample.fraction = hyper_grid$sample.fraction[i],
+    verbose         = FALSE,
+    seed            = 123,
+    respect.unordered.factors = 'order',
+  )
+  # export OOB error 
+  hyper_grid$rmse[i] <- sqrt(fit$prediction.error)
+}
+
+# assess top 10 models
+hyper_grid %>%
+  arrange(rmse) %>%
+  mutate(perc_gain = (default_rmse - rmse) / default_rmse * 100) %>%
+  head(10)
+```
+
+```{r}
+# re-run model with impurity-based variable importance
+#https://bradleyboehmke.github.io/HOML/random-forest.html
+rf_impurity <- ranger(
+  formula = Match_Status ~ ., 
+  data = train, 
+  num.trees = 2000,          # 10 times number of features
+  mtry = 5,
+  min.node.size = 1,
+  sample.fraction = .63,
+  replace = FALSE,
+  importance = "impurity",
+  respect.unordered.factors = "order",
+  verbose = FALSE,
+  seed  = 123
+)
+
+# re-run model with permutation-based variable importance
+rf_permutation <- ranger(
+  formula = Match_Status ~ ., 
+  data = train, 
+  num.trees = 2000,
+  mtry = 5,
+  min.node.size = 1,
+  sample.fraction = .63,
+  replace = FALSE,
+  importance = "permutation",
+  respect.unordered.factors = "order",
+  verbose = FALSE,
+  seed  = 123
+)
+```
+
+Feature importance for Random Forest
+```{r}
+#https://bradleyboehmke.github.io/HOML/random-forest.html
+p1 <- vip::vip(rf_impurity, num_features = 25, bar = FALSE)
+p2 <- vip::vip(rf_permutation, num_features = 25, bar = FALSE)
+
+gridExtra::grid.arrange(p1, p2, nrow = 1)
+```
+
 
 ```{r Random Forest}
 train$Match_Status <- as.factor(train$Match_Status)
@@ -1462,6 +1759,114 @@ Random forest has accuracy of `r round(mean(solution_rf == test$Match_Status), d
 
 # 5) Model: Gradient Boosting Machine (GBM) model
 
+```{r}
+#https://bradleyboehmke.github.io/HOML/gbm.html
+# run a basic GBM model
+set.seed(123)  # for reproducibility
+train_gbm1 <- gbm(
+  formula = Match_Status ~ .,
+  data = train,
+  distribution = "gaussian",  # SSE loss function
+  n.trees = 5000,
+  shrinkage = 0.1,
+  interaction.depth = 3,
+  n.minobsinnode = 10,
+  cv.folds = 10
+)
+
+# find index for number trees with minimum CV error
+best <- which.min(train_gbm1$cv.error)
+
+# get MSE and compute RMSE
+sqrt(train_gbm1$cv.error[best])
+```
+
+```{r}
+# plot error curve
+gbm.perf(train_gbm1, method = "cv")
+```
+
+Tuning
+```{r}
+# create grid search
+hyper_grid <- expand.grid(
+  learning_rate = c(0.3, 0.1, 0.05, 0.01, 0.005),
+  RMSE = NA,
+  trees = NA,
+  time = NA
+)
+
+# execute grid search
+for(i in seq_len(nrow(hyper_grid))) {
+
+  # fit gbm
+  set.seed(123)  # for reproducibility
+  train_time <- system.time({
+    m <- gbm(
+      formula = Match_Status ~ .,
+      data = train,
+      distribution = "gaussian",
+      n.trees = 5000, 
+      shrinkage = hyper_grid$learning_rate[i], 
+      interaction.depth = 3, 
+      n.minobsinnode = 10,
+      cv.folds = 10 
+   )
+  })
+  
+  # add SSE, trees, and training time to results
+  hyper_grid$RMSE[i]  <- sqrt(min(m$cv.error))
+  hyper_grid$trees[i] <- which.min(m$cv.error)
+  hyper_grid$Time[i]  <- train_time[["elapsed"]]
+
+}
+
+# results
+arrange(hyper_grid, RMSE)
+```
+
+```{r}
+# search grid
+hyper_grid <- expand.grid(
+  n.trees = 6000,
+  shrinkage = 0.01,
+  interaction.depth = c(3, 5, 7),
+  n.minobsinnode = c(5, 10, 15)
+)
+
+# create model fit function
+model_fit <- function(n.trees, shrinkage, interaction.depth, n.minobsinnode) {
+  set.seed(123)
+  m <- gbm(
+    formula = Match_Status ~ .,
+    data = train,
+    distribution = "gaussian",
+    n.trees = n.trees,
+    shrinkage = shrinkage,
+    interaction.depth = interaction.depth,
+    n.minobsinnode = n.minobsinnode,
+    cv.folds = 10
+  )
+  # compute RMSE
+  sqrt(min(m$cv.error))
+}
+
+# perform search grid with functional programming
+hyper_grid$rmse <- purrr::pmap_dbl(
+  hyper_grid,
+  ~ model_fit(
+    n.trees = ..1,
+    shrinkage = ..2,
+    interaction.depth = ..3,
+    n.minobsinnode = ..4
+    )
+)
+
+# results
+arrange(hyper_grid, rmse)
+```
+
+
 ```{r, include = T}
 set.seed(2017)
 caret_boost <- caret::train(Match_Status~ white_non_white + Age + Gender + Couples_Match + US_or_Canadian_Applicant + Medical_Education_Interrupted + Alpha_Omega_Alpha + Military_Service_Obligation + USMLE_Step_1_Score + Count_of_Poster_Presentation + Count_of_Oral_Presentation + Count_of_Articles_Abstracts + Count_of_Peer_Reviewed_Book_Chapter + Count_of_Other_than_Published + Count_of_Online_Publications + Visa_Sponsorship_Needed + Medical_Degree, 
@@ -1474,6 +1879,7 @@ print(caret_boost)
 solution_boost <- predict(caret_boost, newdata = test, type = "raw")
 caret::confusionMatrix(solution_boost, test$Match_Status)
 ```
+
 
 \pagebreak
 # 6) Model: Naïve Bayes with WOE Binning model
@@ -1521,14 +1927,6 @@ Data prep for xgboost
 How can we convert these categories to a matrix? One way to do this is using one-hot encoding. One-hot encoding takes each category and makes it its own column. Then, for each observation, it puts a "0" in that column if that observation doesn't belong to that column and "1" if it does.
 
 ```{r}
-# get the subset of the dataframe that doesn't have labels about match_status
-# train <- filter(all_data, Year %in% c("2015", "2016"))  #Train on years 2015, 2016
-# nrow(train) 
-# test <- filter(all_data, Year %in%  c("2017", "2018")) #Test on 2017, 2018 data
-# nrow(test)
-# test <- test %>% select(-"Year")
-# train <- train %>% select(-"Year")
-
 train$Match_Status <- as.factor(train$Match_Status)
 model_04_xgboost <- parsnip::boost_tree(mode = "classification", 
         mtry = 30, 
@@ -1553,6 +1951,300 @@ model_04_xgboost$fit %>%
     xgb.importance(model = .) %>%
     xgb.plot.importance(main = "XGBoost Feature Importance")
 ```
+
+```{r}
+library(recipes)
+xgb_prep <- recipe(Match_Status ~ ., data = train) %>%
+  step_integer(all_nominal()) %>%
+  prep(training = train, retain = TRUE) %>%
+  juice()
+
+X <- as.matrix(xgb_prep[setdiff(names(xgb_prep), "Match_Status")])
+Y <- xgb_prep$Match_Status
+```
+
+Tuning
+```{r}
+set.seed(123)
+train_xgb <- xgb.cv(
+  data = X,
+  label = Y,
+  nrounds = 6000,
+  objective = "reg:linear",
+  early_stopping_rounds = 50, 
+  nfold = 10,
+  params = list(
+    eta = 0.1,
+    max_depth = 3,
+    min_child_weight = 3,
+    subsample = 0.8,
+    colsample_bytree = 1.0),
+  verbose = 0
+)  
+
+# minimum test CV RMSE
+min(ames_xgb$evaluation_log$test_rmse_mean)
+```
+
+Grid Search
+```{r}
+# hyperparameter grid
+hyper_grid <- expand.grid(
+  eta = 0.01,
+  max_depth = 3, 
+  min_child_weight = 3,
+  subsample = 0.5, 
+  colsample_bytree = 0.5,
+  gamma = c(0, 1, 10, 100, 1000),
+  lambda = c(0, 1e-2, 0.1, 1, 100, 1000, 10000),
+  alpha = c(0, 1e-2, 0.1, 1, 100, 1000, 10000),
+  rmse = 0,          # a place to dump RMSE results
+  trees = 0          # a place to dump required number of trees
+)
+
+# grid search
+for(i in seq_len(nrow(hyper_grid))) {
+  set.seed(123)
+  m <- xgb.cv(
+    data = X,
+    label = Y,
+    nrounds = 4000,
+    objective = "reg:linear",
+    early_stopping_rounds = 50, 
+    nfold = 10,
+    verbose = 0,
+    params = list( 
+      eta = hyper_grid$eta[i], 
+      max_depth = hyper_grid$max_depth[i],
+      min_child_weight = hyper_grid$min_child_weight[i],
+      subsample = hyper_grid$subsample[i],
+      colsample_bytree = hyper_grid$colsample_bytree[i],
+      gamma = hyper_grid$gamma[i], 
+      lambda = hyper_grid$lambda[i], 
+      alpha = hyper_grid$alpha[i]
+    ) 
+  )
+  hyper_grid$rmse[i] <- min(m$evaluation_log$test_rmse_mean)
+  hyper_grid$trees[i] <- m$best_iteration
+}
+
+# results
+hyper_grid %>%
+  filter(rmse > 0) %>%
+  arrange(rmse) %>%
+  glimpse()
+```
+
+```{r}
+#Optimal parameters
+# optimal parameter list
+params <- list(
+  eta = 0.01,
+  max_depth = 3,
+  min_child_weight = 3,
+  subsample = 0.5,
+  colsample_bytree = 0.5
+)
+
+# train final model
+xgb.fit.final <- xgboost(
+  params = params,
+  data = X,
+  label = Y,
+  nrounds = 3944,
+  objective = "reg:linear",
+  verbose = 0
+)
+```
+
+```{r}
+# variable importance plot
+vip::vip(xgb.fit.final) 
+xgb.importance(xgb.fit.final)
+xgboost::xgb.ggplot.importance(xgb.fit.final)
+```
+
+# 8) Model: Ensembles model
+
+```{r}
+# Helper packages
+library(rsample)   # for creating our train-test splits
+library(recipes)   # for minor feature engineering tasks
+
+# Modeling packages
+library(h2o)       # for fitting stacked models
+```
+
+```{r}
+# Load and split the Ames housing data
+set.seed(123)  # for reproducibility
+split <- initial_split(all_data, strata = "Match_Status")
+ames_train <- training(split)
+ames_test <- testing(split)
+
+# Make sure we have consistent categorical levels
+blueprint <- recipe(Match_Status ~ ., data = ames_train) %>%
+  step_other(all_nominal(), threshold = 0.005)
+
+# Create training & test sets for h2o
+train_h2o <- prep(blueprint, training = ames_train, retain = TRUE) %>%
+  juice() %>%
+  as.h2o()
+test_h2o <- prep(blueprint, training = ames_train) %>%
+  bake(new_data = ames_test) %>%
+  as.h2o()
+
+# Get response and feature names
+Y <- "Match_Status"
+X <- setdiff(names(ames_train), Y)
+```
+
+```{r}
+# Train & cross-validate a GLM model
+best_glm <- h2o.glm(
+  x = X, y = Y, training_frame = train_h2o, alpha = 0.1,
+  remove_collinear_columns = TRUE, nfolds = 10, fold_assignment = "Modulo",
+  keep_cross_validation_predictions = TRUE, seed = 123
+)
+
+# Train & cross-validate a RF model
+best_rf <- h2o.randomForest(
+  x = X, y = Y, training_frame = train_h2o, ntrees = 1000, mtries = 20,
+  max_depth = 30, min_rows = 1, sample_rate = 0.8, nfolds = 10,
+  fold_assignment = "Modulo", keep_cross_validation_predictions = TRUE,
+  seed = 123, stopping_rounds = 50, stopping_metric = "RMSE",
+  stopping_tolerance = 0
+)
+
+# Train & cross-validate a GBM model
+best_gbm <- h2o.gbm(
+  x = X, y = Y, training_frame = train_h2o, ntrees = 5000, learn_rate = 0.01,
+  max_depth = 7, min_rows = 5, sample_rate = 0.8, nfolds = 10,
+  fold_assignment = "Modulo", keep_cross_validation_predictions = TRUE,
+  seed = 123, stopping_rounds = 50, stopping_metric = "RMSE",
+  stopping_tolerance = 0
+)
+
+# Train & cross-validate an XGBoost model
+best_xgb <- h2o.xgboost(
+  x = X, y = Y, training_frame = train_h2o, ntrees = 5000, learn_rate = 0.05,
+  max_depth = 3, min_rows = 3, sample_rate = 0.8, categorical_encoding = "Enum",
+  nfolds = 10, fold_assignment = "Modulo", 
+  keep_cross_validation_predictions = TRUE, seed = 123, stopping_rounds = 50,
+  stopping_metric = "RMSE", stopping_tolerance = 0
+)
+```
+
+
+```{r}
+# Train a stacked tree ensemble
+ensemble_tree <- h2o.stackedEnsemble(
+  x = X, y = Y, training_frame = train_h2o, model_id = "my_tree_ensemble",
+  base_models = list(best_glm, best_rf, best_gbm, best_xgb),
+  metalearner_algorithm = "drf"
+)
+```
+
+
+```{r}
+# Get results from base learners
+get_rmse <- function(model) {
+  results <- h2o.performance(model, newdata = test_h2o)
+  results@metrics$RMSE
+}
+list(best_glm, best_rf, best_gbm, best_xgb) %>%
+  purrr::map_dbl(get_rmse)
+## [1] 30024.67 23075.24 20859.92 21391.20
+
+# Stacked results
+h2o.performance(ensemble_tree, newdata = test_h2o)@metrics$RMSE
+## [1] 20664.56
+```
+
+
+```{r}
+data.frame(
+  GLM_pred = as.vector(h2o.getFrame(best_glm@model$cross_validation_holdout_predictions_frame_id$name)),
+  RF_pred = as.vector(h2o.getFrame(best_rf@model$cross_validation_holdout_predictions_frame_id$name)),
+  GBM_pred = as.vector(h2o.getFrame(best_gbm@model$cross_validation_holdout_predictions_frame_id$name)),
+  XGB_pred = as.vector(h2o.getFrame(best_xgb@model$cross_validation_holdout_predictions_frame_id$name))
+) %>% cor()
+```
+
+
+```{r}
+# Define GBM hyperparameter grid
+hyper_grid <- list(
+  max_depth = c(1, 3, 5),
+  min_rows = c(1, 5, 10),
+  learn_rate = c(0.01, 0.05, 0.1),
+  learn_rate_annealing = c(0.99, 1),
+  sample_rate = c(0.5, 0.75, 1),
+  col_sample_rate = c(0.8, 0.9, 1)
+)
+
+# Define random grid search criteria
+search_criteria <- list(
+  strategy = "RandomDiscrete",
+  max_models = 25
+)
+
+# Build random grid search 
+random_grid <- h2o.grid(
+  algorithm = "gbm", grid_id = "gbm_grid", x = X, y = Y,
+  training_frame = train_h2o, hyper_params = hyper_grid,
+  search_criteria = search_criteria, ntrees = 5000, stopping_metric = "RMSE",     
+  stopping_rounds = 10, stopping_tolerance = 0, nfolds = 10, 
+  fold_assignment = "Modulo", keep_cross_validation_predictions = TRUE,
+  seed = 123
+)
+```
+
+```{r}
+# Sort results by RMSE
+h2o.getGrid(
+  grid_id = "gbm_grid", 
+  sort_by = "rmse"
+)
+```
+
+```{r}
+# Grab the model_id for the top model, chosen by validation error
+best_model_id <- random_grid_perf@model_ids[[1]]
+best_model <- h2o.getModel(best_model_id)
+h2o.performance(best_model, newdata = test_h2o)
+```
+
+```{r}
+# Train a stacked ensemble using the GBM grid
+ensemble <- h2o.stackedEnsemble(
+  x = X, y = Y, training_frame = train_h2o, model_id = "ensemble_gbm_grid",
+  base_models = random_grid@model_ids, metalearner_algorithm = "gbm"
+)
+
+# Eval ensemble performance on a test set
+h2o.performance(ensemble, newdata = test_h2o)
+```
+
+```{r}
+# Use AutoML to find a list of candidate models (i.e., leaderboard)
+auto_ml <- h2o.automl(
+  x = X, y = Y, training_frame = train_h2o, nfolds = 5, 
+  max_runtime_secs = 60 * 120, max_models = 50,
+  keep_cross_validation_predictions = TRUE, sort_metric = "RMSE", seed = 123,
+  stopping_rounds = 50, stopping_metric = "RMSE", stopping_tolerance = 0
+)
+
+# Assess the leader board; the following truncates the results to show the top 
+# and bottom 15 models. You can get the top model with auto_ml@leader
+auto_ml@leaderboard %>% 
+  as.data.frame() %>%
+  dplyr::select(model_id, rmse) %>%
+  dplyr::slice(1:25)
+```
+
+
+
 
 \pagebreak
 
