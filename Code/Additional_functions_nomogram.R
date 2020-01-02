@@ -10,20 +10,22 @@
 #Paths
 data_folder <- "~/Dropbox/Nomogram/nomogram/data"#paste0(getwd(), "/Data/")
 results_folder <- "~/Dropbox/Nomogram/nomogram/results"#paste0(getwd(), "/Results/")
-data_file <- "all_years_filter_112.rds"
+
+data_file <- "all_years_mutate_124.csv"
+#data_file <- "all_years_filter_112.rds" #original that works
 
 #Install and Load needed R packages.
 # Set libPaths.
 .libPaths("/Users/tylermuffly/.exploratory/R/3.6")
 
-pkg <- (c('R.methodsS3', 'caret', 'readxl', 'XML', 'reshape2', 'devtools', 'purrr', 'readr', 'ggplot2', 'dplyr', 'magick', 'janitor', 'lubridate', 'hms', 'tidyr', 'stringr', 'openxlsx', 'forcats', 'RcppRoll', 'tibble', 'bit64', 'munsell', 'scales', 'rgdal', 'tidyverse', "foreach", "PASWR", "rms", "pROC", "ROCR", "nnet", "packrat", "DynNom", "export", "caTools", "mlbench", "randomForest", "ipred", "xgboost", "Metrics", "RANN", "AppliedPredictiveModeling", "nomogramEx", "shiny", "earth", "fastAdaboost", "Boruta", "glmnet", "ggforce", "tidylog", "InformationValue", "pscl", "scoring", "DescTools", "gbm", "Hmisc", "arsenal", "pander", "moments", "leaps", "MatchIt", "car", "mice", "rpart", "beepr", "fansi", "utf8", "zoom", "lmtest", "ResourceSelection", "rmarkdown", "rattle", "rmda", "funModeling", "tinytex", "caretEnsemble", "Rmisc", "corrplot", "GGally", "alluvial", "progress", "perturb", "vctrs", "highr", "labeling", "DataExplorer", "rsconnect", "inspectdf", "ggpubr", "esquisse", "stargazer", "tableone", "knitr", "drake", "visNetwork", "woeBinning", "OneR", "rpart.plot", "RColorBrewer", "kableExtra", "kernlab", "naivebayes", "e1071", "data.table", "skimr", "naniar", "english", "mosaic", "broom", "mltools", "tidymodels", "tidyquant", "rsample", "yardstick", "parsnip", "tensorflow", "keras", "sparklyr", "dials", "cowplot", "lime", "flexdashboard", "shinyjs", "shinyWidgets", "plotly", "odbc", "BH", "discrim"))
+pkg <- (c('R.methodsS3', 'caret', 'readxl', 'XML', 'reshape2', 'devtools', 'purrr', 'readr', 'ggplot2', 'dplyr', 'magick', 'janitor', 'lubridate', 'hms', 'tidyr', 'stringr', 'openxlsx', 'forcats', 'RcppRoll', 'tibble', 'bit64', 'munsell', 'scales', 'rgdal', 'tidyverse', "foreach", "PASWR", "rms", "pROC", "ROCR", "nnet", "packrat", "DynNom", "export", "caTools", "mlbench", "randomForest", "ipred", "xgboost", "Metrics", "RANN", "AppliedPredictiveModeling", "nomogramEx", "shiny", "earth", "fastAdaboost", "Boruta", "glmnet", "ggforce", "tidylog", "InformationValue", "pscl", "scoring", "DescTools", "gbm", "Hmisc", "arsenal", "pander", "moments", "leaps", "MatchIt", "car", "mice", "rpart", "beepr", "fansi", "utf8", "zoom", "lmtest", "ResourceSelection", "rmarkdown", "rattle", "rmda", "funModeling", "tinytex", "caretEnsemble", "Rmisc", "corrplot", "GGally", "alluvial", "progress", "perturb", "vctrs", "highr", "labeling", "DataExplorer", "rsconnect", "inspectdf", "ggpubr", "esquisse", "stargazer", "tableone", "knitr", "drake", "visNetwork", "woeBinning", "OneR", "rpart.plot", "RColorBrewer", "kableExtra", "kernlab", "naivebayes", "e1071", "data.table", "skimr", "naniar", "english", "mosaic", "broom", "mltools", "tidymodels", "tidyquant", "rsample", "yardstick", "parsnip", "tensorflow", "keras", "sparklyr", "dials", "cowplot", "lime", "flexdashboard", "shinyjs", "shinyWidgets", "plotly", "odbc", "BH", "discrim", "vip"))
+
+#install.packages(pkg, dependencies = TRUE, repos = "https://cloud.r-project.org")
+lapply(pkg, require, character.only = TRUE)
 
 # Database
 library("odbc")
 library("RSQLite")
-
-#install.packages(pkg, dependencies = TRUE, repos = "https://cloud.r-project.org")
-lapply(pkg, require, character.only = TRUE)
 
 packrat::set_opts(auto.snapshot = TRUE, use.cache = TRUE)
 #packrat::snapshot(infer.dependencies = TRUE)
@@ -71,12 +73,13 @@ create_profiling_num <-
 #####  Load in the data
 #Create a dataframe of independent and dependent variables. 
 ## Here are the data for download
-URL<- paste0("https://www.dropbox.com/s/qbykb8sl2c8z3me/", (data_file), "?raw=1")
-download.file(url = URL, destfile = paste0(data_file), method = "curl")
+#URL<- paste0("https://www.dropbox.com/s/qbykb8sl2c8z3me/", (data_file), "?raw=1") #This works
+#download.file(url = URL, destfile = paste0(data_file), method = "curl") #this works
 
 # read in data
 all_data <- 
-  read_rds(paste0(data_folder, "/", data_file)) %>%
+  #read_rds(paste0(data_folder, "/", data_file)) %>%
+  read_csv(paste0(data_folder, "/", data_file)) %>%
   select(-"Gold_Humanism_Honor_Society", 
          -"Sigma_Sigma_Phi", 
          -"Misdemeanor_Conviction", 
@@ -85,11 +88,13 @@ all_data <-
          -"BLS", 
          -"Positions_offered") 
 
+colnames(all_data)
+
 all_data <- 
   all_data[c(
     'white_non_white', 
     'Age',  
-    'Year', 
+    #'Year', 
     'Gender', 
     'Couples_Match', 
     'US_or_Canadian_Applicant', 
@@ -105,6 +110,7 @@ all_data <-
     "Count_of_Peer_Reviewed_Online_Publication", 
     "Visa_Sponsorship_Needed", 
     "Medical_Degree", 
+        'Rank',
     'Match_Status')]
 
 #Rename columns with more human readable names
@@ -127,7 +133,7 @@ colnames(all_data)[colnames(all_data)=="Match_Status_Dichot"] <-
 all_data$Count_of_Online_Publications <- as.numeric(all_data$Count_of_Online_Publications)
 
 all_data$white_non_white <- forcats::fct_explicit_na(all_data$white_non_white, na_level="(Missing)")
-all_data$Year <- forcats::fct_explicit_na(all_data$Year, na_level="(Missing)")
+#all_data$Year <- forcats::fct_explicit_na(all_data$Year, na_level="(Missing)")
 all_data$Gender <- forcats::fct_explicit_na(all_data$Gender, na_level="(Missing)")
 all_data$Couples_Match <- forcats::fct_explicit_na(all_data$Couples_Match, na_level="(Missing)")
 all_data$US_or_Canadian_Applicant <- forcats::fct_explicit_na(all_data$US_or_Canadian_Applicant, na_level="(Missing)")
