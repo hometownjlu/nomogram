@@ -35,6 +35,7 @@ spacing: double
 always_allow_html: yes
 editor_options: 
   chunk_output_type: console
+
 ---
 
 *Tyler M. Muffly, Merdith Alston, Jill Liss, Georg Kropat, Janet Corral, Christine Raffaelli, J. Eric Jelovsek*
@@ -122,22 +123,23 @@ We can see that these data have `r nrow(all_data)` of `r ncol(all_data)` variabl
 
 ```{r Using the Drake package here for efficiency, echo=TRUE, include=FALSE}
 # Using the Drake package here for efficiency.  
-plan <- drake_plan(
-  raw_data = readr::read_rds(paste0(data_folder,"/", data_file)),
-  data = raw_data %>%
-    dplyr::select(-"Gold_Humanism_Honor_Society", -"Sigma_Sigma_Phi", -"Misdemeanor_Conviction", -"Malpractice_Cases_Pending", -"Match_Status", -"Citizenship", -"BLS", -"Positions_offered"),
-  function(data) {funModeling::plot_num(data, path_out = results_folder)},
-  function(data) {funModeling::cross_plot(data, target="Match_Status", path_out = results_folder)},
-  quiet = TRUE)
 
-plan
+###### Stopped working with knitr.  
 
-config <- 
-  drake::drake_config(plan)
+# plan <- drake::drake_plan(
+#   #raw_data = readr::read_rds(paste0(data_folder,"/", data_file)),
+#   data = raw_data %>%
+#     dplyr::select(-"Gold_Humanism_Honor_Society", -"Sigma_Sigma_Phi", -"Misdemeanor_Conviction", -"Malpractice_Cases_Pending", -"Match_Status", -"Citizenship", -"BLS", -"Positions_offered"),
+#   function(data) {funModeling::plot_num(data, path_out = results_folder)},
+#   function(data) {funModeling::cross_plot(data, target="Match_Status", path_out = results_folder)},
+#   quiet = TRUE)
 
-drake::vis_drake_graph(config)
+# config <- 
+#   drake::drake_config(plan)
 
-drake::make(plan)
+#drake::vis_drake_graph(config)
+
+#drake::make(plan)
 ```
 # Description of the Data
 * A summary of the variables are listed below:
@@ -400,7 +402,7 @@ data_split <- rsample::initial_split(data = all_data,
 
 # Using base R
 set.seed(123)  # for reproducibility
-index_1 <- sample(1:nrow(all_data), round(nrow(all_data) * 0.8))
+index_1 <- base::sample(1:nrow(all_data), round(nrow(all_data) * 0.8))
 train_1 <- all_data[index_1, ]
 test_1  <- all_data[-index_1, ]
 
@@ -413,13 +415,14 @@ test_2  <- all_data[-index_2, ]
 
 # Using rsample package
 set.seed(123)  # for reproducibility
-split_1  <- initial_split(all_data, prop = 0.8)
-train_3  <- training(split_1)
-test_3   <- testing(split_1)
+split_1  <- rsample::initial_split(all_data, prop = 0.8)
+train_3  <- rsample::training(split_1)
+test_3   <- rsample::testing(split_1)
 
 # Using h2o package
-all_data.h2o <- as.h2o(all_data)
-split_2 <- h2o.splitFrame(all_data.h2o, ratios = 0.8, 
+h2o::h2o.init()
+all_data.h2o <- h2o::as.h2o(all_data)
+split_2 <- h2o::h2o.splitFrame(all_data.h2o, ratios = 0.8, 
                           seed = 123)
 train_4 <- split_2[[1]]
 test_4  <- split_2[[2]]
@@ -450,11 +453,11 @@ Check Proportions of Matched students in the test and train data sets.  Orginal 
 ```{r, results="asis", echo=TRUE, include=TRUE}
 # Examine the proportions of the Match_Status class lable across the datasets.
 crude_summary <- 
-  prop.table(table(all_data$Match_Status))  #Original data set proportion 
+  base::prop.table(table(all_data$Match_Status))  #Original data set proportion 
 
-prop.table(table(train$Match_Status)) #Train data set proportion
+base::prop.table(table(train$Match_Status)) #Train data set proportion
 
-prop.table(table(test$Match_Status))  #Test data set proportion
+base::prop.table(table(test$Match_Status))  #Test data set proportion
 
 knitr::kable(crude_summary, caption="2x2 Contingency Table on Matching for all_data", format="markdown")
 ```
@@ -470,7 +473,7 @@ skewed_feature_names <- train %>%
   tidyr::gather(factor_key = TRUE) %>% #transposes into a long data column
   dplyr::arrange(desc(value)) %>% #Look for low and high values, high values have a fat tail on right, low has fat tail on left side
   dplyr::filter(value>2.0) %>% #eyeballed cutoff for value cut off
-  pull(key) %>%
+  dplyr::pull(key) %>%
   as.character()
 ```
 
@@ -527,7 +530,7 @@ all_data_binarized_tbl <- all_data %>%
 all_data_binarized_tbl %>% tibble::glimpse()
 
 all_data_correlated_tbl <- all_data_binarized_tbl %>%
-  correlationfunnel::correlate(target = Match_Status__Matched)
+  correlationfunnel::correlate(target = Match_Status__Match)
 
 all_data_correlated_tbl
 
@@ -651,7 +654,7 @@ train$Match_Status
 str(train)
 
 lm.fit2 <- 
-  lm(Match_Status ~ 
+  stats::lm(Match_Status ~ 
        (white_non_white +  
         Age +   
         #rms::rcs(Age, 5) ## Removed splined variable
@@ -694,7 +697,7 @@ Our model formula is intercept of `r round(coefficients[[1, 2]], digit=1)`+`r ro
 The r squared for model `lmfit2` is: `r round(summary.lmfit2[[8]], digit=3)`.  
 
 ```{r}
-prediction_test <- predict.lm(lm.fit2, newdata = test, 
+prediction_test <- stats::predict.lm(lm.fit2, newdata = test, 
                            type = "response")
 prediction_categories <- ifelse(prediction_test > 0.5, 1, 0)
 confusion <- table(prediction_categories, test$Match_Status)
@@ -717,7 +720,7 @@ car::vif(kitchen.sink)
 
 I removed variables one at a time from `kitchen.sink` until VIF is <5.  Here I removed `train$Medical_Degree` and all collinearity dropped out based on VIF readings.  Now I rebuilt the model named `limited.vif.model.kitchen.sink` without the multicollinear factor of `train$Medical_Degree`.  
 ```{r}
-limited.vif.model.kitchen.sink <- glm(Match_Status ~ . - Medical_Degree,   #Nice trick to remove one variable at a time
+limited.vif.model.kitchen.sink <- stats::glm(Match_Status ~ . - Medical_Degree,   #Nice trick to remove one variable at a time
                  family = "binomial", data = train)
 
 rms::vif(limited.vif.model.kitchen.sink)
@@ -2465,5 +2468,16 @@ sessionInfo()
 # 
 # library(rsconnect)
 # rsconnect::deployApp('DynNomapp/')
+```
+
+```{r}
+#Publish to a website
+rmarkdown::render_site()
+
+# list which files will be removed
+rmarkdown::clean_site(preview = TRUE)
+
+# actually remove the files
+rmarkdown::clean_site()
 ```
 
