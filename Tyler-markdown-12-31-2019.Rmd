@@ -94,6 +94,15 @@ options(tinytex.verbose = FALSE)
 library(knitr)
 ```
 
+```{css echo = FALSE}
+#Taken from thhe Pudding.  
+pre code, pre, code {
+  white-space: pre !important;
+  overflow-y: scroll !important;
+  max-height: 25vh !important;
+}
+```
+
 Package installation, data download from Dropbox.com, and functions written for this project are all loaded in a separate "Additional_functions_nomogram.R" file.
 ```{r, echo=TRUE, include = FALSE}
 #May need to run this file line-by-line (CRTL+Enter) by hand.  
@@ -582,7 +591,6 @@ kitchen.sink <-
         Count_of_Peer_Reviewed_Book_Chapter +
         Count_of_Other_than_Published +
         Count_of_Online_Publications +
-          Rank +
         Visa_Sponsorship_Needed +
         Medical_Degree, 
       data = train, 
@@ -1492,15 +1500,18 @@ vip(t.model3, num_features = 40, bar = T)
 ```
 
 ```{r}
-# Construct partial dependence plots
-p1 <- pdp::partial(t.model3, pred.var = "Age") %>% autoplot() #Not working
-p2 <- pdp::partial(t.model3, pred.var = "USMLE_Step_1_Score") %>% autoplot()
-p3 <- partial(t.model3, pred.var = c("Gr_Liv_Area", "Year_Built")) %>% 
-  plotPartial(levelplot = FALSE, zlab = "yhat", drape = TRUE, 
-              colorkey = TRUE, screen = list(z = -20, x = -60))
+#########NOT WORKING
 
-# Display plots side by side
-gridExtra::grid.arrange(p1, p2, p3, ncol = 3)
+
+# # Construct partial dependence plots
+# p1 <- pdp::partial(t.model3, pred.var = "Age") %>% autoplot() #Not working
+# p2 <- pdp::partial(t.model3, pred.var = "USMLE_Step_1_Score") %>% autoplot()
+# p3 <- partial(t.model3, pred.var = c("Gr_Liv_Area", "Year_Built")) %>% 
+#   plotPartial(levelplot = FALSE, zlab = "yhat", drape = TRUE, 
+#               colorkey = TRUE, screen = list(z = -20, x = -60))
+# 
+# # Display plots side by side
+# gridExtra::grid.arrange(p1, p2, p3, ncol = 3)
 ```
 
 
@@ -1590,41 +1601,41 @@ ctrl <- trainControl(
 )
 
 # Tune an SVM
-set.seed(5628)  # for reproducibility
-churn_svm_auc <- caret::train(
-  Match_Status ~ ., 
-  data = train,
-  method = "svmRadial",               
-  preProcess = c("center", "scale"),  
-  metric = "ROC",  # area under ROC curve (AUC)       
-  trControl = ctrl,
-  tuneLength = 10
-)
-
-# Print results
-churn_svm_auc$results
+# set.seed(5628)  # for reproducibility
+# churn_svm_auc <- caret::train(
+#   Match_Status ~ ., 
+#   data = train,
+#   method = "svmRadial",               
+#   preProcess = c("center", "scale"),  
+#   metric = "ROC",  # area under ROC curve (AUC)       
+#   trControl = ctrl,
+#   tuneLength = 10
+# )
+# 
+# # Print results
+# churn_svm_auc$results
 ```
 
 ```{r}
 #https://bradleyboehmke.github.io/HOML/svm.html
-confusionMatrix(churn_svm_auc)
+# caret::confusionMatrix(churn_svm_auc)
 ```
 
 Feature interpretation
 ```{r}
 #https://bradleyboehmke.github.io/HOML/svm.html
-prob_yes <- function(object, newdata) {
-  predict(object, newdata = newdata, type = "prob")[, "Yes"]
-}
+# prob_yes <- function(object, newdata) {
+#   predict(object, newdata = newdata, type = "prob")[, "Yes"]
+# }
 ```
 
 ```{r}
 #https://bradleyboehmke.github.io/HOML/svm.html
 # Variable importance plot
-set.seed(2827)  # for reproducibility
-vip(churn_svm_auc, method = "permute", nsim = 5, train = churn_train, 
-    target = "Attrition", metric = "auc", reference_class = "Yes", 
-    pred_wrapper = prob_yes)
+# set.seed(2827)  # for reproducibility
+# vip::vip(churn_svm_auc, method = "permute", nsim = 5, train = churn_train, 
+#     target = "Attrition", metric = "auc", reference_class = "Yes", 
+#     pred_wrapper = prob_yes)
 ```
 
 
@@ -2324,7 +2335,11 @@ Applying to your specific plot, it appears most of the predicted probabilities a
 The mean absolute error is the "average" absolute difference (disregard a positive or negative error) between predicted probability and actual probability. Ideally, we want this to be small (0 would be perfect indicating no error). This seems small in this plot, but may be situation dependent on how small is small.
 
 ```{r calibration,  fig.width=7, fig.asp=1}
-calib <- rms::calibrate(train.lrm.with.lasso.variables, method = "boot", boot=1000, data = test, estimates = TRUE)  #Plot test data set
+calib <- rms::calibrate(train.lrm.with.lasso.variables, 
+                        method = "boot", boot=1000, 
+                        data = test, 
+                        estimates = TRUE)  #Plot test data set
+
 plot(calib, legend = TRUE, subtitles = TRUE, xlab = "Predicted probability according to model", ylab = "Observation Proportion of Matching")
 ```
 
@@ -2435,7 +2450,7 @@ DynNom.model.lrm  <-
 
 
 ```{r generalized logistic regression, include=FALSE, echo=TRUE, cache=FALSE}
-DynNom.model.glm <- glm(Match_Status ~
+DynNom.model.glm <- stats::glm(Match_Status ~
                           Age +
                           Alpha_Omega_Alpha +
                           Count_of_Oral_Presentation +
@@ -2457,7 +2472,7 @@ summary(DynNom.model.glm)
 ```
 
 ```{r sessionInfo, include=FALSE, echo=TRUE, cache=FALSE}
-sessionInfo()
+utils::sessionInfo()
 ```
 
 ```{r rsconnect for uploading shinyapps, include = FALSE}
