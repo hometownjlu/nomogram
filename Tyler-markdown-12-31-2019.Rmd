@@ -203,23 +203,36 @@ After the data check was completed, an exploratory data analysis (EDA) was condu
 Description of `all_data$Match_Status` variable.  
 ```{r data check, include=TRUE, out.width="50%"}
 Hmisc::describe(as.factor(all_data$Match_Status))
-ggplot2::ggplot(all_data[!is.na(all_data$Match_Status),], aes(x = Match_Status, fill = Match_Status)) +
+whomatched <- 
+  ggplot2::ggplot(all_data[!is.na(all_data$Match_Status),], aes(x = Match_Status, fill = Match_Status)) +
   geom_bar(stat='count') +
   labs(x = 'How many people matched into OBGYN?') +
         geom_label(stat='count',aes(label=..count..), size=7) +
         theme_grey(base_size = 18)
+whomatched
+
+ggsave(here::here("results", "whomatched.svg"), whomatched, device = "svg", width = 10, height = 7)
 ```
 
 # Data Description and *Univariate* analysis of variables. 
 Categorical and numerical variable plots:
 ```{r DataExplorer, results='asis', echo=TRUE, include=TRUE, align = 'left', cache=FALSE, out.width="75%"}
 #General Data Description
-inspectdf::inspect_cat(all_data) %>% show_plot()  #Please use `cols = c(data)`
-DataExplorer::plot_histogram(all_data, nrow = 2L, ncol = 2L)  
+inspect_cat_plot <- inspectdf::inspect_cat(all_data) %>% show_plot()  #Please use `cols = c(data)`
+inspect_cat_plot
+ggplot2::ggsave(here::here("results", "inspect_cat_plot.svg"), inspect_cat_plot, device = "svg", width = 10, height = 7)
+
+plot_histogram_plot <- DataExplorer::plot_histogram(all_data, nrow = 2L, ncol = 2L)  
+plot_histogram_plot
+ggplot2::ggsave(here::here("results", "plot_histogram_plot.svg"), plot_histogram_plot, device = "svg", width = 10, height = 7)
+
 DataExplorer::plot_bar(all_data, nrow = 2L, ncol = 2L)  #Not useful whatsoever.  
 
 #Univariate of boxplots
-inspectdf::inspect_num(all_data) %>% show_plot()  
+inspect_num_plot <- inspectdf::inspect_num(all_data) %>% show_plot()  
+inspect_num_plot
+
+ggplot2::ggsave(here::here("results", "inspect_num_plot.svg"), inspect_num_plot, device = "svg", width = 10, height = 7)
 ```
 
 ```{r, include=TRUE, echo=TRUE, include=TRUE, align = 'left', cache=FALSE, out.width="75%"}
@@ -229,27 +242,39 @@ expl <- names(all_data)[-19]
 
 # Loop vector with map
 expl_plots_box <- purrr::map(expl, ~box_fun_plot(data = all_data, x = "Match_Status", y = .x) )
-cowplot::plot_grid(plotlist = expl_plots_box)
+plot_grid_plot <- cowplot::plot_grid(plotlist = expl_plots_box)
+plot_grid_plot
+
+ggplot2::ggsave(here::here("results", "plot_grid_plot.svg"), plot_grid_plot, device = "svg", width = 10, height = 7)
 
 # Loop vector with map
 expl_plots_density <- purrr::map(expl, ~density_fun_plot(data = all_data, x = "Match_Status", y = .x) )
-cowplot::plot_grid(plotlist = expl_plots_density)
+plot_grid_plot_density <- cowplot::plot_grid(plotlist = expl_plots_density)
+plot_grid_plot_density
+
+ggplot2::ggsave(here::here("results", "plot_grid_plot_density.svg"), plot_grid_plot_density, device = "svg", width = 10, height = 7)
 ```
 
 
 ```{r funModeling2, echo=TRUE, message=FALSE, warning=TRUE, include=FALSE}
-create_plot_num(all_data)  #Uses custom function so it can be run in Drake
+create_plot_num_plot <- create_plot_num(all_data)  #Uses custom function so it can be run in Drake
+create_plot_num_plot
+
+ggplot2::ggsave(here::here("results", "create_plot_num_plot.svg"), create_plot_num_plot, device = "svg", width = 10, height = 7)
 ```
 
 ```{r funModeling1, echo=TRUE, message=FALSE, warning=TRUE, results='asis', include=FALSE}
-funModeling::df_status(all_data)
+df_status_output <- funModeling::df_status(all_data)
 #desc_groups(data=all_data, group_var="Match_Status")  #Breaks the knitr for some reason
+df_status_output
+write_csv(df_status_output, (here::here("results", "df_status_output.csv")))
 ```
 
 ```{r funModeling3, echo=TRUE, message=FALSE, warning=TRUE, results='asis', include=FALSE}
 #Summary stats of the numerical data showing means, medians, skew
-create_profiling_num(all_data)   #Uses custom function so it can be run in Drake
+create_profiling_num_output <- create_profiling_num(all_data)   #Uses custom function so it can be run in Drake
 #all_data %>% mosaic::inspect()  #another good option
+write_csv(create_profiling_num_output, (here::here("results", "create_profiling_num_output.csv")))
 ```
 
 ```{r View the data using Hmisc, echo=TRUE, include=FALSE, warning=FALSE}
@@ -378,7 +403,16 @@ Here is the code that I used for the cubic splines and it pushed the VIF through
 
 # Table: Applicant Descriptive Variables by Matched or Did Not Match from 2015 to 2018
 ```{r, echo=TRUE, warning=FALSE, message=FALSE, include=TRUE, results="asis"}
-tm_arsenal_table(df = all_data, by = all_data$Match_Status) #(arguments are outcome of interest is all_data$Match_Status, dataframe)
+tm_arsenal_table_output <- tm_arsenal_table(df = all_data, by = all_data$Match_Status) #(arguments are outcome of interest is all_data$Match_Status, dataframe)
+tm_arsenal_table_output
+write2word(tm_arsenal_table_output, (here::here("results", "tm_arsenal_table_output.doc")),
+  keep.md = TRUE,
+  quiet = TRUE) # passed to rmarkdown::render
+
+write2pdf(tm_arsenal_table_output, (here::here("results", "tm_arsenal_table_output.pdf")),
+  keep.md = FALSE,
+  quiet = TRUE) # passed to rmarkdown::render
+
 ```
 
 # Why are we using a train and test sample data set to test the model?  
@@ -441,6 +475,8 @@ train <- data_split %>% training() %>% glimpse()  # Extract the training datafra
 plot_hist_facet(data = train)
 test  <- data_split %>% testing() %>% glimpse() # Extra
 plot_hist_facet(data=test)
+
+
 ```
 
 Compare the datasets of `train` and `test`using arsenal package:  
@@ -846,7 +882,7 @@ Also, I like lasso because some people will find that using predictors of age, r
 
 Here, we use Lasso for simplicity and interpretability. The aim is to avoid over-parametrization and unnecessary model bias by carrying feature selection on-the-go. Key to this task will be cross-validation.  Start by creating a custom train control providing the number of cross-validations and setting the classProbs to TRUE for logistic regression. 
 
-# Regularized Regression
+# 0) Model: Regularized Regression
 Regularization methods provide a means to constrain or regularize the estimated coefficients, which can reduce the variance and decrease out of sample error.
 
 The glmnet package is extremely efficient and fast, even on very large data sets (mostly due to its use of Fortran to solve the lasso problem via coordinate descent); note, however, that it only accepts the non-formula XY interface so prior to modeling we need to separate our feature and target sets.
@@ -1082,7 +1118,11 @@ cv_glmnet <- caret::train(
 cv_glmnet$bestTune
 
 # plot cross-validated RMSE
-ggplot(cv_glmnet)
+cv_glmnet_plot <- ggplot(cv_glmnet)
+cv_glmnet_plot
+
+ggplot2::ggsave(here::here("results", "cv_glmnet_plot.svg"), cv_glmnet_plot, device = "svg", width = 10, height = 7)
+
 print("The 10-fold cross valdation RMSE across 10 alpha values (x-axis) and 10 lambda values (line color)")
 ```
 
@@ -1186,7 +1226,7 @@ tm_chart_strength_of_variables(lrm.with.lasso.variables)
 summary(lrm.with.lasso.variables)
 ```
 
-#MARS model (Multivariate Adaptive Regression Splines)
+# 00) Model: MARS model (Multivariate Adaptive Regression Splines)
 MARS allows for non-linear models.  
 https://bradleyboehmke.github.io/HOML/mars.html
 ```{r}
@@ -1253,7 +1293,10 @@ cv_mars <- caret::train(
 cv_mars$bestTune
 ##    nprune degree
 ## 22     12      3  #The model that provides the optimal combination includes third degree interaction effects and retains 12 terms.
-ggplot(cv_mars)
+cv_mars_plot <- ggplot(cv_mars)
+cv_mars_plot
+
+ggplot2::ggsave(here::here("results", "cv_mars_plot.svg"), cv_mars_plot, device = "svg", width = 10, height = 7)
 ```
 
 GCV = Generalized cross-validation (GCV) procedure,
@@ -1299,7 +1342,7 @@ knitr::kable(oddsratios, digits = 2)
 Annotation for Manuscript Table:  A:  Nonlinear component A of the function describing the variable and the probability of matching into OBGYN.  B:  Nonlinear component B of the function describing the variable and the probability of matching into OBGYN.  C:  Nonlinear component C of the function describing the variable and the probability of matching into OBGYN.  
 
 
-# 1) Model: Generalized linear model Use Model to predict match for Test Data
+# 1) Model: Generalized logistic regression model Use Model to predict match for Test Data
 Shift Gears: Test Accuracy of Model on Training Data, Use glmnet model on 207 and 2018 `test` data.   Run the 2017, 2018 data through the train model.  
 
 Build both a glm (train.glm.with.lasso.variables) and a lrm model (train.lrm.with.lasso.variables) here with the same predictor variables.  
@@ -1373,11 +1416,14 @@ roc.data <-
              tpr=unlist(perf@y.values),
              model="GLM")
 
-ggplot(roc.data, aes(x=fpr, ymin=0, ymax=tpr)) +
+roc_plot <- ggplot(roc.data, aes(x=fpr, ymin=0, ymax=tpr)) +
   geom_ribbon(alpha=0.2) +
   geom_line(aes(y=tpr)) +
   labs(title = paste0("ROC Curve with area under the curve = ", auc),
        subtitle = "Model: train.glm.with.lasso.variables")
+roc_plot
+
+ggplot2::ggsave(here::here("results", "roc_plot.svg"), roc_plot, device = "svg", width = 10, height = 7)
 ```
 
 ROC: ROC with nice labels on the x and y
@@ -1421,8 +1467,100 @@ plot(perf2, colorize = TRUE, text.adj = c(-0.2,1.7), main="Precision and Recall 
 
 Exploratory random forest was also performed. The variable importance for the random forest model was summarized in the figure below. 
 
+```{r}
+#https://bradleyboehmke.github.io/HOML/logistic-regression.html
+
+model3 <- glm(
+  Match_Status ~  .,
+  family = "binomial", 
+  data = train
+  )
+
+tidy(model3)
+```
+
+```{r}
+set.seed(123)
+cv_model3 <- train(
+  Match_Status ~ ., 
+  data = train, 
+  method = "glm",
+  family = "binomial",
+  trControl = trainControl(method = "cv", number = 10)
+)
+```
+
+```{r}
+summary(
+  resamples(
+    list(
+      model1 = cv_model1
+    )
+  )
+)$statistics$Accuracy
+```
+
+```{r}
+# predict class
+pred_class <- predict(cv_model3, train)
+
+# create confusion matrix
+confusionMatrix(
+  data = relevel(pred_class, ref = "Yes"), #????????????????
+  reference = relevel(train$Match_Status, ref = "Yes") #??????????????
+)
+```
+
+```{r}
+library(ROCR)
+
+# Compute predicted probabilities
+m3_prob <- predict(cv_model3, churn_train, type = "prob")$Yes
+
+# Compute AUC metrics for cv_model3
+perf2 <- prediction(m3_prob, churn_train$Attrition) %>%
+  performance(measure = "tpr", x.measure = "fpr")
+
+# Plot ROC curves for cv_model1 and cv_model3
+#plot(perf1, col = "black", lty = 2)
+plot(perf2, col = "black", lty = 2)
+legend(0.8, 0.2, legend = c("cv_model3"),
+       col = c("black", "blue"), lty = 2:1, cex = 0.6)
+```
+
+
+```{r}
+# Perform 10-fold CV on a PLS model tuning the number of PCs to 
+# use as predictors
+set.seed(123)
+cv_model_pls <- caret::train(
+  Match_Status ~ ., 
+  data = train, 
+  method = "pls",
+  family = "binomial",
+  trControl = trainControl(method = "cv", number = 10),
+  preProcess = c("zv", "center", "scale"),
+  tuneLength = 10
+)
+
+# Model with lowest RMSE
+cv_model_pls$bestTune
+##    ncomp
+## 14    14
+
+# Plot cross-validated RMSE
+cv_model_pls_plot <- ggplot2::ggplot(cv_model_pls)
+cv_model_pls_plot
+
+ggplot2::ggsave(here::here("results", "cv_model_pls_plot.svg"), cv_model_pls_plot, device = "svg", width = 10, height = 7)
+```
+The 10-fold cross-validation RMSE obtained using PLS with 1–16 principal components.
+
+```{r}
+vip::vip(cv_model3, num_features = 20)
+```
+
 **(2) Regression Tree model**
-  
 # 2)  Model: A CART model was fit using the rpart package. 
 
 Trees cqn handle both factors and continuous variables and do not need to create dummy variables.   Use the divide-and-conquer (aka recursive partinioning e.g. rpart) technique to create two homogenous groups.  Leaf nodes are at the bottom and denote final decisions on matching success. Random Forest is a more powerful algorithm over just a single tree. However, the Decision Tree classification preserve the interpretability which the random forest algorithm lacks.  A simple decision tree model was used for exploration. The Decision Tree does not require feature scaling but can overfit data by fitting the noise instead of the whole data.  It is very important to evaluate decision trees on data it has not seen before.
@@ -1490,7 +1628,10 @@ t.model3 <- caret::train(
   tuneLength = 20
 )
 
-ggplot(t.model3)
+t.model3.plot <- ggplot(t.model3)
+t.model3.plot
+
+ggplot2::ggsave(here::here("results", "t.model3.plot.svg"), t.model3.plot, device = "svg", width = 10, height = 7)
 ```
 
 Feature interpretation of Decision Trees
@@ -1576,7 +1717,9 @@ churn_svm <- caret::train(
 ```{r}
 # Plot results
 #https://bradleyboehmke.github.io/HOML/svm.html
-ggplot(churn_svm) + theme_light()
+churn_svm_plot <- ggplot(churn_svm) + theme_light()
+
+ggplot2::ggsave(here::here("results", "churn_svm_plot.svg"), churn_svm_plot, device = "svg", width = 10, height = 7)
 ```
 
 ```{r}
@@ -1773,7 +1916,7 @@ Random forest has accuracy of `r round(mean(solution_rf == test$Match_Status), d
 
 # 5) Model: Gradient Boosting Machine (GBM) model
 
-```{r}
+```{r run a basic GBM model}
 #https://bradleyboehmke.github.io/HOML/gbm.html
 # run a basic GBM model
 set.seed(123)  # for reproducibility
@@ -1795,13 +1938,13 @@ best <- which.min(train_gbm1$cv.error)
 sqrt(train_gbm1$cv.error[best])
 ```
 
-```{r}
+```{r plot error curve}
 # plot error curve
 gbm.perf(train_gbm1, method = "cv")
 ```
 
 Tuning
-```{r}
+```{r create grid search}
 # create grid search
 hyper_grid <- expand.grid(
   learning_rate = c(0.3, 0.1, 0.05, 0.01, 0.005),
@@ -1839,7 +1982,7 @@ for(i in seq_len(nrow(hyper_grid))) {
 arrange(hyper_grid, RMSE)
 ```
 
-```{r}
+```{r search grid}
 # search grid
 hyper_grid <- expand.grid(
   n.trees = 6000,
@@ -2262,6 +2405,121 @@ auto_ml@leaderboard %>%
 ```
 
 
+# 9) Model: Deep Learning model
+```{r}
+# https://bradleyboehmke.github.io/HOML/deep-learning.html
+# Helper packages
+library(dplyr)         # for basic data wrangling
+
+# Modeling packages
+library(keras)         # for fitting DNNs
+library(tfruns)        # for additional grid search & model training functions
+
+# Modeling helper package - not necessary for reproducibility
+library(tfestimators)  # provides grid search & model training interface
+library(dslabs)
+```
+
+```{r}
+# Import MNIST training data
+mnist <- dslabs::read_mnist()
+mnist_x <- mnist$train$images
+mnist_y <- mnist$train$labels
+
+# Rename columns and standardize feature values
+colnames(mnist_x) <- paste0("V", 1:ncol(mnist_x))
+mnist_x <- mnist_x / 255
+
+# One-hot encode response
+mnist_y <- to_categorical(mnist_y, 10)
+```
+
+```{r}
+model <- keras_model_sequential() %>%
+  layer_dense(units = 128, input_shape = ncol(mnist_x)) %>%
+  layer_dense(units = 64) %>%
+  layer_dense(units = 10)
+```
+
+```{r}
+model <- keras_model_sequential() %>%
+  
+  # Network architecture
+  layer_dense(units = 128, activation = "relu", input_shape = ncol(mnist_x)) %>%
+  layer_dense(units = 64, activation = "relu") %>%
+  layer_dense(units = 10, activation = "softmax") %>%
+  
+  # Backpropagation
+  compile(
+    loss = 'categorical_crossentropy',
+    optimizer = optimizer_rmsprop(),
+    metrics = c('accuracy')
+  )
+```
+
+```{r}
+# Train the model
+fit1 <- model %>%
+  fit(
+    x = mnist_x,
+    y = mnist_y,
+    epochs = 25,
+    batch_size = 128,
+    validation_split = 0.2,
+    verbose = FALSE
+  )
+
+# Display output
+fit1
+## Trained on 48,000 samples, validated on 12,000 samples (batch_size=128, epochs=25)
+## Final epoch (plot to see history):
+## val_loss: 0.1512
+##  val_acc: 0.9773
+##     loss: 0.002308
+##      acc: 0.9994
+plot(fit1)
+```
+
+
+```{r}
+model_w_adj_lrn <- keras_model_sequential() %>%
+  layer_dense(units = 256, activation = "relu", input_shape = ncol(mnist_x)) %>%
+  layer_batch_normalization() %>%
+  layer_dropout(rate = 0.4) %>%
+  layer_dense(units = 128, activation = "relu") %>%
+  layer_batch_normalization() %>%
+  layer_dropout(rate = 0.3) %>%
+  layer_dense(units = 64, activation = "relu") %>%
+  layer_batch_normalization() %>%
+  layer_dropout(rate = 0.2) %>%
+  layer_dense(units = 10, activation = "softmax") %>%
+  compile(
+    loss = 'categorical_crossentropy',
+    optimizer = optimizer_adam(),
+    metrics = c('accuracy')
+  ) %>%
+  fit(
+    x = mnist_x,
+    y = mnist_y,
+    epochs = 35,
+    batch_size = 128,
+    validation_split = 0.2,
+    callbacks = list(
+      callback_early_stopping(patience = 5),
+      callback_reduce_lr_on_plateau(factor = 0.05)
+      ),
+    verbose = FALSE
+  )
+
+model_w_adj_lrn
+
+# Optimal
+min(model_w_adj_lrn$metrics$val_loss)
+max(model_w_adj_lrn$metrics$val_acc)
+
+# Learning rate
+plot(model_w_adj_lrn)
+```
 
 
 \pagebreak
@@ -2487,7 +2745,17 @@ utils::sessionInfo()
 # rsconnect::deployApp('DynNomapp/')
 ```
 
+# Render Web Site
 ```{r}
+#https://bookdown.org/yihui/rmarkdown/websites.html
+
+# from CRAN
+install.packages("blogdown")
+library(blogdown)
+
+#blogdown::new_site()
+blogdown::serve_site()
+
 #Publish to a website
 rmarkdown::render_site()
 
