@@ -11,8 +11,8 @@
 data_folder <- "~/Dropbox/Nomogram/nomogram/data"#paste0(getwd(), "/Data/")
 results_folder <- "~/Dropbox/Nomogram/nomogram/results"#paste0(getwd(), "/Results/")
 
-data_file <- "all_years_mutate_124.csv"
-#data_file <- "all_years_filter_112.rds" #original that works
+#data_file <- "all_years_mutate_124.csv"
+data_file <- "all_years_filter_112.rds" #original that works
 
 #Install and Load needed R packages.
 # Set libPaths.
@@ -46,8 +46,8 @@ doMC::registerDoMC(cores = detectCores()-1) #Use multiple cores for processing
 skim_with(numeric = list(hist = NULL), integer = list(hist = NULL))
 
 ## TinTex
+options(tinytex.verbose = FALSE)
 tinytex::tlmgr_update()  # update LaTeX packages
-options(tinytex.verbose = TRUE)
 
 #####  Functions for nomogram
 create_plot_num <- 
@@ -78,8 +78,8 @@ create_profiling_num <-
 
 # read in data
 all_data <- 
-  #read_rds(paste0(data_folder, "/", data_file)) %>%
-  read_csv(paste0(data_folder, "/", data_file)) %>%
+  read_rds(paste0(data_folder, "/", data_file)) %>%
+  #read_csv(paste0(data_folder, "/", data_file)) %>%
   select(-"Gold_Humanism_Honor_Society", 
          -"Sigma_Sigma_Phi", 
          -"Misdemeanor_Conviction", 
@@ -110,7 +110,7 @@ all_data <-
     "Count_of_Peer_Reviewed_Online_Publication", 
     "Visa_Sponsorship_Needed", 
     "Medical_Degree", 
-        'Rank',
+       # 'Rank',
     'Match_Status')]
 
 #Rename columns with more human readable names
