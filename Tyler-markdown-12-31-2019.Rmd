@@ -165,7 +165,7 @@ all_data$Count_of_Oral_Presentation <- as.numeric(all_data$Count_of_Oral_Present
 all_data$Count_of_Other_than_Published <- as.numeric(all_data$Count_of_Other_than_Published)
 all_data$Count_of_Peer_Reviewed_Book_Chapter <- as.numeric(all_data$Count_of_Peer_Reviewed_Book_Chapter)
 all_data$Count_of_Online_Publications <- as.numeric(all_data$Count_of_Online_Publications)
-    all_data$Rank <- as.factor(all_data$Rank)
+    #all_data$Rank <- as.factor(all_data$Rank)
 inspectdf::inspect_types(all_data) %>% show_plot()
 ```
 
@@ -272,8 +272,8 @@ s <-
             white_non_white + 
             Visa_Sponsorship_Needed +
             cut2(Count_of_Articles_Abstracts, 0:3) + 
-            cut2(Count_of_Other_than_Published, 0:3) +#, 
-            Rank,
+            cut2(Count_of_Other_than_Published, 0:3),  
+            #Rank,
           data = all_data)
 s
 ```
@@ -682,7 +682,7 @@ lm.fit2 <-
         Count_of_Other_than_Published + 
         Count_of_Online_Publications + 
         Visa_Sponsorship_Needed + 
-          Rank + 
+          #Rank + 
         Medical_Degree),  
      data = train)
 
@@ -2049,7 +2049,7 @@ hyper_grid %>%
   glimpse()
 ```
 
-```{r}
+```{r Optimal parameters}
 #Optimal parameters
 # optimal parameter list
 params <- list(
@@ -2061,26 +2061,31 @@ params <- list(
 )
 
 # train final model
-xgb.fit.final <- xgboost(
-  params = params,
-  data = X,
-  label = Y,
-  nrounds = 3944,
-  objective = "reg:linear",
-  verbose = 0
-)
+
+#Error in UseMethod("xgboost") : 
+  #no applicable method for 'xgboost' applied to an object of class "list"
+  
+  
+# xgb.fit.final <- xgboost(
+#   params = params,
+#   data = X,
+#   label = Y,
+#   nrounds = 3944,
+#   objective = "reg:linear",
+#   verbose = 0
+# )
 ```
 
 ```{r}
-# variable importance plot
-vip::vip(xgb.fit.final) 
-xgb.importance(xgb.fit.final)
-xgboost::xgb.ggplot.importance(xgb.fit.final)
+# variable importance plot,   Error in vip::vip(xgb.fit.final) : object 'xgb.fit.final' not found
+# vip::vip(xgb.fit.final) 
+# xgb.importance(xgb.fit.final)
+# xgboost::xgb.ggplot.importance(xgb.fit.final)
 ```
 
 # 8) Model: Ensembles model
 
-```{r}
+```{r Helper packages}
 # Helper packages
 library(rsample)   # for creating our train-test splits
 library(recipes)   # for minor feature engineering tasks
@@ -2089,8 +2094,8 @@ library(recipes)   # for minor feature engineering tasks
 library(h2o)       # for fitting stacked models
 ```
 
-```{r}
-# Load and split the Ames housing data
+```{r Load and split the data}
+# Load and split the data
 set.seed(123)  # for reproducibility
 split <- initial_split(all_data, strata = "Match_Status")
 ames_train <- training(split)
@@ -2101,7 +2106,6 @@ blueprint <- recipe(Match_Status ~ ., data = train) %>%
   step_other(all_nominal(), threshold = 0.005)
 
 # Create training & test sets for h2o
-library(h2o)
 h2o.init()
 train_h2o <- prep(blueprint, training = train, retain = TRUE) %>%
   juice() %>%
@@ -2115,7 +2119,7 @@ Y <- "Match_Status"
 X <- setdiff(names(ames_train), Y)
 ```
 
-```{r}
+```{r Train & cross-validate mutliple models}
 # Train & cross-validate a GLM model
 # best_glm <- h2o.glm(
 #   x = X, y = Y, training_frame = train_h2o, alpha = 0.1,
@@ -2152,7 +2156,7 @@ best_xgb <- h2o.xgboost(
 ```
 
 
-```{r}
+```{r Train a stacked tree ensemble}
 # Train a stacked tree ensemble
 ensemble_tree <- h2o.stackedEnsemble(
   x = X, y = Y, training_frame = train_h2o, model_id = "my_tree_ensemble",
@@ -2162,7 +2166,7 @@ ensemble_tree <- h2o.stackedEnsemble(
 ```
 
 
-```{r}
+```{r et results from base learners}
 # Get results from base learners
 get_rmse <- function(model) {
   results <- h2o.performance(model, newdata = test_h2o)
@@ -2170,15 +2174,13 @@ get_rmse <- function(model) {
 }
 list(best_rf, best_gbm, best_xgb) %>%
   purrr::map_dbl(get_rmse)
-## [1] 30024.67 23075.24 20859.92 21391.20
 
 # Stacked results
 h2o.performance(ensemble_tree, newdata = test_h2o)@metrics$RMSE
-## [1] 20664.56
 ```
 
 
-```{r}
+```{r Creation of prections for each model}
 data.frame(
   #GLM_pred = as.vector(h2o.getFrame(best_glm@model$cross_validation_holdout_predictions_frame_id$name)),
   RF_pred = as.vector(h2o.getFrame(best_rf@model$cross_validation_holdout_predictions_frame_id$name)),
@@ -2188,7 +2190,7 @@ data.frame(
 ```
 
 
-```{r}
+```{r Define GBM hyperparameter grid}
 # Define GBM hyperparameter grid
 hyper_grid <- list(
   max_depth = c(1, 3, 5),
@@ -2216,7 +2218,7 @@ random_grid <- h2o.grid(
 )
 ```
 
-```{r}
+```{r Sort results by RMSE}
 # Sort results by RMSE
 h2o.getGrid(
   grid_id = "gbm_grid", 
@@ -2224,14 +2226,14 @@ h2o.getGrid(
 )
 ```
 
-```{r}
+```{r Grab the model_id for the top model, chosen by validation error}
 # Grab the model_id for the top model, chosen by validation error
 best_model_id <- random_grid_perf@model_ids[[1]]
 best_model <- h2o.getModel(best_model_id)
 h2o.performance(best_model, newdata = test_h2o)
 ```
 
-```{r}
+```{r Train a stacked ensemble using the GBM grid}
 # Train a stacked ensemble using the GBM grid
 ensemble <- h2o.stackedEnsemble(
   x = X, y = Y, training_frame = train_h2o, model_id = "ensemble_gbm_grid",
@@ -2242,7 +2244,7 @@ ensemble <- h2o.stackedEnsemble(
 h2o.performance(ensemble, newdata = test_h2o)
 ```
 
-```{r}
+```{r Use AutoML to find a list of candidate models (i.e., leaderboard)}
 # Use AutoML to find a list of candidate models (i.e., leaderboard)
 auto_ml <- h2o.automl(
   x = X, y = Y, training_frame = train_h2o, nfolds = 5, 
