@@ -211,7 +211,7 @@ whomatched <-
         theme_grey(base_size = 18)
 whomatched
 
-ggsave(here::here("results", "whomatched.svg"), whomatched, device = "svg", width = 10, height = 7)
+ggsave(here::here("results", "whomatched.png"), whomatched, device = "png", width = 10, height = 7)
 ```
 
 # Data Description and *Univariate* analysis of variables. 
@@ -220,11 +220,10 @@ Categorical and numerical variable plots:
 #General Data Description
 inspect_cat_plot <- inspectdf::inspect_cat(all_data) %>% show_plot()  #Please use `cols = c(data)`
 inspect_cat_plot
-ggplot2::ggsave(here::here("results", "inspect_cat_plot.svg"), inspect_cat_plot, device = "svg", width = 10, height = 7)
+ggplot2::ggsave(here::here("results", "inspect_cat_plot.png"), inspect_cat_plot, device = "png", width = 10, height = 7)
 
 plot_histogram_plot <- DataExplorer::plot_histogram(all_data, nrow = 2L, ncol = 2L)  
 plot_histogram_plot
-ggplot2::ggsave(here::here("results", "plot_histogram_plot.svg"), plot_histogram_plot, device = "svg", width = 10, height = 7)
 
 DataExplorer::plot_bar(all_data, nrow = 2L, ncol = 2L)  #Not useful whatsoever.  
 
@@ -232,7 +231,7 @@ DataExplorer::plot_bar(all_data, nrow = 2L, ncol = 2L)  #Not useful whatsoever.
 inspect_num_plot <- inspectdf::inspect_num(all_data) %>% show_plot()  
 inspect_num_plot
 
-ggplot2::ggsave(here::here("results", "inspect_num_plot.svg"), inspect_num_plot, device = "svg", width = 10, height = 7)
+ggplot2::ggsave(here::here("results", "inspect_num_plot.png"), inspect_num_plot, device = "png", width = 10, height = 7)
 ```
 
 ```{r, include=TRUE, echo=TRUE, include=TRUE, align = 'left', cache=FALSE, out.width="75%"}
@@ -245,14 +244,14 @@ expl_plots_box <- purrr::map(expl, ~box_fun_plot(data = all_data, x = "Match_Sta
 plot_grid_plot <- cowplot::plot_grid(plotlist = expl_plots_box)
 plot_grid_plot
 
-ggplot2::ggsave(here::here("results", "plot_grid_plot.svg"), plot_grid_plot, device = "svg", width = 10, height = 7)
+ggplot2::ggsave(here::here("results", "plot_grid_plot.png"), plot_grid_plot, device = "png", width = 10, height = 7)
 
 # Loop vector with map
 expl_plots_density <- purrr::map(expl, ~density_fun_plot(data = all_data, x = "Match_Status", y = .x) )
 plot_grid_plot_density <- cowplot::plot_grid(plotlist = expl_plots_density)
 plot_grid_plot_density
 
-ggplot2::ggsave(here::here("results", "plot_grid_plot_density.svg"), plot_grid_plot_density, device = "svg", width = 10, height = 7)
+ggplot2::ggsave(here::here("results", "plot_grid_plot_density.png"), plot_grid_plot_density, device = "png", width = 10, height = 7)
 ```
 
 
@@ -260,7 +259,7 @@ ggplot2::ggsave(here::here("results", "plot_grid_plot_density.svg"), plot_grid_p
 create_plot_num_plot <- create_plot_num(all_data)  #Uses custom function so it can be run in Drake
 create_plot_num_plot
 
-ggplot2::ggsave(here::here("results", "create_plot_num_plot.svg"), create_plot_num_plot, device = "svg", width = 10, height = 7)
+ggplot2::ggsave(here::here("results", "create_plot_num_plot.png"), create_plot_num_plot, device = "png", width = 10, height = 7)
 ```
 
 ```{r funModeling1, echo=TRUE, message=FALSE, warning=TRUE, results='asis', include=FALSE}
@@ -410,7 +409,7 @@ write2word(tm_arsenal_table_output, (here::here("results", "tm_arsenal_table_out
   quiet = TRUE) # passed to rmarkdown::render
 
 write2pdf(tm_arsenal_table_output, (here::here("results", "tm_arsenal_table_output.pdf")),
-  keep.md = FALSE,
+  keep.md = TRUE,
   quiet = TRUE) # passed to rmarkdown::render
 
 ```
@@ -472,26 +471,61 @@ test_4  <- split_2[[2]]
 data_split
 
 train <- data_split %>% training() %>% glimpse()  # Extract the training dataframe
-plot_hist_facet(data = train)
-test  <- data_split %>% testing() %>% glimpse() # Extra
+write_csv(x = train, 
+          path = (here::here("results", "train_at_data_split_phase.csv")), 
+          col_names = TRUE)
+training_data_plot_hist_facet <- plot_hist_facet(data = train)
+training_data_plot_hist_facet
+# ggplot2::ggsave(here::here("results", "training_data_plot_hist_facet.png"), train, device = "png", width = 10, height = 7)
+
+test <- data_split %>% testing() %>% glimpse() # Extra
+write_csv(x = test, 
+          path = (here::here("results", "test_at_data_split_phase.csv")), 
+          col_names = TRUE)
+
 plot_hist_facet(data=test)
-
-
+# ggplot2::ggsave(here::here("results", "tests_data_plot_hist_facet.png"), tests_data_plot_hist_facet, device = "png", width = 10, height = 7)
 ```
 
 Compare the datasets of `train` and `test`using arsenal package:  
 ```{r, results="asis", include=FALSE, echo=FALSE}
-summary(arsenal::comparedf(train, test))
+compareddf <- summary(arsenal::comparedf(train, test))
+
+write2word(compareddf, (here::here("results", "compareddf.doc")),
+  keep.md = TRUE,
+  quiet = TRUE) # passed to rmarkdown::render
+
+write2pdf(compareddf, (here::here("results", "compareddf.pdf")),
+  keep.md = TRUE,
+  quiet = TRUE) # passed to rmarkdown::render
 ```
 
 `train` data characteristics are all reported with medians and IQR.  
 ```{r, include = TRUE, results="asis"}
-tm_arsenal_table(df=train, by=train$Match_Status)
+train_table_characteristics <- tm_arsenal_table(
+  df=train, 
+  by=train$Match_Status)
+
+write2word(train_table_characteristics, (here::here("results", "train_table_characteristics.doc")),
+  keep.md = TRUE,
+  quiet = TRUE) # passed to rmarkdown::render
+
+write2pdf(train_table_characteristics, (here::here("results", "train_table_characteristics.pdf")),
+  keep.md = TRUE,
+  quiet = TRUE) # passed to rmarkdown::render
 ```
 
 `test` data characteristics are all reported with medians and IQR. 
 ```{r, include = TRUE, results="asis"}
-tm_arsenal_table(df = test, by = test$Match_Status)
+test_table_characteristics <- tm_arsenal_table(df = test, by = test$Match_Status)
+
+write2word(test_table_characteristics, (here::here("results", "test_table_characteristics.doc")),
+  keep.md = TRUE,
+  quiet = TRUE) # passed to rmarkdown::render
+
+write2pdf(test_table_characteristics, (here::here("results", "test_table_characteristics.pdf")),
+  keep.md = TRUE,
+  quiet = TRUE) # passed to rmarkdown::render
 ```
 
 Check Proportions of Matched students in the test and train data sets.  Orginal response distribution and then showing consistent response ratio between train & test data sets.  
@@ -558,7 +592,9 @@ In this correlation plot we want to look for the bright, large circles which imm
 Observations:  Match_Status is most correlated to US_or_Canadian_Applicant and then to Age.  Visa_Sponsorship_Needed, Medical_Education_Interrupted, and white_non_white are all variables that might play a secondary role.  The other features are pretty weak.  
 
 ```{r, echo=TRUE, include = TRUE}
-inspectdf::inspect_cor(train, method = "pearson", alpha = 0.05) %>% show_plot()  
+inspect_cor_plot <- inspectdf::inspect_cor(train, method = "pearson", alpha = 0.05) %>% show_plot()  
+
+ggplot2::ggsave(here::here("results", "inspect_cor_plot.png"), inspect_cor_plot, device = "png", width = 10, height = 7)
 ```
 Correlation was found with Count_of_Poster_Presentation, Age, and USMLE_Step_1_Score in the train data set.  The lower the age (correlation -0.33)  the patient the more likely they are to match.  The higher the USMLE_Step_1 scores the more likely they are to match (correlation 0.344).  The younger you are the more likely that you get a higher USMLE_Step_1 score.  The number of posters and the number of abstract articles are positively correleated as well.  The strongest positive correlation was between the count of articles and the count of posters.  No shocker there.  Strong negative correlations were between Age and USMLE step 1 score.  Also match status and age were negatively correlated (the younger you are the more likely you are to match).   
 
@@ -575,15 +611,17 @@ all_data_binarized_tbl <- all_data %>%
 all_data_binarized_tbl %>% tibble::glimpse()
 
 all_data_correlated_tbl <- all_data_binarized_tbl %>%
-  correlationfunnel::correlate(target = Match_Status__Match)
+  correlationfunnel::correlate(target = Match_Status__Matched)
 
 all_data_correlated_tbl
 
 all_data_correlated_tbl %>%
   correlationfunnel::plot_correlation_funnel(interactive = TRUE, limits = c(-1, 1))
 
-all_data_correlated_tbl %>%
+static_correlation_funnel <- all_data_correlated_tbl %>%
   correlationfunnel::plot_correlation_funnel(interactive = FALSE, limits = c(-1, 1))
+
+ggplot2::ggsave(here::here("results", "static_correlation_funnel.png"), static_correlation_funnel, device = "png", width = 10, height = 7)
 ```
 
 
@@ -591,7 +629,10 @@ all_data_correlated_tbl %>%
 #cor(1:5, 1:5) #Perfect positive correlation
 #cor(1:5, 5:1) #Perfect negative correlation
 #https://jamesmarquezportfolio.com/correlation_matrices_in_r.html
-psych::pairs.panels(train[, c(2, 9:15, 18)], bg=c("red","blue")[as.factor(train$Match_Status)], pch=21, jiggle = TRUE, scale = TRUE)
+psych_correlation <- psych::pairs.panels(train[, c(2, 9:15, 18)], bg=c("red","blue")[as.factor(train$Match_Status)], pch=21, jiggle = TRUE, scale = TRUE)
+psych_correlation
+
+ggplot2::ggsave(here::here("results", "psych_correlation.png"), psych_correlation, device = "png", width = 10, height = 7)
 ```
 
 # Fitting and Summarizing the Kitchen Sink Model: (aka throw everything at it)
@@ -644,6 +685,8 @@ kitchen.sink[[26]]
 ```{r, include=TRUE}
 #See custom-made function in Additional_functions_nomogram.R for specific settings on nomogram build. 
 tm_nomogram_prep(kitchen.sink)
+dev.print(pdf, '~/Dropbox/Nomogram/nomogram/results/tm_nomogram_prep_kitchen_sink.pdf')
+dev.off()
 ```
 
 ```{r}
@@ -776,6 +819,8 @@ prediction_train <- predict(limited.vif.model.kitchen.sink, newdata = train,
                             type = "response")
 
 hist(prediction_train)
+dev.print(pdf, '~/Dropbox/Nomogram/nomogram/results/hist_prediction_train.pdf')
+dev.off()
 ```
 
 Out of data set prediction, predicting probability on test data set with collinear variable of `train$Medical_Degree` removed.  
@@ -786,6 +831,8 @@ prediction_test <- predict(limited.vif.model.kitchen.sink, newdata = test,
                            type = "response")
 
 hist(prediction_test)
+dev.print(pdf, '~/Dropbox/Nomogram/nomogram/results/hist_prediction_test.pdf')
+dev.off()
 ```
 
 ```{r}
@@ -969,15 +1016,22 @@ Plot the results of the lasso.mod so we can see if this is more ridge or more la
 
 ```{r, fig.width=7, fig.asp=1, fig.cap="Figure: Plotting the results of ridge or lasso in regression"}
 plot(lasso.mod)
+dev.print(pdf, '~/Dropbox/Nomogram/nomogram/results/plot_lasso_mod.pdf')
+dev.off()
 ```
   
 Plot LASSO factors - Plot the individual variables by lambda.  Saves the lasso.mod to an RDS file for later use.  Coefficients for our ridge regression model as λ grows from  0 → ∞
  
 ```{r,  fig.asp=1}
-plot(lasso.mod$finalModel, xvar = 'lambda', label = TRUE)
+lasso.mod.plot <- plot(lasso.mod$finalModel, xvar = 'lambda', label = TRUE)
+dev.print(pdf, '~/Dropbox/Nomogram/nomogram/results/lasso_mod_plot.pdf')
+dev.off()
+
 print("Coefficients for our ridge regression model as λ grows from  0 → ∞")
 #legend("topright", lwd = 1, col = 1:5, legend = colnames(train), cex = .6)
 #https://www.datacamp.com/community/tutorials/tutorial-ridge-lasso-elastic-net
+ggplot2::ggsave(here::here("results", "lasso.mod.plot.png"), lasso.mod.plot, device = "png", width = 10, height = 7)
+
 colnames(train[1:17])
 saveRDS(lasso.mod, "best.LASSO.rds")  #save the model
 ```
@@ -1012,7 +1066,10 @@ glmnet1 <-
             alpha=.5, 
             family="binomial")
 
-plot(glmnet1,main = "Misclassification Error")
+misclassification_error <- plot(glmnet1,main = "Misclassification Error")
+misclassification_error
+
+ggplot2::ggsave(here::here("results", "misclassification_error.png"), misclassification_error, device = "png", width = 10, height = 7)
 ```
 The left vertical line represents the minimum error, and the right vertical line represents the cross-validated error within 1 standard error of the minimum. LASSO, least absolute shrinkage and selection operator
 
@@ -1031,6 +1088,8 @@ ridge <- cv.glmnet(
   family="binomial")
 
 plot(ridge, xvar = "lambda")
+dev.print(pdf, '~/Dropbox/Nomogram/nomogram/results/ridge.pdf')
+dev.off()
 ```
 
 We can also access the coefficients for a particular model using coef(). glmnet stores all the coefficients for each model in order of largest to smallest λ. 
@@ -1053,6 +1112,9 @@ lasso <- cv.glmnet(
 par(mfrow = c(1, 2))
 plot(ridge, main = "Ridge penalty\n\n")
 plot(lasso, main = "Lasso penalty\n\n")
+
+dev.print(pdf, '~/Dropbox/Nomogram/nomogram/results/ridgeandlassopenalty.pdf')
+dev.off()
 ```
 
 ```{r}
@@ -1097,6 +1159,9 @@ abline(v = log(ridge$lambda.1se), col = "blue", lty = "dashed")
 plot(lasso_min, xvar = "lambda", main = "Lasso penalty\n\n")
 abline(v = log(lasso$lambda.min), col = "red", lty = "dashed")
 abline(v = log(lasso$lambda.1se), col = "blue", lty = "dashed")
+
+dev.print(pdf, '~/Dropbox/Nomogram/nomogram/results/ridge_lass_min_max.pdf')
+dev.off()
 ```
 
 ```{r}
@@ -1121,7 +1186,7 @@ cv_glmnet$bestTune
 cv_glmnet_plot <- ggplot(cv_glmnet)
 cv_glmnet_plot
 
-ggplot2::ggsave(here::here("results", "cv_glmnet_plot.svg"), cv_glmnet_plot, device = "svg", width = 10, height = 7)
+ggplot2::ggsave(here::here("results", "cv_glmnet_plot.png"), cv_glmnet_plot, device = "png", width = 10, height = 7)
 
 print("The 10-fold cross valdation RMSE across 10 alpha values (x-axis) and 10 lambda values (line color)")
 ```
@@ -1137,7 +1202,10 @@ Variable importance for regularized models provides a similar interpretation as 
 
 ```{r}
 library(vip)
-vip::vip(cv_glmnet, num_features = 20, bar = FALSE)
+feature_interpretation_regularized_regression <- vip::vip(cv_glmnet, num_features = 20, bar = FALSE)
+feature_interpretation_regularized_regression
+
+ggplot2::ggsave(here::here("results", "feature_interpretation_regularized_regression.png"), feature_interpretation_regularized_regression, device = "png", width = 10, height = 7)
 ```
 
 
@@ -1244,6 +1312,12 @@ summary(mars1) %>% .$coefficients %>% head(20)
 
 ```{r}
 plot(mars1, which = 1)
+dev.print(pdf, '~/Dropbox/Nomogram/nomogram/results/mars1.pdf')
+dev.off()
+
+grDevices::tiff(filename="mars_plot.tiff", width=480, height=240, res=120, units = "px", bg = "white")
+plot(mars1, which = 1)
+dev.off()
 ```
 
 In addition to pruning the number of knots, earth::earth() allows us to also assess potential interactions between different hinge functions. The following illustrates this by including a degree = 2 argument. 
@@ -1296,7 +1370,7 @@ cv_mars$bestTune
 cv_mars_plot <- ggplot(cv_mars)
 cv_mars_plot
 
-ggplot2::ggsave(here::here("results", "cv_mars_plot.svg"), cv_mars_plot, device = "svg", width = 10, height = 7)
+ggplot2::ggsave(here::here("results", "cv_mars_plot.png"), cv_mars_plot, device = "png", width = 10, height = 7)
 ```
 
 GCV = Generalized cross-validation (GCV) procedure,
@@ -1309,6 +1383,8 @@ p1 <- vip(cv_mars, num_features = 40, bar = FALSE, value = "gcv") + ggtitle("GCV
 p2 <- vip(cv_mars, num_features = 40, bar = FALSE, value = "rss") + ggtitle("RSS")
 
 gridExtra::grid.arrange(p1, p2, ncol = 2)
+dev.print(pdf, '~/Dropbox/Nomogram/nomogram/results/p1_and_p2.pdf')
+dev.off()
 ```
 
 Its important to realize that variable importance will only measure the impact of the prediction error as features are included; however, it does not measure the impact for particular hinge functions created for a given feature.
@@ -1328,6 +1404,9 @@ Odds ratios in graph form in the train dataset.
 ```{r, echo=TRUE,  include = TRUE, fig.width=7, fig.asp=1, fig.cap="Figure: Odds ratios of the training data set to predict matching into OBGYN residency."}
 plot(summary(lrm.with.lasso.variables), cex=1.2, cex.lab=0.7, cex.axis = 0.7)
 #https://rstudio-pubs-static.s3.amazonaws.com/283447_fd922429e1f0415c89b93b6da6dc1ccc.html
+
+dev.print(pdf, '~/Dropbox/Nomogram/nomogram/results/odds_ratio_image.pdf')
+dev.off()
 ```
 
 ```{r, results="asis"}
@@ -1423,7 +1502,7 @@ roc_plot <- ggplot(roc.data, aes(x=fpr, ymin=0, ymax=tpr)) +
        subtitle = "Model: train.glm.with.lasso.variables")
 roc_plot
 
-ggplot2::ggsave(here::here("results", "roc_plot.svg"), roc_plot, device = "svg", width = 10, height = 7)
+ggplot2::ggsave(here::here("results", "roc_plot.png"), roc_plot, device = "png", width = 10, height = 7)
 ```
 
 ROC: ROC with nice labels on the x and y
@@ -1526,6 +1605,8 @@ perf2 <- prediction(m3_prob, churn_train$Attrition) %>%
 plot(perf2, col = "black", lty = 2)
 legend(0.8, 0.2, legend = c("cv_model3"),
        col = c("black", "blue"), lty = 2:1, cex = 0.6)
+dev.print(pdf, '~/Dropbox/Nomogram/nomogram/results/cv_model3.pdf')
+dev.off()
 ```
 
 
@@ -1552,7 +1633,7 @@ cv_model_pls$bestTune
 cv_model_pls_plot <- ggplot2::ggplot(cv_model_pls)
 cv_model_pls_plot
 
-ggplot2::ggsave(here::here("results", "cv_model_pls_plot.svg"), cv_model_pls_plot, device = "svg", width = 10, height = 7)
+ggplot2::ggsave(here::here("results", "cv_model_pls_plot.png"), cv_model_pls_plot, device = "png", width = 10, height = 7)
 ```
 The 10-fold cross-validation RMSE obtained using PLS with 1–16 principal components.
 
@@ -1581,6 +1662,8 @@ t.model$variable.importance
 ```{r fancyR plot rpart EDA, include=TRUE}
 # Tree visualization
 tm_rpart_plot(t.model)
+dev.print(pdf, '~/Dropbox/Nomogram/nomogram/results/tm_rpart_plot.pdf')
+dev.off()
 ```
 Using the model to make Match_Status predictions on the test dataframe
 ```{r}
@@ -1599,6 +1682,8 @@ The accuracy or correct classification rate of the decision tree called `t.model
 Look at pruning the tree branches to determine the optimal complexity vs. accuracy point for stopping branch growth.  Pruning complexity parameter (cp) plot illustrating the relative cross validation error (y-axis) for various cp values (lower x-axis). Smaller cp values lead to larger trees (upper x-axis). Using the 1-SE rule, a tree size of 10-12 provides optimal cross validation results.
 ```{r}
 plotcp(t.model)
+dev.print(pdf, '~/Dropbox/Nomogram/nomogram/results/plotcp.pdf')
+dev.off()
 ```
 
 The figure shows the pruning complexity parameter plot for a fully grown tree. Significant reduction in the cross validation error is achieved with tree sizes 88-100 and then the cross validation error levels off with minimal or no additional improvements.
@@ -1613,6 +1698,9 @@ t.model2 <- rpart(
 plotcp(t.model2)
 abline(v = 34, lty = "dashed")  #Not sure if 11 is ideal.  
 #https://bradleyboehmke.github.io/HOML/DT.html
+dev.print(pdf, '~/Dropbox/Nomogram/nomogram/results/plotcp_for_t_model2.pdf')
+dev.off()
+
 ```
 
 ```{r}
@@ -1631,7 +1719,7 @@ t.model3 <- caret::train(
 t.model3.plot <- ggplot(t.model3)
 t.model3.plot
 
-ggplot2::ggsave(here::here("results", "t.model3.plot.svg"), t.model3.plot, device = "svg", width = 10, height = 7)
+ggplot2::ggsave(here::here("results", "t.model3.plot.png"), t.model3.plot, device = "png", width = 10, height = 7)
 ```
 
 Feature interpretation of Decision Trees
@@ -1719,7 +1807,7 @@ churn_svm <- caret::train(
 #https://bradleyboehmke.github.io/HOML/svm.html
 churn_svm_plot <- ggplot(churn_svm) + theme_light()
 
-ggplot2::ggsave(here::here("results", "churn_svm_plot.svg"), churn_svm_plot, device = "svg", width = 10, height = 7)
+ggplot2::ggsave(here::here("results", "churn_svm_plot.png"), churn_svm_plot, device = "png", width = 10, height = 7)
 ```
 
 ```{r}
@@ -2478,6 +2566,8 @@ fit1
 ##     loss: 0.002308
 ##      acc: 0.9994
 plot(fit1)
+dev.print(pdf, '~/Dropbox/Nomogram/nomogram/results/deep_learning_fit1.pdf')
+dev.off()
 ```
 
 
@@ -2519,6 +2609,8 @@ max(model_w_adj_lrn$metrics$val_acc)
 
 # Learning rate
 plot(model_w_adj_lrn)
+dev.print(pdf, '~/Dropbox/Nomogram/nomogram/results/learning_rate_plot.pdf')
+dev.off()
 ```
 
 
@@ -2600,7 +2692,12 @@ calib <- rms::calibrate(train.lrm.with.lasso.variables,
                         data = test, 
                         estimates = TRUE)  #Plot test data set
 
-plot(calib, legend = TRUE, subtitles = TRUE, xlab = "Predicted probability according to model", ylab = "Observation Proportion of Matching")
+calibration_plot <- plot(calib, legend = TRUE, subtitles = TRUE, xlab = "Predicted probability according to model", ylab = "Observation Proportion of Matching")
+calibration_plot
+
+plot(calibration_plot)
+dev.print(pdf, '~/Dropbox/Nomogram/nomogram/results/calibration_plot.pdf')
+dev.off()
 ```
 
   \pagebreak
