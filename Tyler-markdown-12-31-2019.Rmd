@@ -2384,7 +2384,7 @@ X <- setdiff(names(ames_train), Y)
 best_rf <- h2o.randomForest(
   x = X, y = Y, training_frame = train_h2o, ntrees = 100, mtries = 1,
   #  x = X, y = Y, training_frame = train_h2o, ntrees = 1000, mtries = 10,  #original
-  max_depth = 30, min_rows = 1, sample_rate = 0.8, nfolds = 5,
+  max_depth = 30, min_rows = 1, sample_rate = 0.8, nfolds = 3,
   fold_assignment = "Modulo", keep_cross_validation_predictions = TRUE,
   seed = 123, stopping_rounds = 50, stopping_metric = "RMSE",
   stopping_tolerance = 0
@@ -2394,7 +2394,7 @@ best_rf <- h2o.randomForest(
 best_gbm <- h2o.gbm(
   x = X, y = Y, training_frame = train_h2o, ntrees = 100, learn_rate = 0.01,
   #x = X, y = Y, training_frame = train_h2o, ntrees = 5000, learn_rate = 0.01, #original
-  max_depth = 7, min_rows = 5, sample_rate = 0.8, nfolds = 5,
+  max_depth = 7, min_rows = 5, sample_rate = 0.8, nfolds = 3,
   #  max_depth = 7, min_rows = 5, sample_rate = 0.8, nfolds = 10, #original
   fold_assignment = "Modulo", keep_cross_validation_predictions = TRUE,
   seed = 123, stopping_rounds = 50, stopping_metric = "RMSE",
@@ -2417,7 +2417,7 @@ best_xgb <- h2o.xgboost(
 ```{r Train a stacked tree ensemble}
 # Train a stacked tree ensemble
 ensemble_tree <- h2o.stackedEnsemble(
-  x = X, y = Y, training_frame = train_h2o, model_id = "my_tree_ensemble",
+  x = X, y = Y, training_frame = train_h2o, model_id = "my_tree_ensemble_2",
   base_models = list(best_rf, best_gbm, best_xgb),
   metalearner_algorithm = "drf"
 )
@@ -2647,43 +2647,43 @@ dev.off()
 
 Given the fact that all three models have decent public scores, especially the correlation between SVM and the RF model is low. The most likely explanation is that SVM really is a different algorithm (both other models are tree-based).
 
-```{r, include=TRUE}
-#https://www.kaggle.com/kernels/scriptcontent/7086189/download
-#adding model predictions to test dataframe
-test$RF <- as.numeric(solution_rf)-1
-test$SVM <- as.numeric(solution_svm)-1 #NOT WORKING
-test$Boost <- as.numeric(solution_boost)-1
-test$tree <- as.numeric(solution_tree)-1
+<!-- ```{r, include=TRUE} -->
+<!-- #https://www.kaggle.com/kernels/scriptcontent/7086189/download -->
+<!-- #adding model predictions to test dataframe -->
+<!-- test$RF <- as.numeric(solution_rf)-1 -->
+<!-- test$SVM <- as.numeric(solution_svm)-1 #NOT WORKING -->
+<!-- test$Boost <- as.numeric(solution_boost)-1 -->
+<!-- test$tree <- as.numeric(solution_tree)-1 -->
 
-#compose correlations plot
-corrplot.mixed(cor(test[, c('RF', 'SVM', 'Boost')]), order="hclust", tl.col="black")
-```
-
-
-```{r model comparison, align = 'center', include=TRUE}
-#Table 14 summarizes the overall in-sample and out-of-sample accuracy of each model. The best performing models (highest accuracy) was the random forest model with a test set accuracy of `r rf.accuracy.test[1]`. The Logistic regression model using backwards elimination was second with a test set accuracy of `r lr.accuracy.test[1]`. The Naive Bayes model did not perform as well as the other models. In summary, if accuracy is the most important aspect of the model and interpretion is not a priority then the best model was the random forest model. If interpretability of the model is paramount, then the logistic regression model is recommended.
-
-# Training set performance summary
-# x <- caret::postResample(pred = step_prob, obs = as.factor(train$Match_Status))
-# a <- caret::postResample(pred = solution_tree_probability, obs = as.factor(train$Match_Status))
-# c <- caret::postResample(pred = train.svm, obs = as.factor(train$Match_Status))
-# e <- caret::postResample(pred = train.rf, obs = as.factor(train$Match_Status))
-# g <- caret::postResample(pred = train.nbwoe, obs = as.factor(train$Match_Status))
+<!-- #compose correlations plot -->
+<!-- corrplot.mixed(cor(test[, c('RF', 'SVM', 'Boost')]), order="hclust", tl.col="black") -->
+<!-- ``` -->
 
 
-# Test set performance summary
-# xt <- postResample(pred = back_step_prob, obs = as.factor(test$Match_Status))
-# at <- postResample(pred = test.cart, obs = as.factor(test.df.binned$Match_Status))
-# 
-# ct <- postResample(pred = test.svm, obs = as.factor(test.df.binned$Match_Status))
-# et  <- postResample(pred = test.rf, obs = as.factor(test.df.binned$Match_Status))
-# gt <- postResample(pred = test.nbwoe, obs = as.factor(test.df.binned$Match_Status))
-# matrix <- matrix(data = c(x[1], a[1], c[1], e[1], g[1], xt[1], at[1], ct[1], et[1], gt[1]), nrow = 5, ncol = 2, byrow = FALSE)
-# colnames(matrix) <- c("Training Set Accuracy", "Test Set Accuracy")
-# rownames(matrix) <- c("LR Backwards Elimination", "CART", "Support Vector Machine", "Random Forest", "Naive Bayes")
-# df <- round(matrix, 3)
-# kable(df, "latex", booktabs = T, caption = "In-sample and out-of-sample accuracy of all models") %>% kable_styling(latex_options = "striped")
-```
+<!-- ```{r model comparison, align = 'center', include=TRUE} -->
+<!-- #Table 14 summarizes the overall in-sample and out-of-sample accuracy of each model. The best performing models (highest accuracy) was the random forest model with a test set accuracy of `r rf.accuracy.test[1]`. The Logistic regression model using backwards elimination was second with a test set accuracy of `r lr.accuracy.test[1]`. The Naive Bayes model did not perform as well as the other models. In summary, if accuracy is the most important aspect of the model and interpretion is not a priority then the best model was the random forest model. If interpretability of the model is paramount, then the logistic regression model is recommended. -->
+
+<!-- # Training set performance summary -->
+<!-- # x <- caret::postResample(pred = step_prob, obs = as.factor(train$Match_Status)) -->
+<!-- # a <- caret::postResample(pred = solution_tree_probability, obs = as.factor(train$Match_Status)) -->
+<!-- # c <- caret::postResample(pred = train.svm, obs = as.factor(train$Match_Status)) -->
+<!-- # e <- caret::postResample(pred = train.rf, obs = as.factor(train$Match_Status)) -->
+<!-- # g <- caret::postResample(pred = train.nbwoe, obs = as.factor(train$Match_Status)) -->
+
+
+<!-- # Test set performance summary -->
+<!-- # xt <- postResample(pred = back_step_prob, obs = as.factor(test$Match_Status)) -->
+<!-- # at <- postResample(pred = test.cart, obs = as.factor(test.df.binned$Match_Status)) -->
+<!-- #  -->
+<!-- # ct <- postResample(pred = test.svm, obs = as.factor(test.df.binned$Match_Status)) -->
+<!-- # et  <- postResample(pred = test.rf, obs = as.factor(test.df.binned$Match_Status)) -->
+<!-- # gt <- postResample(pred = test.nbwoe, obs = as.factor(test.df.binned$Match_Status)) -->
+<!-- # matrix <- matrix(data = c(x[1], a[1], c[1], e[1], g[1], xt[1], at[1], ct[1], et[1], gt[1]), nrow = 5, ncol = 2, byrow = FALSE) -->
+<!-- # colnames(matrix) <- c("Training Set Accuracy", "Test Set Accuracy") -->
+<!-- # rownames(matrix) <- c("LR Backwards Elimination", "CART", "Support Vector Machine", "Random Forest", "Naive Bayes") -->
+<!-- # df <- round(matrix, 3) -->
+<!-- # kable(df, "latex", booktabs = T, caption = "In-sample and out-of-sample accuracy of all models") %>% kable_styling(latex_options = "striped") -->
+<!-- ``` -->
 \pagebreak
 
 ```{r NOMOGRAM,  fig.width=7, fig.asp=1}
