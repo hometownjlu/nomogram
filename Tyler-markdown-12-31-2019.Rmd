@@ -1560,7 +1560,7 @@ tidy(model3)
 
 ```{r}
 set.seed(123)
-cv_model3 <- train(
+cv_model3 <- caret::train(
   Match_Status ~ ., 
   data = train, 
   method = "glm",
@@ -1570,35 +1570,44 @@ cv_model3 <- train(
 ```
 
 ```{r}
-summary(
-  resamples(
-    list(
-      model1 = cv_model1
-    )
-  )
-)$statistics$Accuracy
+#Error in resamples.default(list(model3 = cv_model3)) : 
+  #at least two train objects are needed
+
+# summary(
+#   resamples(
+#     list(
+#       model3 = cv_model3
+#     )
+#   )
+# )$statistics$Accuracy
 ```
 
 ```{r}
 # predict class
 pred_class <- predict(cv_model3, train)
 
+#Error in confusionMatrix(data = relevel(pred_class, ref = "Matched"),  : 
+  # unused arguments (data = relevel(pred_class, ref = "Matched"), reference = relevel(train$Match_Status, ref = "Matched"))
+
 # create confusion matrix
-confusionMatrix(
-  data = relevel(pred_class, ref = "Yes"), #????????????????
-  reference = relevel(train$Match_Status, ref = "Yes") #??????????????
-)
+# confusionMatrix(
+#   data = relevel(pred_class, ref = "Matched"), 
+#   reference = relevel(train$Match_Status, ref = "Matched") 
+# )
 ```
 
 ```{r}
 library(ROCR)
 
 # Compute predicted probabilities
-m3_prob <- predict(cv_model3, churn_train, type = "prob")$Yes
+m3_prob <- predict(cv_model3, train, type = "prob")$Yes
 
 # Compute AUC metrics for cv_model3
-perf2 <- prediction(m3_prob, churn_train$Attrition) %>%
-  performance(measure = "tpr", x.measure = "fpr")
+#Error in prediction(m3_prob, train$Match_Status) : 
+  # Format of predictions is invalid.
+
+# perf2 <- prediction(m3_prob, train$Match_Status) %>%
+#   performance(measure = "tpr", x.measure = "fpr")
 
 # Plot ROC curves for cv_model1 and cv_model3
 #plot(perf1, col = "black", lty = 2)
@@ -1639,12 +1648,14 @@ The 10-fold cross-validation RMSE obtained using PLS with 1–16 principal compo
 
 ```{r}
 vip::vip(cv_model3, num_features = 20)
+dev.print(pdf, '~/Dropbox/Nomogram/nomogram/results/varicable_importance_logistic_regression_glm.pdf')
+dev.off()
 ```
 
 **(2) Regression Tree model**
 # 2)  Model: A CART model was fit using the rpart package. 
 
-Trees cqn handle both factors and continuous variables and do not need to create dummy variables.   Use the divide-and-conquer (aka recursive partinioning e.g. rpart) technique to create two homogenous groups.  Leaf nodes are at the bottom and denote final decisions on matching success. Random Forest is a more powerful algorithm over just a single tree. However, the Decision Tree classification preserve the interpretability which the random forest algorithm lacks.  A simple decision tree model was used for exploration. The Decision Tree does not require feature scaling but can overfit data by fitting the noise instead of the whole data.  It is very important to evaluate decision trees on data it has not seen before.
+Trees can handle both factors and continuous variables and do not need to create dummy variables.   Use the divide-and-conquer (aka recursive partinioning e.g. rpart) technique to create two homogenous groups.  Leaf nodes are at the bottom and denote final decisions on matching success. Random Forest is a more powerful algorithm over just a single tree. However, the Decision Tree classification preserve the interpretability which the random forest algorithm lacks.  A simple decision tree model was used for exploration. The Decision Tree does not require feature scaling but can overfit data by fitting the noise instead of the whole data.  It is very important to evaluate decision trees on data it has not seen before.
 
 Here we intentionally grow a large and complex tree then prune it to be smaller and more efficient later on.
 ```{r rpart EDA}
@@ -1822,14 +1833,16 @@ class.weights = c("No" = 1, "Yes" = 10)
 ```
 
 ```{r}
+#Takes FOREVER!
+
 #https://bradleyboehmke.github.io/HOML/svm.html
 # Control params for SVM
-ctrl <- trainControl(
-  method = "cv", 
-  number = 10, 
-  classProbs = TRUE,                 
-  summaryFunction = twoClassSummary  # also needed for AUC/ROC
-)
+# ctrl <- trainControl(
+#   method = "cv", 
+#   number = 10, 
+#   classProbs = TRUE,                 
+#   summaryFunction = twoClassSummary  # also needed for AUC/ROC
+# )
 
 # Tune an SVM
 # set.seed(5628)  # for reproducibility
@@ -1875,7 +1888,7 @@ Feature interpretation
   
 A random forest model is a forest of decision trees. Think of random forest as an ensemble of multiple trees.  
 
-```{r}
+```{r Random Forest Model}
 # train a default random forest model
 #https://bradleyboehmke.github.io/HOML/random-forest.html
 # number of features
@@ -2035,7 +2048,8 @@ Tuning
 ```{r create grid search}
 # create grid search
 hyper_grid <- expand.grid(
-  learning_rate = c(0.3, 0.1, 0.05, 0.01, 0.005),
+  learning_rate = c(0.3),
+  #  learning_rate = c(0.3, 0.1, 0.05, 0.01, 0.005),  #original
   RMSE = NA,
   trees = NA,
   time = NA
@@ -2073,10 +2087,15 @@ arrange(hyper_grid, RMSE)
 ```{r search grid}
 # search grid
 hyper_grid <- expand.grid(
-  n.trees = 6000,
+  n.trees = 1000,
   shrinkage = 0.01,
-  interaction.depth = c(3, 5, 7),
-  n.minobsinnode = c(5, 10, 15)
+  interaction.depth = c(3),
+  n.minobsinnode = c(5)
+  #   n.trees = 6000, #original
+  # shrinkage = 0.01, #original
+  # interaction.depth = c(3, 5, 7), #original
+  # n.minobsinnode = c(5, 10, 15) #original
+  
 )
 
 # create model fit function
@@ -2233,6 +2252,8 @@ min(train_xgb$evaluation_log$test_rmse_mean)
 
 Grid Search
 ```{r}
+#This takes FOREVER!  Oh man!
+
 # hyperparameter grid
 hyper_grid <- expand.grid(
   eta = 0.01,
@@ -2247,13 +2268,14 @@ hyper_grid <- expand.grid(
   trees = 0          # a place to dump required number of trees
 )
 
+#This takes FOREVER!  Oh man!
 # grid search
 for(i in seq_len(nrow(hyper_grid))) {
   set.seed(123)
   m <- xgb.cv(
     data = X,
     label = Y,
-    nrounds = 4000,
+    nrounds = 4, #4000
     objective = "reg:linear",
     early_stopping_rounds = 50, 
     nfold = 10,
@@ -2296,7 +2318,7 @@ params <- list(
 #Error in UseMethod("xgboost") : 
   #no applicable method for 'xgboost' applied to an object of class "list"
   
-  
+
 # xgb.fit.final <- xgboost(
 #   params = params,
 #   data = X,
@@ -2352,16 +2374,17 @@ X <- setdiff(names(ames_train), Y)
 
 ```{r Train & cross-validate mutliple models}
 # Train & cross-validate a GLM model
-# best_glm <- h2o.glm(
-#   x = X, y = Y, training_frame = train_h2o, alpha = 0.1,
-#   remove_collinear_columns = TRUE, nfolds = 10, fold_assignment = "Modulo",
-#   keep_cross_validation_predictions = TRUE, seed = 123
-# )
+ # best_glm <- h2o.glm(
+ #   x = X, y = Y, training_frame = train_h2o, alpha = 0.1,
+ #   remove_collinear_columns = TRUE, nfolds = 5, fold_assignment = "Modulo",  #nfolds was 10 originally
+ #   keep_cross_validation_predictions = TRUE, seed = 123
+ # )
 
 # Train & cross-validate a RF model
 best_rf <- h2o.randomForest(
-  x = X, y = Y, training_frame = train_h2o, ntrees = 1000, mtries = 10,
-  max_depth = 30, min_rows = 1, sample_rate = 0.8, nfolds = 10,
+  x = X, y = Y, training_frame = train_h2o, ntrees = 100, mtries = 1,
+  #  x = X, y = Y, training_frame = train_h2o, ntrees = 1000, mtries = 10,  #original
+  max_depth = 30, min_rows = 1, sample_rate = 0.8, nfolds = 5,
   fold_assignment = "Modulo", keep_cross_validation_predictions = TRUE,
   seed = 123, stopping_rounds = 50, stopping_metric = "RMSE",
   stopping_tolerance = 0
@@ -2369,8 +2392,10 @@ best_rf <- h2o.randomForest(
 
 # Train & cross-validate a GBM model
 best_gbm <- h2o.gbm(
-  x = X, y = Y, training_frame = train_h2o, ntrees = 5000, learn_rate = 0.01,
-  max_depth = 7, min_rows = 5, sample_rate = 0.8, nfolds = 10,
+  x = X, y = Y, training_frame = train_h2o, ntrees = 100, learn_rate = 0.01,
+  #x = X, y = Y, training_frame = train_h2o, ntrees = 5000, learn_rate = 0.01, #original
+  max_depth = 7, min_rows = 5, sample_rate = 0.8, nfolds = 5,
+  #  max_depth = 7, min_rows = 5, sample_rate = 0.8, nfolds = 10, #original
   fold_assignment = "Modulo", keep_cross_validation_predictions = TRUE,
   seed = 123, stopping_rounds = 50, stopping_metric = "RMSE",
   stopping_tolerance = 0
@@ -2378,9 +2403,11 @@ best_gbm <- h2o.gbm(
 
 # Train & cross-validate an XGBoost model
 best_xgb <- h2o.xgboost(
-  x = X, y = Y, training_frame = train_h2o, ntrees = 5000, learn_rate = 0.05,
+  x = X, y = Y, training_frame = train_h2o, ntrees = 100, learn_rate = 0.05,
+  #x = X, y = Y, training_frame = train_h2o, ntrees = 5000, learn_rate = 0.05, #original
   max_depth = 3, min_rows = 3, sample_rate = 0.8, categorical_encoding = "Enum",
-  nfolds = 10, fold_assignment = "Modulo", 
+  nfolds = 3, fold_assignment = "Modulo",
+  #nfolds = 10, fold_assignment = "Modulo", #original
   keep_cross_validation_predictions = TRUE, seed = 123, stopping_rounds = 50,
   stopping_metric = "RMSE", stopping_tolerance = 0
 )
