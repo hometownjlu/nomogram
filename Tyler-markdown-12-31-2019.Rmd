@@ -46,6 +46,8 @@ editor_options:
   affiliation: Denver Health
 - name: Jill Liss
   affiliation: University of Colorado
+- name: Michael Courtois, MS
+  affiliation: Denver Health
 - name: Georg Kropat, PhD
   affiliation: R & D Services
 - name: Janet Corall, PhD
