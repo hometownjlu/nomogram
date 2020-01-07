@@ -1,4 +1,4 @@
-# nomogram
+# A Model to Predict Chances of Matching into Obstetrics and Gynecology Residency
 
 *Objective:  *
 *We sought to construct and validate a model that predict a medical student's chances of matching into an obstetrics and gynecology residency.*
