@@ -92,7 +92,13 @@ Packrat is in use to control package versions and a packrat.lock file is posted 
 
 # I want to use packrate to make the project more: isolated, portable and reproducible.  Please see packrat/packrat.lock for a list of the precise packages used and their versions.  Be sure to check in the .Rprofile, packrat.lock files, and everything under packrat/src/. 
 packrat::packrat_mode(on = TRUE)
-packrat::snapshot() #Run each time a new library is installed.  
+packrat::clean()
+packrat::restore()
+packrat::status()
+packrat::snapshot(infer.dependencies = TRUE)  #Run each time a new library is installed.
+packrat::bundle(include.lib = TRUE, include.src = TRUE, omit.cran.src = TRUE)  #Use this for portability
+#Michael the packrat library bundle is saved at: https://www.dropbox.com/s/k32f438gdw3iq8v/nomogram-2020-01-08.tar.gz?dl=0.  
+
 options(tinytex.verbose = FALSE)
 library(knitr)
 ```
@@ -2616,8 +2622,6 @@ plot(model_w_adj_lrn)
 dev.print(pdf, '~/Dropbox/Nomogram/nomogram/results/learning_rate_plot.pdf')
 dev.off()
 ```
-
-
 \pagebreak
 
 # Model Comparison
@@ -2625,7 +2629,7 @@ dev.off()
 Given the fact that all three models have decent public scores, especially the correlation between SVM and the RF model is low. The most likely explanation is that SVM really is a different algorithm (both other models are tree-based).
 
 ```{r}
-
+# This has never worked.  
 # <!-- ```{r, include=TRUE} -->
 # <!-- #https://www.kaggle.com/kernels/scriptcontent/7086189/download -->
 # <!-- #adding model predictions to test dataframe -->
