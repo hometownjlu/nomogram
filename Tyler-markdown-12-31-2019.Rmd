@@ -60,7 +60,7 @@ editor_options:
 *Objective:  *
 *We sought to construct and validate a model that predict a medical student's chances of matching into an obstetrics and gynecology residency.*
 
-ERAS is a centralized solution to the medical residency application and documents distribution process. The data source to be used for the project is the Electronic Residency Application Service data that was in discrete fields in the application.  No hand-searching of data was done. The data was exported from the ERAS Program Director Work Station under the Archives menu.The data is collected by the University of Colorado OBGYN residency that has both a categorical and a preliminary position.  Medical students who applied to the preliminary position were considered to be unmatched. The data set of years 2015, 2016, 2017, and 2018 applicants to the University of Colorado OBGYN residency. The data is contained in a data frame called 'all_data'. In advance, we might anticipate that USMLE Step 1 Score and US or Canadian Applicant will be key predictors.  Match Status is the dependent Variable and shows the medical students who applied to the OBGYN residency. 
+The Electronic Residency Application Service (ERAS) is a centralized solution to the medical residency application and documents distribution process. The data source to be used for the project is the Electronic Residency Application Service data that was in discrete fields in the application.  No hand-searching of data was done. The data was exported from the ERAS Program Director Work Station under the Archives menu.The data is collected by the University of Colorado OBGYN residency that has both a categorical and a preliminary position.  Medical students who applied to the preliminary position were considered to be unmatched. The data set of years 2015, 2016, 2017, and 2018 applicants to the University of Colorado OBGYN residency. The data is contained in a data frame called 'all_data'. In advance, we might anticipate that USMLE Step 1 Score and US or Canadian Applicant will be key predictors.  Match Status is the dependent Variable and shows the medical students who applied to the OBGYN residency. 
 
 # Codebook
 A codebook is a technical description of the data that was collected for a particular purpose. It describes how the data are arranged in the computer file or files, what the various numbers and letters mean, and any special instructions on how to use the data properly.
@@ -86,18 +86,19 @@ A codebook is a technical description of the data that was collected for a parti
 
 This data was cleaned in a separate R script with the help of exploratory.io.  
 
-Packrat is in use to control package versions and a packrat.lock file is posted to my github repository.  This will allow for easier reproducibility.  Packrat records the exact package versions you depend on, and ensures those exact versions are the ones that get installed wherever you go.  We can also control the environment by deploying the project inside a Docker container as needed.  The project was created in R version 3.6.1 and run inside RStudio 1.2.5019.  
+Packrat is in use to control package versions and a packrat.lock file is posted to my github repository.  This will allow for easier reproducibility.  Packrat records the exact package versions you depend on, and ensures those exact versions are the ones that get installed wherever you go.  We can also control the environment by deploying the project inside a Docker container as needed.  The project was created in R version 3.6.1 and run inside RStudio 1.2.5019.  Session info is present at the bottom of the script.  
 ```{r directory paths and packrat settings, include=FALSE}
 #Helpful, https://www.kaggle.com/pjmcintyre/titanic-first-kernel/code
-#packrate director for Tyler: ~/Dropbox/Nomogram/nomogram/packrat/lib
-#packrat::packrat_mode(on = TRUE)
-#packrat::status()
+
+# I want to use packrate to make the project more: isolated, portable and reproducible.  Please see packrat/packrat.lock for a list of the precise packages used and their versions.  
+packrat::packrat_mode(on = TRUE)
+packrat::snapshot() #Run each time a new library is installed.  
 options(tinytex.verbose = FALSE)
 library(knitr)
 ```
 
 ```{css echo = FALSE}
-#Taken from thhe Pudding.  
+#Taken from the Pudding.cool
 pre code, pre, code {
   white-space: pre !important;
   overflow-y: scroll !important;
@@ -126,32 +127,9 @@ funModeling::freq(data=all_data, plot = FALSE, na.rm = FALSE)
 tmp <- table(all_data$Match_Status)
 match_rate <- (tmp[[2]]/(tmp[[2]] + tmp[[1]]))*100
 match_rate
-
-# vars
-# all_data[,vars]
 ```
 We can see that these data have `r nrow(all_data)` of `r ncol(all_data)` variables, and thatabout `r round(match_rate, digits = 1)` percent of medical students applying to OB/GYN residency matched.   Let’s create a few plots to get a sense of the data. Remember, the goal here will be to predict whether a given medical student will match into OB/GYN residency, based on the variables listed in the codebook.
 
-```{r Using the Drake package here for efficiency, echo=TRUE, include=FALSE}
-# Using the Drake package here for efficiency.  
-
-###### Stopped working with knitr.  
-
-# plan <- drake::drake_plan(
-#   #raw_data = readr::read_rds(paste0(data_folder,"/", data_file)),
-#   data = raw_data %>%
-#     dplyr::select(-"Gold_Humanism_Honor_Society", -"Sigma_Sigma_Phi", -"Misdemeanor_Conviction", -"Malpractice_Cases_Pending", -"Match_Status", -"Citizenship", -"BLS", -"Positions_offered"),
-#   function(data) {funModeling::plot_num(data, path_out = results_folder)},
-#   function(data) {funModeling::cross_plot(data, target="Match_Status", path_out = results_folder)},
-#   quiet = TRUE)
-
-# config <- 
-#   drake::drake_config(plan)
-
-#drake::vis_drake_graph(config)
-
-#drake::make(plan)
-```
 # Description of the Data
 * A summary of the variables are listed below:
 1. Eleven of the variables were a factor.  All factors had two levels except for Alpha_Omega_Alpha had three levels.  The target variable is `all_data$Match_Status`.  
@@ -167,7 +145,7 @@ all_data$Count_of_Oral_Presentation <- as.numeric(all_data$Count_of_Oral_Present
 all_data$Count_of_Other_than_Published <- as.numeric(all_data$Count_of_Other_than_Published)
 all_data$Count_of_Peer_Reviewed_Book_Chapter <- as.numeric(all_data$Count_of_Peer_Reviewed_Book_Chapter)
 all_data$Count_of_Online_Publications <- as.numeric(all_data$Count_of_Online_Publications)
-    #all_data$Rank <- as.factor(all_data$Rank)
+
 inspectdf::inspect_types(all_data) %>% show_plot()
 ```
 
@@ -187,15 +165,14 @@ DataExplorer::plot_intro(all_data)
 ```
 
 The new data set in `all_data`, includes `r nrow(all_data)` rows and `r ncol(all_data)` columns.  The `r (english::words(nrow(all_data)))` applicants are missing `r (english::words(sum(is.na(all_data))))` values.    
-```{r, include=FALSE, out.width="50%"}
-#Cool but a little overkill for checking if we have missing data.  
-#all_data <- na.omit(all_data)
+
+## Shows four different ways to check for missingness in the data 
+```{r, four ways to look for missingness, include=FALSE, out.width="50%"}
+#Cool but a little overkill with three ways for checking if we have missing data.  
+
 colSums(is.na(all_data))
 purrr::map_df(all_data, ~ sum(is.na(.)))
 naniar::gg_miss_var(all_data)
-```
-
-```{r, include=FALSE}
 Hmisc::na.pattern(all_data)
 ```
 
@@ -208,7 +185,7 @@ Hmisc::describe(as.factor(all_data$Match_Status))
 whomatched <- 
   ggplot2::ggplot(all_data[!is.na(all_data$Match_Status),], aes(x = Match_Status, fill = Match_Status)) +
   geom_bar(stat='count') +
-  labs(x = 'How many people matched into OBGYN?') +
+  labs(x = 'How many applicants matched into OBGYN?') +
         geom_label(stat='count',aes(label=..count..), size=7) +
         theme_grey(base_size = 18)
 whomatched
@@ -220,7 +197,7 @@ ggsave(here::here("results", "whomatched.png"), whomatched, device = "png", widt
 Categorical and numerical variable plots:
 ```{r DataExplorer, results='asis', echo=TRUE, include=TRUE, align = 'left', cache=FALSE, out.width="75%"}
 #General Data Description
-inspect_cat_plot <- inspectdf::inspect_cat(all_data) %>% show_plot()  #Please use `cols = c(data)`
+inspect_cat_plot <- inspectdf::inspect_cat(all_data) %>% show_plot()  #Please use `cols = c(data)` is the error message I get here.  But it still runs.  
 inspect_cat_plot
 ggplot2::ggsave(here::here("results", "inspect_cat_plot.png"), inspect_cat_plot, device = "png", width = 10, height = 7)
 
@@ -238,7 +215,7 @@ ggplot2::ggsave(here::here("results", "inspect_num_plot.png"), inspect_num_plot,
 
 ```{r, include=TRUE, echo=TRUE, include=TRUE, align = 'left', cache=FALSE, out.width="75%"}
 #EDA,  https://ryjohnson09.netlify.com/post/caret-and-tidymodels/
-# Create vector of predictors
+# Create vector of predictors and subtract the last column with the target variable
 expl <- names(all_data)[-19]
 
 # Loop vector with map
@@ -258,7 +235,7 @@ ggplot2::ggsave(here::here("results", "plot_grid_plot_density.png"), plot_grid_p
 
 
 ```{r funModeling2, echo=TRUE, message=FALSE, warning=TRUE, include=FALSE}
-create_plot_num_plot <- create_plot_num(all_data)  #Uses custom function so it can be run in Drake
+create_plot_num_plot <- create_plot_num(all_data)  
 create_plot_num_plot
 
 ggplot2::ggsave(here::here("results", "create_plot_num_plot.png"), create_plot_num_plot, device = "png", width = 10, height = 7)
@@ -273,8 +250,8 @@ write_csv(df_status_output, (here::here("results", "df_status_output.csv")))
 
 ```{r funModeling3, echo=TRUE, message=FALSE, warning=TRUE, results='asis', include=FALSE}
 #Summary stats of the numerical data showing means, medians, skew
-create_profiling_num_output <- create_profiling_num(all_data)   #Uses custom function so it can be run in Drake
-#all_data %>% mosaic::inspect()  #another good option
+create_profiling_num_output <- create_profiling_num(all_data)   
+all_data %>% mosaic::inspect()  #another good option
 write_csv(create_profiling_num_output, (here::here("results", "create_profiling_num_output.csv")))
 ```
 
@@ -308,11 +285,13 @@ s
 ```{r funModeling4, echo=TRUE, message=FALSE, warning=TRUE, include=TRUE, out.width="75%"}
 DataExplorer::plot_boxplot(all_data, by = "Match_Status", nrow = 2L, ncol = 2L)
 #Shows the variable frequency charted by matching status
-create_plot_cross_plot(all_data)   #Uses custom function so it can be run in Drake
+create_plot_cross_plot(all_data)   
 ```
 
 Here is the code that I used for the cubic splines and it pushed the VIF through the roof below.  I need help with this part.  
 ```{r, echo=TRUE, include=FALSE, warning = FALSE, fig.width=7, fig.asp=1, fig.cap="Figure: Relaxing Cubic Splines for Continuous Variables."}
+
+#Using thhe splines was a mess.  
 
 ## Relaxed Cubic Splines For Continuous Variables
 
@@ -406,6 +385,7 @@ Here is the code that I used for the cubic splines and it pushed the VIF through
 ```{r, echo=TRUE, warning=FALSE, message=FALSE, include=TRUE, results="asis"}
 tm_arsenal_table_output <- tm_arsenal_table(df = all_data, by = all_data$Match_Status) #(arguments are outcome of interest is all_data$Match_Status, dataframe)
 tm_arsenal_table_output
+
 write2word(tm_arsenal_table_output, (here::here("results", "tm_arsenal_table_output.doc")),
   keep.md = TRUE,
   quiet = TRUE) # passed to rmarkdown::render
@@ -413,7 +393,6 @@ write2word(tm_arsenal_table_output, (here::here("results", "tm_arsenal_table_out
 write2pdf(tm_arsenal_table_output, (here::here("results", "tm_arsenal_table_output.pdf")),
   keep.md = TRUE,
   quiet = TRUE) # passed to rmarkdown::render
-
 ```
 
 # Why are we using a train and test sample data set to test the model?  
@@ -427,7 +406,6 @@ Two well known strategies to overcome the problem of overfitting are the train/v
 I will call the training sample `train` and the test sample `test`.  *Creative!*  Another option is dplyr::sample_n if you want to instead specify the exact number of observations to be selected. There are `r nrow(train)` medical students in the training data set and `r nrow(test)` in the test data set.  
 
 ## Shows four different ways to split the data  
-
 ```{r, train vs test, warning=FALSE, echo=TRUE, message=FALSE, include=TRUE}
 #http://rpubs.com/josevilardy/crossvalidation
 # train <- filter(all_data, Year %in% c("2015", "2016"))  #Train on years 2015, 2016
@@ -478,7 +456,6 @@ write_csv(x = train,
           col_names = TRUE)
 training_data_plot_hist_facet <- plot_hist_facet(data = train)
 training_data_plot_hist_facet
-# ggplot2::ggsave(here::here("results", "training_data_plot_hist_facet.png"), train, device = "png", width = 10, height = 7)
 
 test <- data_split %>% testing() %>% glimpse() # Extra
 write_csv(x = test, 
@@ -486,7 +463,6 @@ write_csv(x = test,
           col_names = TRUE)
 
 plot_hist_facet(data=test)
-# ggplot2::ggsave(here::here("results", "tests_data_plot_hist_facet.png"), tests_data_plot_hist_facet, device = "png", width = 10, height = 7)
 ```
 
 Compare the datasets of `train` and `test`using arsenal package:  
@@ -530,7 +506,7 @@ write2pdf(test_table_characteristics, (here::here("results", "test_table_charact
   quiet = TRUE) # passed to rmarkdown::render
 ```
 
-Check Proportions of Matched students in the test and train data sets.  Orginal response distribution and then showing consistent response ratio between train & test data sets.  
+Check Proportions of Matched/Unmatched applicants in the test and train data sets.  Orginal response distribution and then showing consistent response ratio between train & test data sets.  
 ```{r, results="asis", echo=TRUE, include=TRUE}
 # Examine the proportions of the Match_Status class lable across the datasets.
 crude_summary <- 
@@ -561,7 +537,6 @@ skewed_feature_names <- train %>%
 # Scatterplot Matrix and Correlation
 ```{r, warning= FALSE, message=FALSE, echo=TRUE, include=TRUE}
 colnames(train)
-
 
 ####Not working!!!
 
@@ -606,6 +581,7 @@ You can see that there is a natural separation between the Match status and USML
 
 The values of correlation range from -1 to 1.  If there is a value of 0 there is no correlation between the variables.  Perfect correlation is 1.  Perfect negative correlation is -1.  
 
+One way to look at correlation is with a correlation funnel.  
 ```{r, include=TRUE, echo=FALSE}
 all_data_binarized_tbl <- all_data %>%
   correlationfunnel::binarize(n_bins = 4, thresh_infreq = 0.01)
@@ -626,10 +602,8 @@ static_correlation_funnel <- all_data_correlated_tbl %>%
 ggplot2::ggsave(here::here("results", "static_correlation_funnel.png"), static_correlation_funnel, device = "png", width = 10, height = 7)
 ```
 
-
+A second way to look at correlation is with pairs of variables plotted.   
 ```{r, include = TRUE, fig.width=8, fig.height=4, fig.cap="Figure: Evaluation of the variable interactions in the train data set."}
-#cor(1:5, 1:5) #Perfect positive correlation
-#cor(1:5, 5:1) #Perfect negative correlation
 #https://jamesmarquezportfolio.com/correlation_matrices_in_r.html
 psych_correlation <- psych::pairs.panels(train[, c(2, 9:15, 18)], bg=c("red","blue")[as.factor(train$Match_Status)], pch=21, jiggle = TRUE, scale = TRUE)
 psych_correlation
@@ -691,8 +665,8 @@ dev.print(pdf, '~/Dropbox/Nomogram/nomogram/results/tm_nomogram_prep_kitchen_sin
 dev.off()
 ```
 
+Create a Confusion Matrix
 ```{r}
-#???
 train$Match_Status <- as.factor(train$Match_Status)
 
 ###Not working!!!
@@ -703,6 +677,7 @@ train$Match_Status <- as.factor(train$Match_Status)
 # (confusion.limited.vif.model.kitchen.sink <- caret::confusionMatrix(confusion, positive = "1"))
 ```
 
+Calculates the Brier score for the `kitchen.sink` model.  
 ```{r, warning=FALSE, echo=TRUE, include = TRUE}
 #Shows the C-statistic and the Brier score.  
 tmp <- 
