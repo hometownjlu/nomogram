@@ -90,7 +90,7 @@ Packrat is in use to control package versions and a packrat.lock file is posted 
 ```{r directory paths and packrat settings, include=FALSE}
 #Helpful, https://www.kaggle.com/pjmcintyre/titanic-first-kernel/code
 
-# I want to use packrate to make the project more: isolated, portable and reproducible.  Please see packrat/packrat.lock for a list of the precise packages used and their versions.  
+# I want to use packrate to make the project more: isolated, portable and reproducible.  Please see packrat/packrat.lock for a list of the precise packages used and their versions.  Be sure to check in the .Rprofile, packrat.lock files, and everything under packrat/src/. 
 packrat::packrat_mode(on = TRUE)
 packrat::snapshot() #Run each time a new library is installed.  
 options(tinytex.verbose = FALSE)
@@ -2624,56 +2624,58 @@ dev.off()
 
 Given the fact that all three models have decent public scores, especially the correlation between SVM and the RF model is low. The most likely explanation is that SVM really is a different algorithm (both other models are tree-based).
 
-<!-- ```{r, include=TRUE} -->
-<!-- #https://www.kaggle.com/kernels/scriptcontent/7086189/download -->
-<!-- #adding model predictions to test dataframe -->
-<!-- test$RF <- as.numeric(solution_rf)-1 -->
-<!-- test$SVM <- as.numeric(solution_svm)-1 #NOT WORKING -->
-<!-- test$Boost <- as.numeric(solution_boost)-1 -->
-<!-- test$tree <- as.numeric(solution_tree)-1 -->
+```{r}
 
-<!-- #compose correlations plot -->
-<!-- corrplot.mixed(cor(test[, c('RF', 'SVM', 'Boost')]), order="hclust", tl.col="black") -->
-<!-- ``` -->
+# <!-- ```{r, include=TRUE} -->
+# <!-- #https://www.kaggle.com/kernels/scriptcontent/7086189/download -->
+# <!-- #adding model predictions to test dataframe -->
+# <!-- test$RF <- as.numeric(solution_rf)-1 -->
+# <!-- test$SVM <- as.numeric(solution_svm)-1 #NOT WORKING -->
+# <!-- test$Boost <- as.numeric(solution_boost)-1 -->
+# <!-- test$tree <- as.numeric(solution_tree)-1 -->
+# 
+# <!-- #compose correlations plot -->
+# <!-- corrplot.mixed(cor(test[, c('RF', 'SVM', 'Boost')]), order="hclust", tl.col="black") -->
+# <!-- ``` -->
+# 
+# 
+# <!-- ```{r model comparison, align = 'center', include=TRUE} -->
+# <!-- #Table 14 summarizes the overall in-sample and out-of-sample accuracy of each model. The best performing models (highest accuracy) was the random forest model with a test set accuracy of `r rf.accuracy.test[1]`. The Logistic regression model using backwards elimination was second with a test set accuracy of `r lr.accuracy.test[1]`. The Naive Bayes model did not perform as well as the other models. In summary, if accuracy is the most important aspect of the model and interpretion is not a priority then the best model was the random forest model. If interpretability of the model is paramount, then the logistic regression model is recommended. -->
+
+# <!-- # Training set performance summary -->
+# <!-- # x <- caret::postResample(pred = step_prob, obs = as.factor(train$Match_Status)) -->
+# <!-- # a <- caret::postResample(pred = solution_tree_probability, obs = as.factor(train$Match_Status)) -->
+# <!-- # c <- caret::postResample(pred = train.svm, obs = as.factor(train$Match_Status)) -->
+# <!-- # e <- caret::postResample(pred = train.rf, obs = as.factor(train$Match_Status)) -->
+# <!-- # g <- caret::postResample(pred = train.nbwoe, obs = as.factor(train$Match_Status)) -->
+# 
+# 
+# <!-- # Test set performance summary -->
+# <!-- # xt <- postResample(pred = back_step_prob, obs = as.factor(test$Match_Status)) -->
+# <!-- # at <- postResample(pred = test.cart, obs = as.factor(test.df.binned$Match_Status)) -->
+# <!-- #  -->
+# <!-- # ct <- postResample(pred = test.svm, obs = as.factor(test.df.binned$Match_Status)) -->
+# <!-- # et  <- postResample(pred = test.rf, obs = as.factor(test.df.binned$Match_Status)) -->
+# <!-- # gt <- postResample(pred = test.nbwoe, obs = as.factor(test.df.binned$Match_Status)) -->
+# <!-- # matrix <- matrix(data = c(x[1], a[1], c[1], e[1], g[1], xt[1], at[1], ct[1], et[1], gt[1]), nrow = 5, ncol = 2, byrow = FALSE) -->
+# <!-- # colnames(matrix) <- c("Training Set Accuracy", "Test Set Accuracy") -->
+# <!-- # rownames(matrix) <- c("LR Backwards Elimination", "CART", "Support Vector Machine", "Random Forest", "Naive Bayes") -->
+# <!-- # df <- round(matrix, 3) -->
+# <!-- # kable(df, "latex", booktabs = T, caption = "In-sample and out-of-sample accuracy of all models") %>% kable_styling(latex_options = "striped") -->
+# <!-- ``` -->
+```
 
 
-<!-- ```{r model comparison, align = 'center', include=TRUE} -->
-<!-- #Table 14 summarizes the overall in-sample and out-of-sample accuracy of each model. The best performing models (highest accuracy) was the random forest model with a test set accuracy of `r rf.accuracy.test[1]`. The Logistic regression model using backwards elimination was second with a test set accuracy of `r lr.accuracy.test[1]`. The Naive Bayes model did not perform as well as the other models. In summary, if accuracy is the most important aspect of the model and interpretion is not a priority then the best model was the random forest model. If interpretability of the model is paramount, then the logistic regression model is recommended. -->
-
-<!-- # Training set performance summary -->
-<!-- # x <- caret::postResample(pred = step_prob, obs = as.factor(train$Match_Status)) -->
-<!-- # a <- caret::postResample(pred = solution_tree_probability, obs = as.factor(train$Match_Status)) -->
-<!-- # c <- caret::postResample(pred = train.svm, obs = as.factor(train$Match_Status)) -->
-<!-- # e <- caret::postResample(pred = train.rf, obs = as.factor(train$Match_Status)) -->
-<!-- # g <- caret::postResample(pred = train.nbwoe, obs = as.factor(train$Match_Status)) -->
-
-
-<!-- # Test set performance summary -->
-<!-- # xt <- postResample(pred = back_step_prob, obs = as.factor(test$Match_Status)) -->
-<!-- # at <- postResample(pred = test.cart, obs = as.factor(test.df.binned$Match_Status)) -->
-<!-- #  -->
-<!-- # ct <- postResample(pred = test.svm, obs = as.factor(test.df.binned$Match_Status)) -->
-<!-- # et  <- postResample(pred = test.rf, obs = as.factor(test.df.binned$Match_Status)) -->
-<!-- # gt <- postResample(pred = test.nbwoe, obs = as.factor(test.df.binned$Match_Status)) -->
-<!-- # matrix <- matrix(data = c(x[1], a[1], c[1], e[1], g[1], xt[1], at[1], ct[1], et[1], gt[1]), nrow = 5, ncol = 2, byrow = FALSE) -->
-<!-- # colnames(matrix) <- c("Training Set Accuracy", "Test Set Accuracy") -->
-<!-- # rownames(matrix) <- c("LR Backwards Elimination", "CART", "Support Vector Machine", "Random Forest", "Naive Bayes") -->
-<!-- # df <- round(matrix, 3) -->
-<!-- # kable(df, "latex", booktabs = T, caption = "In-sample and out-of-sample accuracy of all models") %>% kable_styling(latex_options = "striped") -->
-<!-- ``` -->
 \pagebreak
 
 ```{r NOMOGRAM,  fig.width=7, fig.asp=1}
 ###NOMOGRAM
-#fun.at - Demarcations on the function axis: "Matching into obgyn"
-#lp=FALSE so we don't have the logistic progression
 d <- rms::datadist(test)
 options(datadist = "d")
 args(tm_nomogram_prep)
 tm_nomogram_prep(train.lrm.with.lasso.variables)
 ```
 Annotation:  Manuscript Figure 1:  The first row called points assigned to each variable's measurement from rows 2-12, which are variables included in predictive model.  Assigned points for all variables are then summed and total can be located on line 13 (total points).  Once total points are located, draw a vertical line down to the bottom line to obtain the predicted probability of matching.  For non-linear variables (count of oral presentations, etc.) values should be erad from left to right.
-
 
 # Calibration of the model based on the test data.
 The ticks across the x-axis represent the frequency distribution (may be called a rug plot) of the predicted probabilities. This is a way to see where there is sparsity in your predictions and where there is a relative abundance of predictions in a given area of predicted probabilities.
@@ -2849,6 +2851,7 @@ utils::sessionInfo()
 # Render Web Site
 ```{r}
 #https://bookdown.org/yihui/rmarkdown/websites.html
+#Ideally I want to get the rmarkdown file to be uploaded to a web site like Michael did for his project.  Extra and optional.  
 
 # from CRAN
 install.packages("blogdown")

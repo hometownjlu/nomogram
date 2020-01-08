@@ -7,31 +7,31 @@
 #Instillation packages
 #dev.off()
 
-#Paths
-data_folder <- "~/Dropbox/Nomogram/nomogram/data"#paste0(getwd(), "/Data/")
-results_folder <- "~/Dropbox/Nomogram/nomogram/results"#paste0(getwd(), "/Results/")
+#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
+# Directory Paths for Data and Results
+#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### ####
+data_folder <- paste0(getwd(), "/Data/")
+results_folder <- paste0(getwd(), "/Results/")
 
 #data_file <- "all_years_mutate_124.csv"
-data_file <- "all_years_filter_112.rds" #original that works
+data_file <- "all_years_filter_112.rds" 
 
+
+
+#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
 #Install and Load needed R packages.
+#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### ####
 # Set libPaths.
 .libPaths("/Users/tylermuffly/.exploratory/R/3.6")
 
 pkg <- (c('R.methodsS3', 'caret', 'readxl', 'XML', 'reshape2', 'devtools', 'purrr', 'readr', 'ggplot2', 'dplyr', 'magick', 'janitor', 'lubridate', 'hms', 'tidyr', 'stringr', 'openxlsx', 'forcats', 'RcppRoll', 'tibble', 'bit64', 'munsell', 'scales', 'rgdal', 'tidyverse', "foreach", "PASWR", "rms", "pROC", "ROCR", "nnet", "packrat", "DynNom", "export", "caTools", "mlbench", "randomForest", "ipred", "xgboost", "Metrics", "RANN", "AppliedPredictiveModeling", "nomogramEx", "shiny", "earth", "fastAdaboost", "Boruta", "glmnet", "ggforce", "tidylog", "InformationValue", "pscl", "scoring", "DescTools", "gbm", "Hmisc", "arsenal", "pander", "moments", "leaps", "MatchIt", "car", "mice", "rpart", "beepr", "fansi", "utf8", "zoom", "lmtest", "ResourceSelection", "rmarkdown", "rattle", "rmda", "funModeling", "tinytex", "caretEnsemble", "Rmisc", "corrplot", "GGally", "alluvial", "progress", "perturb", "vctrs", "highr", "labeling", "DataExplorer", "rsconnect", "inspectdf", "ggpubr", "esquisse", "stargazer", "tableone", "knitr", "drake", "visNetwork", "woeBinning", "OneR", "rpart.plot", "RColorBrewer", "kableExtra", "kernlab", "naivebayes", "e1071", "data.table", "skimr", "naniar", "english", "mosaic", "broom", "mltools", "tidymodels", "tidyquant", "rsample", "yardstick", "parsnip", "tensorflow", "keras", "sparklyr", "dials", "cowplot", "lime", "flexdashboard", "shinyjs", "shinyWidgets", "plotly", "odbc", "BH", "discrim", "vip", "ezknitr"))
 
-#install.packages(pkg, dependencies = TRUE, repos = "https://cloud.r-project.org")
+#install.packages(pkg, dependencies = TRUE, repos = "https://cloud.r-project.org")  #run this first time
 lapply(pkg, require, character.only = TRUE)
 
 # Database
 library("odbc")
 library("RSQLite")
-
-packrat::set_opts(auto.snapshot = TRUE, use.cache = TRUE)
-#packrat::snapshot(infer.dependencies = TRUE)
-#packrat::clean()
-#packrat::bundle(include.lib = TRUE, include.src = TRUE, omit.cran.src = TRUE)  #Use this for portability
-#packrat::status()
 
 #install.packages("dplR", dependencies = TRUE)
 #library(dplR)
@@ -42,14 +42,51 @@ library(discrim)
 library("doMC")
 doMC::registerDoMC(cores = detectCores()-1) #Use multiple cores for processing
 
+#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
+# Package functions customization
+#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### ####
+
+packrat::set_opts(auto.snapshot = TRUE, use.cache = TRUE)
+
+#### https://stirlingcodingclub.github.io/Manuscripts_in_Rmarkdown/Rmarkdown_notes.html
+knitr::opts_chunk$set(fig.width=7, 
+                      fig.height=5,
+                      fig.align="center",
+                      include=TRUE,
+                      echo=TRUE, # does not show R code
+                      warning=FALSE,  # does not show warnings during generation
+                      message=FALSE, # shows no messages
+                      tidy = TRUE, 
+                      comment="",
+                      align = 'left',
+                      cache = FALSE,  #keep as false so I don't get random error messages later on
+                      dev = "png",   #Will need to change for manuscript
+                      dpi = 200)   #Will need to change for manuscript
+
+
 ### Skimr set up
 skim_with(numeric = list(hist = NULL), integer = list(hist = NULL))
 
-## TinTex
+## TinyTex
 options(tinytex.verbose = FALSE)
 tinytex::tlmgr_update()  # update LaTeX packages
 
+custom_theme <- function(...){   ##My ggplot theme
+  theme(legend.position = "bottom", 
+        legend.text = element_text(size = 8),
+        panel.background = element_rect(fill = "white"),
+        strip.background = element_rect(fill = "white"),
+        axis.line.x = element_line(color="black"),
+        axis.line.y = element_line(color="black"))
+}
+
+pander::panderOptions("table.split.table", Inf)
+options(width = 100) # ensures skimr results fit on one line
+set.seed(123456)
+
+#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
 #####  Functions for nomogram
+#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
 create_plot_num <- 
   function(data) {
     funModeling::plot_num(data, path_out = results_folder)
@@ -69,14 +106,18 @@ create_profiling_num <-
     funModeling::profiling_num(data)
   }
 
-
+#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
 #####  Load in the data
+#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
 #Create a dataframe of independent and dependent variables. 
 ## Here are the data for download
 URL<- paste0("https://www.dropbox.com/s/qbykb8sl2c8z3me/", (data_file), "?raw=1") #This works
 download.file(url = URL, destfile = paste0(data_file), method = "curl") #this works
 
-# read in data
+
+#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
+#####  Read in the data
+#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
 all_data <- 
   read_rds(paste0(data_folder, "/", data_file)) %>%
   #read_csv(paste0(data_folder, "/", data_file)) %>%
@@ -131,7 +172,6 @@ colnames(all_data)[colnames(all_data)=="Match_Status_Dichot"] <-
 #factor_columns
 
 all_data$Count_of_Online_Publications <- as.numeric(all_data$Count_of_Online_Publications)
-
 all_data$white_non_white <- forcats::fct_explicit_na(all_data$white_non_white, na_level="(Missing)")
 #all_data$Year <- forcats::fct_explicit_na(all_data$Year, na_level="(Missing)")
 all_data$Gender <- forcats::fct_explicit_na(all_data$Gender, na_level="(Missing)")
@@ -152,11 +192,12 @@ all_data$Count_of_Oral_Presentation <- as.numeric(all_data$Count_of_Oral_Present
 all_data$Count_of_Other_than_Published <- as.numeric(all_data$Count_of_Other_than_Published)
 all_data$Count_of_Peer_Reviewed_Book_Chapter <- as.numeric(all_data$Count_of_Peer_Reviewed_Book_Chapter)
 all_data$Count_of_Online_Publications <- as.numeric(all_data$Count_of_Online_Publications)
-
 all_data <- na.omit(all_data)
 
-#Set reference category for each variable
-#donors$wealth_rating <- relevel(donors$wealth_rating, ref = "Medium")
+
+#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
+#####  Set reference category for each variable
+#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
 contrasts(all_data$US_or_Canadian_Applicant)
 all_data$US_or_Canadian_Applicant <- relevel(all_data$US_or_Canadian_Applicant, ref = "US senior")
 contrasts(all_data$white_non_white)
@@ -169,36 +210,7 @@ all_data$Military_Service_Obligation <- relevel(all_data$Military_Service_Obliga
 all_data$Medical_Degree <- relevel (all_data$Medical_Degree, ref = "MD")
 all_data$Visa_Sponsorship_Needed <- relevel(all_data$Visa_Sponsorship_Needed, ref = "No")
 
-#write_csv(all_data, "~/all_data.csv")
 
-#### https://stirlingcodingclub.github.io/Manuscripts_in_Rmarkdown/Rmarkdown_notes.html
-knitr::opts_chunk$set(fig.width=7, 
-                      fig.height=5,
-                      fig.align="center",
-                      include=TRUE,
-                      echo=TRUE, # does not show R code
-                      warning=FALSE,  # does not show warnings during generation
-                      message=FALSE, # shows no messages
-                      tidy = TRUE, 
-                      comment="",
-                      align = 'left',
-                      cache = FALSE,  #keep as false so I don't get random error messages later on
-                      dev = "png",   #Will need to change for manuscript
-                      dpi = 200)   #Will need to change for manuscript
-
-
-custom_theme <- function(...){   ##My ggplot theme
-  theme(legend.position = "bottom", 
-        legend.text = element_text(size = 8),
-        panel.background = element_rect(fill = "white"),
-        strip.background = element_rect(fill = "white"),
-        axis.line.x = element_line(color="black"),
-        axis.line.y = element_line(color="black"))
-}
-
-pander::panderOptions("table.split.table", Inf)
-options(width = 100) # ensure skim results fit on one line
-set.seed(123456)
 
 ###tableby labels
 mylabels <- list(white_non_white = "Race", Age = "Age, years", Gender = "Sex", Couples_Match = "Participating in the Couples Match", US_or_Canadian_Applicant = "US or Canadian Applicant", Medical_Education_Interrupted = "Medical Education Process was Interrupted", Alpha_Omega_Alpha = "Alpha Omega Alpha", Military_Service_Obligation = "Military Service Obligation", USMLE_Step_1_Score = "USMLE Step 1 Score", Military_Service_Obligation = "Military Service Obligations", Count_of_Poster_Presentation = "Count of Poster Presentations", Count_of_Oral_Presentation = "Count of Oral Presentations", Count_of_Articles_Abstracts = "Count of Published Abstracts", Count_of_Peer_Reviewed_Book_Chapter = "Count of Peer Reviewed Book Chapters", Count_of_Other_than_Published = "Count of Other Published Products", Count_of_Online_Publications = "Count of Online Publications", Visa_Sponsorship_Needed = "Visa Sponsorship is Needed", Medical_Degree = "Medical Degree Training")
@@ -412,8 +424,6 @@ model_name %>%  #Plug in the model using the training data
   ggplot2::geom_text(aes(label = n), colour = "white", alpha = 1, size = 8) +
   labs(
     title = paste('Confusion matrix using:', label, sep = " ")) }
-
-
 
 # HR 201: PREDICTING EMPLOYEE ATTRITION WITH H2O AND LIME ----
 # CHAPTER 4: H2O MODELING ----
@@ -856,4 +866,3 @@ plot_ggpairs <- function(data, color = NULL, density_alpha = 0.5) {
   return(g)
   
 }
-
