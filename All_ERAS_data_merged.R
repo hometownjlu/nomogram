@@ -17,9 +17,7 @@ library(exploratory)
 
 # Steps to produce GOBA_list_of_people_who_all_matched_into_OBGYN
 `GOBA_list_of_people_who_all_matched_into_OBGYN` <- 
-  # ABOG data plus the HG and Doximity data from a few years ago.  
-  # 
-  # This data is an export from the ABOG API.  I did not hack the API the front door was left open.  There was no API key required to get the data.  I downloaded all the physicians and got the majority of people (Missing about 200 FMPRS certifications).  
+
   # 
   # We needed this data because it is a check about who is an OBGYN.  There is no public information about residents available on Physician Compare, NPPES or Doximity beyond the basics of address.  This ABOG data also groups people by userid putting consecutive userids/people next to each other who were enrolled in the same residency.  
   exploratory::read_rds_file("/Users/tylermuffly/Dropbox/Nomogram/nomogram/data/list of people who all matched into OBGYN.rds") %>%
