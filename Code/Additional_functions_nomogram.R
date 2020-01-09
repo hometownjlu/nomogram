@@ -69,7 +69,7 @@ skim_with(numeric = list(hist = NULL), integer = list(hist = NULL))
 
 ## TinyTex
 options(tinytex.verbose = FALSE)
-tinytex::tlmgr_update()  # update LaTeX packages
+#tinytex::tlmgr_update()  # update LaTeX packages
 
 custom_theme <- function(...){   ##My ggplot theme
   theme(legend.position = "bottom", 
@@ -867,3 +867,25 @@ plot_ggpairs <- function(data, color = NULL, density_alpha = 0.5) {
   
 }
 
+ggsave(here::here("results", "whomatched.tiff"), whomatched, device = "tiff", width = 10, height = 7, dpi = 320)
+
+df = whomatched
+
+tm_ggsave1 <- function(df) 
+  {
+  ggsave(here::here("results", (paste0(df, ".tiff"))), df, device = "tiff", scale = 1, width = 12, height = 10, units = c("cm"), dpi = 500,  bg = "transparent")
+         }
+
+tm_ggsave1(df=whomatched)
+
+
+
+ggsave(paste0("from_npi_physician_class", format(Sys.time(),'_%Y%m%d_%H%M%S'), ".png"), plot = last_plot(), device = "png", scale = 1, width = 12, height = 10, units = c("cm"), dpi = 500,  bg = "transparent")
+
+tm_ggsave <- function(df) {
+  ggsave(paste0(df, format(Sys.time(),'_%Y%m%d_%H%M%S'), ".TIFF"), plot = last_plot(), device = "tiff", scale = 1, width = 12, height = 10, units = c("cm"), dpi = 500,  bg = "transparent")
+}
+
+tm_ggsave(df = whomatched)
+
+ggsave(here::here("results", "whomatched.tiff"), whomatched, device = "tiff", width = 10, height = 7, dpi = 320)
