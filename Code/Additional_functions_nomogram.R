@@ -866,3 +866,4 @@ plot_ggpairs <- function(data, color = NULL, density_alpha = 0.5) {
   return(g)
   
 }
+
