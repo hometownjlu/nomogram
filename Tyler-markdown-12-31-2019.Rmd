@@ -626,7 +626,6 @@ stats::t.test(y=train$Count_of_Other_than_Published[train$Match_Status == "Match
 chisq.test(train$white_non_white,train$Match_Status,correct = FALSE)#Race is NOT significant
 chisq.test(train$Gender,train$Match_Status,correct = FALSE)#Gender is significant
 chisq.test(train$Couples_Match,train$Match_Status,correct = FALSE)#Couples match status is significant
-chisq.test(train$Racegrp,train$Match_Status,correct = FALSE)#Racegroup is significant
 chisq.test(train$US_or_Canadian_Applicant,train$Match_Status,correct = FALSE)#US Applicant is significant
 chisq.test(train$Medical_Education_Interrupted,train$Match_Status,correct = FALSE)#Interrupting medical education is significant
 chisq.test(train$Alpha_Omega_Alpha,train$Match_Status,correct = FALSE)#AOA is significant
@@ -637,13 +636,15 @@ chisq.test(train$Medical_Degree,train$Match_Status,correct = FALSE)#Medical Degr
 cnum <- train[,c("Age", "USMLE_Step_1_Score")]
 cormat <- cor(cnum) # Select only numeric variables. 
 pairs(cnum)
+ 
 dev.print(tiff, '~/Dropbox/Nomogram/nomogram/results/significant_numeric_variable_correlation.tiff', compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
 dev.off()
 
-#scatterplotMatrix(~Age+Weight+Height+BMI+Waist+SBP+DBP+HDL+LDL+`Total Chol`, data=chronic, main="Correlations of Numeric Variables in the Cars Data")
+scatterplotMatrix(~Age+USMLE_Step_1_Score, data=train, main="Correlations of Numeric Variables in the Cars Data")
+
 corrplot(cormat, method="circle")
 corrplot(cormat, method="circle", addCoef.col="black") # With correlation 
-dev.print(tiff, '~/Dropbox/Nomogram/nomogram/results/plot_significant_numeric_variable_correlation.tiff', compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
+dev.print(tiff, '~/Dropbox/Nomogram/nomogram/results/plot_numeric_variable_correlation.tiff', compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
 dev.off()
 ```
 
