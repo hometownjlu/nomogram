@@ -1403,8 +1403,8 @@ Shift Gears: Test Accuracy of Model on Training Data, Use glmnet model on 207 an
 Build both a glm (train.glm.with.lasso.variables) and a lrm model (train.lrm.with.lasso.variables) here with the same predictor variables.  
 
 ```{r, echo=TRUE, warning=FALSE}
-#test$Match_Status
 
+#It would be nice to create a character variable that we drop features from.  
 train.glm.with.lasso.variables  <- 
   stats::glm(Match_Status ~
                                     white_non_white + 
@@ -1966,7 +1966,7 @@ train_rf1 <- ranger(
 )
 train_rf1
 
-rf_model <- randomForest::randomForest(formula, data = train)
+rf_model <- randomForest::randomForest(Match_Status~., data = train)
 # Show model error
 plot(rf_model, ylim=c(0,0.36))
 legend('topright', colnames(rf_model$err.rate), col=1:3, fill=1:3)
@@ -2261,7 +2261,7 @@ caret::confusionMatrix(solution_boost, test$Match_Status)
 # NAIVE BAYES 
 # e1071 implementation # https://github.com/tobiolatunji/Readmission_Prediction/blob/master/diabetes_readmission.R
 
-nbayesmodel <- naiveBayes(formula, 
+nbayesmodel <- naiveBayes(Match_Status~., 
                           data = train)
 print(nbayesmodel)
 
@@ -2291,7 +2291,7 @@ model_04_xgboost <- parsnip::boost_tree(mode = "classification",
         learn_rate = 0.35, 
         loss_reduction = 0.0001) %>%
     set_engine("xgboost") %>%
-    fit(formula, data = train)
+    fit(Match_Status~., data = train)
 
 model_04_xgboost
 
@@ -2498,7 +2498,7 @@ train <- training(split)
 test <- testing(split)
 
 # Make sure we have consistent categorical levels
-blueprint <- recipe(formula = formula, data = train) %>%
+blueprint <- recipe(Match_Status~., data = train) %>%
   step_other(all_nominal(), threshold = 0.005)
 
 # Create training & test sets for h2o
@@ -2665,123 +2665,7 @@ auto_ml@leaderboard %>%
 
 # 9) Model: Deep Learning model
 ```{r}
-# https://bradleyboehmke.github.io/HOML/deep-learning.html
-# Helper packages
-library(dplyr)         # for basic data wrangling
-
-# Modeling packages
-library(keras)         # for fitting DNNs
-library(tfruns)        # for additional grid search & model training functions
-
-# Modeling helper package - not necessary for reproducibility
-library(tfestimators)  # provides grid search & model training interface
-library(dslabs)
-```
-
-```{r}
-# Import MNIST training data
-mnist <- dslabs::read_mnist()
-mnist_x <- mnist$train$images
-mnist_y <- mnist$train$labels
-
-# Rename columns and standardize feature values
-colnames(mnist_x) <- paste0("V", 1:ncol(mnist_x))
-mnist_x <- mnist_x / 255
-
-# One-hot encode response
-mnist_y <- to_categorical(mnist_y, 10)
-```
-
-```{r}
-model <- keras_model_sequential() %>%
-  layer_dense(units = 128, input_shape = ncol(mnist_x)) %>%
-  layer_dense(units = 64) %>%
-  layer_dense(units = 10)
-```
-
-```{r}
-model <- keras_model_sequential() %>%
-  
-  # Network architecture
-  layer_dense(units = 128, activation = "relu", input_shape = ncol(mnist_x)) %>%
-  layer_dense(units = 64, activation = "relu") %>%
-  layer_dense(units = 10, activation = "softmax") %>%
-  
-  # Backpropagation
-  compile(
-    loss = 'categorical_crossentropy',
-    optimizer = optimizer_rmsprop(),
-    metrics = c('accuracy')
-  )
-```
-
-```{r}
-# Train the model
-fit1 <- model %>%
-  fit(
-    x = mnist_x,
-    y = mnist_y,
-    epochs = 25,
-    batch_size = 128,
-    validation_split = 0.2,
-    verbose = FALSE
-  )
-
-# Display output
-fit1
-## Trained on 48,000 samples, validated on 12,000 samples (batch_size=128, epochs=25)
-## Final epoch (plot to see history):
-## val_loss: 0.1512
-##  val_acc: 0.9773
-##     loss: 0.002308
-##      acc: 0.9994
-plot(fit1)
-dev.print(tiff, '~/Dropbox/Nomogram/nomogram/results/deep_learning_fit1.tiff', width=2000, height=2000, bg="transparent", res = 200,units = "px" )
-dev.off()
-```
-
-
-```{r}
-model_w_adj_lrn <- keras_model_sequential() %>%
-  layer_dense(units = 256, activation = "relu", input_shape = ncol(mnist_x)) %>%
-  layer_batch_normalization() %>%
-  layer_dropout(rate = 0.4) %>%
-  layer_dense(units = 128, activation = "relu") %>%
-  layer_batch_normalization() %>%
-  layer_dropout(rate = 0.3) %>%
-  layer_dense(units = 64, activation = "relu") %>%
-  layer_batch_normalization() %>%
-  layer_dropout(rate = 0.2) %>%
-  layer_dense(units = 10, activation = "softmax") %>%
-  compile(
-    loss = 'categorical_crossentropy',
-    optimizer = optimizer_adam(),
-    metrics = c('accuracy')
-  ) %>%
-  fit(
-    x = mnist_x,
-    y = mnist_y,
-    epochs = 35,
-    batch_size = 128,
-    validation_split = 0.2,
-    callbacks = list(
-      callback_early_stopping(patience = 5),
-      callback_reduce_lr_on_plateau(factor = 0.05)
-      ),
-    verbose = FALSE
-  )
-
-model_w_adj_lrn
-
-# Optimal
-min(model_w_adj_lrn$metrics$val_loss)
-max(model_w_adj_lrn$metrics$val_acc)
-
-# Learning rate
-plot(model_w_adj_lrn)
-dev.print(tiff, '~/Dropbox/Nomogram/nomogram/results/learning_rate_plot.tiff',  width=2000, height=2000, bg="transparent", res = 200,units = "px" )
-dev.off()
-
+# I have no idea how to do this.  
 ```
 \pagebreak
 
@@ -2878,7 +2762,29 @@ The funModeling package will first give distributions for numerical data and fin
 # Appendix, Supplemental Table:  Descriptive analysis of all variables considered in the training set along with their association to matching.
 
 ```{r, echo=TRUE, warning=FALSE, message=FALSE, include=TRUE, results="asis"}
-table1_all_data <- arsenal::tableby(formula = formula,
+table1_all_data <- arsenal::tableby(Match_Status ~
+                                       white_non_white +
+                                       Age +
+                                       Gender +
+                                       Couples_Match +
+                                       #Expected_Visa_Status_Dichotomized +
+                                       US_or_Canadian_Applicant +
+                                       #Medical_School_Type +
+                                       Medical_Education_Interrupted +
+                                       #Misdemeanor_Conviction +
+                                       Alpha_Omega_Alpha +
+                                       #Gold_Humanism_Honor_Society +
+                                       Military_Service_Obligation +
+                                       USMLE_Step_1_Score +
+                                       Military_Service_Obligation +
+                                       Count_of_Poster_Presentation +
+                                       Count_of_Oral_Presentation +
+                                       # Count_of_Peer_Reviewed_Articles_Abstracts +
+                                       Count_of_Peer_Reviewed_Book_Chapter +
+                                       # Count_of_Peer_Reviewed_Other_than_Published +
+                                       Count_of_Online_Publications +
+                                       Visa_Sponsorship_Needed +
+                                       Medical_Degree,
                                     data=train, 
                                     control = arsenal::tableby.control(test = TRUE, total = TRUE, digits = 1L, digits.p = 2L, digits.count = 0L, numeric.simplify = F, numeric.stats = c("median", "q1q3"), cat.stats = c("Nmiss","countpct"), stats.labels = list(Nmiss = "N Missing", Nmiss2 ="N Missing", meansd = "Mean (SD)", medianrange = "Median (Range)", median ="Median", medianq1q3 = "Median (Q1, Q3)", q1q3 = "Q1, Q3", iqr = "IQR",range = "Range", countpct = "Count (Pct)", Nevents = "Events", medSurv ="Median Survival", medTime = "Median Follow-Up")))
 
