@@ -134,7 +134,7 @@ tmp <- table(all_data$Match_Status)
 match_rate <- (tmp[[2]]/(tmp[[2]] + tmp[[1]]))*100
 match_rate
 ```
-We can see that these data have `r nrow(all_data)` of `r ncol(all_data)` variables, and thatabout `r round(match_rate, digits = 1)` percent of medical students applying to OB/GYN residency matched.   Let’s create a few plots to get a sense of the data. Remember, the goal here will be to predict whether a given medical student will match into OB/GYN residency, based on the variables listed in the codebook.
+We can see that these data have `r nrow(all_data)` observations of `r ncol(all_data)` features, and thatabout `r round(match_rate, digits = 1)` percent of medical students applying to OB/GYN residency matched.   Let’s create a few plots to get a sense of the data. Remember, the goal here will be to predict whether a given medical student will match into OB/GYN residency, based on the variables listed in the codebook.
 
 # Description of the Data
 * A summary of the variables are listed below:
@@ -616,6 +616,16 @@ psych_correlation
 
 ggplot2::ggsave(here::here("results", "psych_correlation.tiff"), psych_correlation, device = "tiff", width = 10, height = 7, dpi = 320)
 ```
+
+```{r}
+#Correlation plot
+library("PerformanceAnalytics")
+library(corrplot)
+library(corrgram)
+M <- corrgram(all_data)
+
+```
+
 
 # Fitting and Summarizing the Kitchen Sink Model: (aka throw everything at it)
 Create a Kitchen Sink or a "large" model with all factors in the `train` data set first. This is essentially a screening model with all variables. 
@@ -1426,6 +1436,10 @@ train.glm.with.lasso.variables  <-
       data = train, 
       family = "binomial"(link=logit))  
 
+summary(train.glm.with.lasso.variables)  #check the model
+exp(train.glm.with.lasso.variables$coefficients)
+confint(train.glm.with.lasso.variables)
+
 train.lrm.with.lasso.variables <- 
   rms::lrm(formula = Match_Status ~ 
                                     white_non_white + 
@@ -1449,15 +1463,54 @@ The Receiver Operating Characteristic (ROC) curve is plotted below for false pos
 Use Model to predict match Status for Test Data
 ```{r}
 #Use Model to predict match Status for Test Data
+##For prediction
 prob <- 
   predict(train.glm.with.lasso.variables, newdata = test, type="response")
 dim(test)
-
-#test$Match_Status <- as.numeric(test$Match_Status) -1
+plot(prob)
 
 pred <- 
   prediction(prob, test$Match_Status)  #removed na.omit
 ```
+
+```{r}
+#https://github.com/mufflyt/Diabetes-Patient-Readdmission-Prediction/blob/master/Patient%20Readmission%20Risk%20Prediction.r
+
+# Accuracy of Model
+GLM_Pred <- ifelse(prob > 0.5, 1, 0)
+pred2 <- ifelse(GLM_Pred == 1, "Match", "No.Match")
+#Number True and Number False
+table(pred2)["Match"]
+
+test$Match_Status1 <- as.numeric(test$Match_Status) - 1
+
+#Accuracy Equation
+GLM_Accuracy <- ifelse(GLM_Pred == test$Match_Status1,1,0)
+
+#table for accuracy
+table(GLM_Accuracy)
+
+#Calculating True vs. total
+Accuracy_GLM <- (sum(GLM_Accuracy)/count(test))*100
+Accuracy_GLM
+
+#confusion matrix  #Not working from here
+confusionMatrix(as.factor(GLM_Pred),as.factor(test$Match_Status1), positive = "1")  ##????
+
+#ROC curve for GLM
+library(ROCR)
+pred_glm <- prediction(as.numeric(as.character(prob)), as.numeric(as.character(test$Match_Status)))
+perf_glm <- performance(pred, "tpr", 'fpr')
+plot(perf_glm, main = "ROC curve", colorize = T)
+abline(0,1, col='gray60')
+
+summary(perf_glm)
+
+auc_ROCR <- performance(pred_glm, measure = "auc")
+auc_ROCR <- auc_ROCR@y.values[[1]]
+auc_ROCR
+```
+
 
 ROC: ROC ggplot with nice controls
 ```{r, include = TRUE}
@@ -1633,6 +1686,26 @@ dev.print(tiff, '~/Dropbox/Nomogram/nomogram/results/varicable_importance_logist
 dev.off()
 ```
 
+```{r}
+# https://github.com/tobiolatunji/Readmission_Prediction/blob/master/diabetes_readmission.R
+# pseudo R-squared for logistic regression model
+logisticPseudoR2s <- function(LogModel) {
+  dev <- LogModel$deviance 
+  nullDev <- LogModel$null.deviance 
+  modelN <-  length(LogModel$fitted.values)
+  R.l <-  1 -  dev / nullDev
+  R.cs <- 1- exp ( -(nullDev - dev) / modelN)
+  R.n <- R.cs / ( 1 - ( exp (-(nullDev / modelN))))
+  cat("Pseudo R^2 for logistic regression\n")
+  cat("Hosmer and Lemeshow R^2  ", round(R.l, 3), "\n")
+  cat("Cox and Snell R^2        ", round(R.cs, 3), "\n")
+  cat("Nagelkerke R^2           ", round(R.n, 3),    "\n")
+}
+
+logisticPseudoR2s(train.glm.with.lasso.variables)
+```
+
+
 **(2) Regression Tree model**
 # 2)  Model: A CART model was fit using the rpart package. 
 
@@ -1676,6 +1749,8 @@ Look at pruning the tree branches to determine the optimal complexity vs. accura
 plotcp(t.model)
 dev.print(tiff, '~/Dropbox/Nomogram/nomogram/results/plotcp.tiff',  width=2000, height=2000, bg="transparent", res = 200,units = "px" )
 dev.off()
+
+printcp(t.model)
 ```
 
 The figure shows the pruning complexity parameter plot for a fully grown tree. Significant reduction in the cross validation error is achieved with tree sizes 88-100 and then the cross validation error levels off with minimal or no additional improvements.
@@ -1739,8 +1814,24 @@ vip(t.model3, num_features = 40, bar = T)
 ```{r}
 pruned.t.model <- rpart::prune(t.model, cp = 0.005) #Set the cp where the complexity to accuraty rate plateaued.  
 tm_rpart_plot(pruned.t.model)
+summary(pruned.t.model)
 ```
 Based on the complexity plot, prune the tree to a complexity of 0.005 using the prune() function with the tree and the complexity parameter.  Now Compute the accuracy of the pruned tree.  
+
+```{r}
+pred = predict(pruned.t.model, test, type = "class")
+
+confusionMatrix(as.factor(test$Match_Status), pred)  #In Ops.factor(predictedScores, threshold) : ‘<’ not meaningful for factors
+
+varImp(pruned.t.model)
+
+#Not working
+pred_ct <- prediction(as.numeric(as.character(pred)), as.numeric(as.character(test$Match_Status)))
+perf_ct <- performance(pred_ct, "tpr", 'fpr')
+plot(perf_ct, main = "ROC curve", colorize = T)
+abline(0,1, col='gray60')
+```
+
 
 ```{r}
 # Compute the accuracy of the pruned tree
@@ -1777,6 +1868,12 @@ The in-sample accuracy of the supported vector machine model is `r round(caret_s
 #using the model to make Survival predictions on the test set
 solution_svm <- predict(caret_svm, newdata = test, type = "raw")
 mean(solution_svm == test$Match_Status)
+
+#ROC Curve
+SVM_ROC <-roc(response=test$Match_Status, predictor= factor(solution_svm,ordered = TRUE), plot=TRUE) 
+plot(SVM_ROC)
+dev.print(tiff, '~/Dropbox/Nomogram/nomogram/results/SVM_ROC.tiff',  width=2000, height=2000, bg="transparent", res = 200,units = "px" )
+dev.off()
 ```
 
 ```{r}
@@ -1882,9 +1979,12 @@ train_rf1 <- ranger(
   respect.unordered.factors = "order",
   seed = 123
 )
+train_rf1
 
-# get OOB RMSE
-(default_rmse <- sqrt(train_rf1$prediction.error))
+rf_model <- randomForest::randomForest(Match_Status ~., data = train)
+# Show model error
+plot(rf_model, ylim=c(0,0.36))
+legend('topright', colnames(rf_model$err.rate), col=1:3, fill=1:3)
 ```
 
 Tuning
@@ -1972,6 +2072,8 @@ dev.off()
 
 
 ```{r Random Forest}
+#https://github.com/mufflyt/Diabetes-Patient-Readdmission-Prediction/blob/master/Patient%20Readmission%20Risk%20Prediction.r
+
 train$Match_Status <- as.factor(train$Match_Status)
 levels(train$Match_Status)
 
@@ -1979,7 +2081,11 @@ levels(train$Match_Status)
 caret_matrix <- caret::train(x=train[,c('white_non_white', 'Age', 'Gender', 'Couples_Match', 'US_or_Canadian_Applicant', 'Medical_Education_Interrupted', 'Alpha_Omega_Alpha', 'Military_Service_Obligation', 'USMLE_Step_1_Score', 'Count_of_Poster_Presentation', 'Count_of_Oral_Presentation', 'Count_of_Articles_Abstracts', 'Count_of_Peer_Reviewed_Book_Chapter', 'Count_of_Other_than_Published', 'Count_of_Online_Publications', 'Visa_Sponsorship_Needed', 'Medical_Degree')],
 y=train$Match_Status, 
 method='rf', 
-trControl=trainControl(method="cv", number=5))
+trControl=trainControl(method="repeatedcv", 
+                       number=5, 
+                       summaryFunction = twoClassSummary, 
+                       classProbs = TRUE, 
+                       allowParallel = TRUE))
 
 caret_matrix
 caret_matrix$results
@@ -1996,10 +2102,15 @@ The random Forest classification suffers in terms of interpretability. We are un
 ```{r}
 #using the model to make Survival predictions on the test set
 solution_rf <- predict(caret_matrix, newdata = test, type = "raw")
-mean(solution_rf == test$Match_Status)
+head(solution_rf)
+mean(solution_rf == test$Match_Status)  #Accuracy
+
+#for confusion Matrix
+test$Match_Status
+y_test <- test[test, "Matched"]  #Not sure what is wrong here.  #https://github.com/mufflyt/Diabetes-Patient-Readdmission-Prediction/blob/master/Patient%20Readmission%20Risk%20Prediction.r
+confusionMatrix(solution_rf, y_test)
 ```
 Random forest has accuracy of `r round(mean(solution_rf == test$Match_Status), digits=2)`.  
-
 \pagebreak
 
 # 5) Model: Gradient Boosting Machine (GBM) model
@@ -2008,27 +2119,54 @@ Random forest has accuracy of `r round(mean(solution_rf == test$Match_Status), d
 #https://bradleyboehmke.github.io/HOML/gbm.html
 # run a basic GBM model
 set.seed(123)  # for reproducibility
-train_gbm1 <- gbm(
-  formula = Match_Status ~ .,
-  data = train,
-  distribution = "gaussian",  # SSE loss function
-  n.trees = 5000,
-  shrinkage = 0.1,
-  interaction.depth = 3,
-  n.minobsinnode = 10,
-  cv.folds = 10
-)
+library(gbm)
+
+ctrl <- trainControl(method = "repeatedcv",   # 10fold cross validation
+                     # number = 5,							# do 5 repititions of cv
+                     summaryFunction=twoClassSummary,	# Use AUC to pick the best model
+                     classProbs=TRUE,
+                     allowParallel = TRUE)
+
+grid <- expand.grid(interaction.depth=c(2,3), # Depth of variable interactions
+                    n.trees=c(100,1000),	        # Num trees to fit
+                    shrinkage=c(0.01,0.2),		# Try 2 values for learning rate 
+                    n.minobsinnode = 20)
+
+gbmFit<- caret::train(Match_Status~., data = train,
+               method = "gbm", #n.trees = 1000,
+  #shrinkage = c(0.01,0.2),
+  #interaction.depth = c(2,3),
+  #n.minobsinnode = 20,
+  #cv.folds = 10,
+  #distribution = "gaussian",
+               tuneGrid = grid,
+               metric = "ROC",
+               verbose = FALSE,
+               trControl = ctrl)
+
+gbmPred <- predict(gbmFit,type = "raw")
+head(gbmPred)
+
+confusionMatrix(train$Match_Status,gbmPred)
+
+library(ROCR)
+gbmPred <- predict(gbmFit, test)
+pred <- prediction(as.numeric(gbmPred), as.numeric(y_test))
+perf <- performance(pred, "tpr", 'fpr')
+plot(perf, main = "ROC curve", colorize = T)
+abline(0,1, col='gray60')
+
+auc_ROCR <- performance(pred, measure = "auc")
+auc_ROCR <- auc_ROCR@y.values[[1]]
+auc_ROCR
 
 # find index for number trees with minimum CV error
-best <- which.min(train_gbm1$cv.error)
-
-# get MSE and compute RMSE
-sqrt(train_gbm1$cv.error[best])
+best <- which.min(gbmFit$cv.error)
 ```
 
 ```{r plot error curve}
 # plot error curve
-gbm.perf(train_gbm1, method = "cv")
+gbm.perf(gbmFit, method = "cv")
 ```
 
 Tuning
@@ -2048,7 +2186,7 @@ for(i in seq_len(nrow(hyper_grid))) {
   # fit gbm
   set.seed(123)  # for reproducibility
   train_time <- system.time({
-    m <- gbm(
+    m <- gbm::gbm(
       formula = Match_Status ~ .,
       data = train,
       distribution = "gaussian",
@@ -2061,14 +2199,10 @@ for(i in seq_len(nrow(hyper_grid))) {
   })
   
   # add SSE, trees, and training time to results
-  hyper_grid$RMSE[i]  <- sqrt(min(m$cv.error))
   hyper_grid$trees[i] <- which.min(m$cv.error)
   hyper_grid$Time[i]  <- train_time[["elapsed"]]
 
 }
-
-# results
-arrange(hyper_grid, RMSE)
 ```
 
 ```{r search grid}
@@ -2138,38 +2272,22 @@ caret::confusionMatrix(solution_boost, test$Match_Status)
 ?????????????Finally, a Naïve Bayes model was fit. Similar to the previous models, the top 5 WOE binned variables were also included in this model. Cross-validation demonstrated that the tuning parameter 'laplace' was held constant at a value of 0 and tuning parameter 'adjust' was held constant at a value of 1.
 
 ```{r NB model, cache=FALSE}
-#Naive Bayes with WOE Binning
+# NAIVE BAYES 
+# e1071 implementation # https://github.com/tobiolatunji/Readmission_Prediction/blob/master/diabetes_readmission.R
 
-# Timer on
-ptm = proc.time()
-set.seed(12345)
-fitControl <- trainControl(method = "repeatedcv",
-                           number = 10,
-                           repeats = 2)
-nbwoe <-    caret::train(as.factor(Match_Status) ~ .,
-                  data = train,
-                  method = 'naive_bayes',
-                  trControl = fitControl,
-                  tuneLength = 8,
-                  metric = "Accuracy"
-)
-# Timer off
-proc.time() - ptm
-nbwoe
-```
+nbayesmodel <- naiveBayes(Match_Status ~ ., 
+                          data = train)
+print(nbayesmodel)
 
-```{r NB model accuracy, align = 'center'}
-#Not working!!!
-
-# train.nbwoe <- predict(nbwoe, newdata = test[,-which(names(train)=="Match_Status")])
-# cat("\n","----- Performance of nbwoe on train set -----","\n")
-# nb.accuracy <- postResample(pred = train.nbwoe, obs = as.factor(train$Match_Status))
-# nb.accuracy[1]
+pred <- predict(nbayesmodel, test, type = "class")
+test$pred_Match_Status <- pred
+prop.table(table(test$Match_Status, test$pred_Match_Status),1)
+confusionMatrix(test$Match_Status, test$pred_Match_Status)
 ```
 
 \pagebreak
 
-**(6) xgboost model**
+**(7) xgboost model**
 
 # 7) Model: XGboost model
 XGBoost (which stands for eXtreme Gradient Boosting) is an especialy efficent implimentation of gradient boosting. In practice, XGBoost is a very powerful tool for classification and regression. 
@@ -2324,6 +2442,55 @@ params <- list(
 # vip::vip(xgb.fit.final) 
 # xgb.importance(xgb.fit.final)
 # xgboost::xgb.ggplot.importance(xgb.fit.final)
+```
+
+# 7a)  Model: Neural Network
+```{r}
+##################### NNET MODEL #################################
+library(nnet)
+model <- caret::train(Match_Status ~ . , train, method='nnet', #linout=TRUE, trace = FALSE,
+               #Grid of tuning parameters to try:
+               tuneGrid=NULL ) 
+summary(model)
+############### Without Cross Validation#######
+
+pred <- predict(model, test)
+predNew = as.data.frame(pred)
+categorise=function(x){
+  return(ifelse(x>0.5,1,0))
+}
+predNew=apply(predNew,2,categorise)
+head(predNew,10)
+confusionMatrix(as.factor(test$Match_Status),as.factor(predNew))
+
+############### WITH CROSS VALIDATION###########
+train_control <- trainControl(method = "cv", number = 10)
+linearCrossMod <- caret::train(Match_Status ~ ., 
+                        data=train, 
+                        trControl = train_control,
+                        method = "nnet",
+                        family=binomial())
+
+summary(linearCrossMod)
+
+pred_cv <- predict(linearCrossMod, test)
+predNew_cv = as.data.frame(pred_cv)
+predNew_cv=apply(predNew_cv,2,categorise)
+head(predNew_cv,10)
+confusionMatrix(as.factor(predNew_cv),as.factor(test$Match_Status))
+
+############### Roc curve for NNET MODEL################
+library(ROCR)
+
+pred_roc <- prediction(as.numeric(as.character(pred_cv)), as.numeric(as.character(test$Match_Status)))
+perf <- performance(pred_roc, "tpr", 'fpr')
+plot(perf, main = "ROC curve for Neural Net", colorize = T)
+abline(0,1, col='gray60')
+
+auc_ROCR <- performance(pred_roc, measure = "auc")
+auc_ROCR <- auc_ROCR@y.values[[1]]
+
+auc_ROCR
 ```
 
 # 8) Model: Ensembles model
@@ -2884,7 +3051,66 @@ rmarkdown::clean_site()
 
 
 
+#I liked how they did this:
+#https://github.com/manojmukkamala/DiabeticPatientsReadmission/blob/master/Project_V4.R
+```{r}
+#Just writing the names of all the variables under one term to avoid re-writing when we apply model multiple times
+drivers <- c("race", "gender", "age", "admission_type_id", "discharge_disposition_id", "admission_source_id", "time_in_hospital", "num_lab_procedures", "num_procedures", "num_medications", "number_diagnoses", "A1Cresult", "metformin", "glipizide", "glyburide", "insulin", "change", "diabetesMed")
+
+#Writing the name of dependent variable seperately
+dependentVar <- "readmitted"
+```
+
+## Evaluate Algorithms to create a model
+```{r}
+
+#https://github.com/shriyarp/IndianLiverPatient/blob/master/indianLiverPatientsReport.Rmd
+control <- trainControl(method="cv", number=10)
+#Quadratic Discriminant Analysis
+set.seed(4)
+fit.qda <- caret::train(Match_Status~., data=train, method="qda", trControl=control)
+#AdaBoost Classification Trees
+set.seed(4)
+fit.ab <- caret::train(Match_Status~., data=train, method="adaboost", trControl=control)
+#Naive Bayes
+set.seed(4)
+fit.nb <- caret::train(Match_Status~., data=train, method="naive_bayes", trControl=control)
+# Linear Discriminant Analysis
+set.seed(4)
+fit.lda <- caret::train(Match_Status~., data=train, method="lda",  trControl=control)
+# CART
+set.seed(4)
+fit.cart <- caret::train(Match_Status~., data=train, method="rpart",  trControl=control)
+# K-nearest neighbours
+set.seed(4)
+fit.knn <- caret::train(Match_Status~., data=train, method="knn",  trControl=control)
+# Support Vector Machines with Radial Basis Function Kernel
+set.seed(4)
+fit.svm <- caret::train(Match_Status~., data=train, method="svmRadial",  trControl=control)
+# Random Forest
+set.seed(4)
+fit.rf <- caret::train(Match_Status~., data=train, method="rf",  trControl=control)
+```
+
+Post Building the models, we now select the best model based on accuracy
+```{r}
+results <- resamples(list(qda = fit.qda, ab = fit.ab, nb=fit.nb, lda=fit.lda, cart=fit.cart, knn=fit.knn, svm=fit.svm, rf=fit.rf))
+summary(results)
+```
+
+```{r}
+dotplot(results)
+```
+
+## Make Predictions
+We can now proceed to make predictions based on the AdaBoost Classification Trees
+```{r}
+#predict 
+y_hat <- predict(fit.ab,test)
+```
 
 
-
+```{r}
+confusionMatrix(y_hat,test$Match_Status)
+```
 
