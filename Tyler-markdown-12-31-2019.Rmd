@@ -88,8 +88,6 @@ This data was cleaned in a separate R script with the help of exploratory.io.
 
 Packrat is in use to control package versions and a packrat.lock file is posted to my github repository.  This will allow for easier reproducibility.  Packrat records the exact package versions you depend on, and ensures those exact versions are the ones that get installed wherever you go.  We can also control the environment by deploying the project inside a Docker container as needed.  The project was created in R version 3.6.1 and run inside RStudio 1.2.5019.  Session info is present at the bottom of the script.  
 ```{r directory paths and packrat settings, include=FALSE}
-#CREATE FUNCTION:  ggsave(paste0("from_npi_physician_class", format(Sys.time(),'_%Y%m%d_%H%M%S'), ".png"), plot = last_plot(), device = "png", scale = 1, width = 12, height = 10, units = c("cm"), dpi = 500,  bg = "transparent")
-
 #Helpful, https://www.kaggle.com/pjmcintyre/titanic-first-kernel/code
 
 # I want to use packrate to make the project more: isolated, portable and reproducible.  Please see packrat/packrat.lock for a list of the precise packages used and their versions.  Be sure to check in the .Rprofile, packrat.lock files, and everything under packrat/src/. 
@@ -2883,4 +2881,10 @@ rmarkdown::clean_site(preview = TRUE)
 # actually remove the files
 rmarkdown::clean_site()
 ```
+
+
+
+
+
+
 
