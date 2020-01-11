@@ -577,7 +577,77 @@ skewed_feature_names <- train %>%
   as.character()
 ```
 
-# Scatterplot Matrix and Correlation
+# Factor Selection: Scatterplot Matrix and Correlation
+```{r}
+stats::t.test(y=train$Age[train$Match_Status == "Matched"],
+              x=train$Age[train$Match_Status == "Did not match"],
+              alternative = ("two.sided"),
+              paired = FALSE,
+              conf.level = 0.95) #Significant different in age for people who matched and did not match shown by the t-test
+
+stats::t.test(y=train$USMLE_Step_1_Score[train$Match_Status == "Matched"],
+              x=train$USMLE_Step_1_Score[train$Match_Status == "Did not match"],
+              alternative = ("two.sided"),
+              paired = FALSE,
+              conf.level = 0.95) #Significant different in USMLE_Step_1_Score for people who matched and did not match shown by the t-test
+
+stats::t.test(y=train$Count_of_Poster_Presentation[train$Match_Status == "Matched"],
+              x=train$Count_of_Poster_Presentation[train$Match_Status == "Did not match"],
+              alternative = ("two.sided"),
+              paired = FALSE,
+              conf.level = 0.95) #NO DIFFERENCE in Count_of_Poster_Presentation for people who matched and did not match shown by the t-test
+
+stats::t.test(y=train$Count_of_Oral_Presentation[train$Match_Status == "Matched"],
+              x=train$Count_of_Oral_Presentation[train$Match_Status == "Did not match"],
+              alternative = ("two.sided"),
+              paired = FALSE,
+              conf.level = 0.95) #NO DIFFERENCE in Count_of_Oral_Presentation for people who matched and did not match shown by the t-test
+
+stats::t.test(y=train$Count_of_Articles_Abstracts[train$Match_Status == "Matched"],
+              x=train$Count_of_Articles_Abstracts[train$Match_Status == "Did not match"],
+              alternative = ("two.sided"),
+              paired = FALSE,
+              conf.level = 0.95) #NO DIFFERENCE in Count_of_Articles_Abstracts for people who matched and did not match shown by the t-test
+
+stats::t.test(y=train$Count_of_Peer_Reviewed_Book_Chapter[train$Match_Status == "Matched"],
+              x=train$Count_of_Peer_Reviewed_Book_Chapter[train$Match_Status == "Did not match"],
+              alternative = ("two.sided"),
+              paired = FALSE,
+              conf.level = 0.95) #NO DIFFERENCE in Count_of_Peer_Reviewed_Book_Chapter for people who matched and did not match shown by the t-test
+
+
+stats::t.test(y=train$Count_of_Other_than_Published[train$Match_Status == "Matched"],
+              x=train$Count_of_Other_than_Published[train$Match_Status == "Did not match"],
+              alternative = ("two.sided"),
+              paired = FALSE,
+              conf.level = 0.95) #NO DIFFERENCE in Count_of_Other_than_Published for people who matched and did not match shown by the t-test
+
+
+chisq.test(train$white_non_white,train$Match_Status,correct = FALSE)#Race is NOT significant
+chisq.test(train$Gender,train$Match_Status,correct = FALSE)#Gender is significant
+chisq.test(train$Couples_Match,train$Match_Status,correct = FALSE)#Couples match status is significant
+chisq.test(train$Racegrp,train$Match_Status,correct = FALSE)#Racegroup is significant
+chisq.test(train$US_or_Canadian_Applicant,train$Match_Status,correct = FALSE)#US Applicant is significant
+chisq.test(train$Medical_Education_Interrupted,train$Match_Status,correct = FALSE)#Interrupting medical education is significant
+chisq.test(train$Alpha_Omega_Alpha,train$Match_Status,correct = FALSE)#AOA is significant
+chisq.test(train$Military_Service_Obligation,train$Match_Status,correct = FALSE)#Military Service obligation is NOT significant
+chisq.test(train$Visa_Sponsorship_Needed,train$Match_Status,correct = FALSE)#Visa sponsorship is significant
+chisq.test(train$Medical_Degree,train$Match_Status,correct = FALSE)#Medical Degree is significant
+
+cnum <- train[,c("Age", "USMLE_Step_1_Score")]
+cormat <- cor(cnum) # Select only numeric variables. 
+pairs(cnum)
+dev.print(tiff, '~/Dropbox/Nomogram/nomogram/results/significant_numeric_variable_correlation.tiff', compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
+dev.off()
+
+#scatterplotMatrix(~Age+Weight+Height+BMI+Waist+SBP+DBP+HDL+LDL+`Total Chol`, data=chronic, main="Correlations of Numeric Variables in the Cars Data")
+corrplot(cormat, method="circle")
+corrplot(cormat, method="circle", addCoef.col="black") # With correlation 
+dev.print(tiff, '~/Dropbox/Nomogram/nomogram/results/plot_significant_numeric_variable_correlation.tiff', compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
+dev.off()
+```
+
+Correlation plot 
 ```{r, warning= FALSE, message=FALSE, echo=TRUE, include=TRUE}
 train_correlation <-
   train %>%
@@ -602,6 +672,8 @@ dplyr::mutate(white_non_white = as.integer(train$white_non_white),
                      sig.level = "0.01",
                      insig = "blank", #Insignficant values are left blank
                      pch = TRUE)
+dev.print(tiff, '~/Dropbox/Nomogram/nomogram/results/train_correlation.tiff', compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
+dev.off()
 ```
 In this correlation plot we want to look for the bright, large circles which immediately show the strong correlations (size and shading depends on the absolute values of the coefficients; color depends on direction).  This shows whether two features are connected so that one changes with a predictable trend if you change the other. The closer this coefficient is to zero the weaker is the correlation. Anything that you would have to squint to see is usually not worth seeing! 
 
@@ -849,12 +921,12 @@ False positive is `r confusion[2]`.  These are the people who were predicted to 
 ```
 The accuracy of the `limited.vif.model.kitchen.sink` model is `r round(confusion.limited.vif.model.kitchen.sink$overall[[1]], digit=3)`.  The sensitivity of the `limited.vif.model.kitchen.sink` model is `r round(confusion.limited.vif.model.kitchen.sink$byClass[[1]], digit=3)`. The specificity of the `limited.vif.model.kitchen.sink` model is `r round(confusion.limited.vif.model.kitchen.sink$byClass[[2]], digit=3)`.
 
-## Evaluating the signficance of kitchen.sink variables 
+Evaluating the signficance of kitchen.sink variables 
 ```{r, echo=TRUE, message=FALSE,fig.width=7, fig.asp=1, fig.cap="Figure: Variance-inflation factors for matching into OBGYN."}
 tm_chart_strength_of_variables(limited.vif.model.kitchen.sink)
 ```
 
-# Factor Selection
+# Factor Selection using Regression
 https://livebook.datascienceheroes.com/selecting-best-variables.html
 
 After splitting the model in training and validation data, it is necessary to evaluate the variables with a major predictive power. The best method is reviewing the p-values in the regression model, however there are many variables in the model so it will take considerable time to do so manually. In this case, the LASSO regularization algorithm is implemented to identify the variables to be significant on the model. 
@@ -915,14 +987,12 @@ pROC::auc(backwards_ROC)
 
 Not working with HTML knitr
 
-## Factor Selection: LASSO (Least Absolute Shrinkage and Selection Operator)
+#Factor Selection: LASSO (Least Absolute Shrinkage and Selection Operator)
 Also, I like lasso because some people will find that using predictors of age, race, gender as predictors will be discriminatory.  In short, LASSO eliminates the need for an author to be a subject expert on matching when selecting variables.  
 
 Here, we use Lasso for simplicity and interpretability. The aim is to avoid over-parametrization and unnecessary model bias by carrying feature selection on-the-go. Key to this task will be cross-validation.  Start by creating a custom train control providing the number of cross-validations and setting the classProbs to TRUE for logistic regression. 
 
 #Factor Selection:  Principal Components Analysis
-##PCA Principal Component Analysis
-
 In order to reduce 17 dimensions or knowing the significant impact of our reduction we will do PCA.
 
 ```{r}
@@ -935,11 +1005,13 @@ names(pcaObj)
 plot(pcaObj)
 pcaObj$loadings
 biplot(pcaObj, cex = 0.7)
+tiff(file=paste("Principal_Components_for_numeric_data.tiff", sep=""), width=2000, height=2000, bg="transparent", res = 200,units = "px" )
+dev.off()
+
 final_data <- as.data.frame(pcaObj$scores)
-final_data
 ```
 According to PCA,the columns that are of utmost importance are as follows:
-Age,
+Age, AND
 USMLE_Step_1_Score
 
 
