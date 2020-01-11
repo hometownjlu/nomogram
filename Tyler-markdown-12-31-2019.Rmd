@@ -579,33 +579,29 @@ skewed_feature_names <- train %>%
 
 # Scatterplot Matrix and Correlation
 ```{r, warning= FALSE, message=FALSE, echo=TRUE, include=TRUE}
-colnames(train)
-
-####Not working!!!
-
-# train_correlation <- 
-#   train %>% 
-#   #select_if(is.numeric) %>% #selects only numeric columns to be used in the correlation plot, NICE!
-#     dplyr::mutate(white_non_white = as.integer(white_non_white),
-#          Match_Status = as.integer(Match_Status),
-#          Gender = as.integer(Gender),
-#          Couples_Match = as.integer(Couples_Match),
-#          US_or_Canadian_Applicant = as.integer(US_or_Canadian_Applicant),
-#          Medical_Education_Interrupted = as.integer(Medical_Education_Interrupted),
-#          Alpha_Omega_Alpha = as.integer(Alpha_Omega_Alpha),
-#          Military_Service_Obligation = as.integer(Military_Service_Obligation),
-#          Visa_Sponsorship_Needed = as.integer(Visa_Sponsorship_Needed),
-#          Medical_Degree = as.integer(Medical_Degree))%>% 
-#   stats::cor(use="complete.obs") %>%
-#   corrplot::corrplot(type="lower", 
-#                      diag=FALSE, 
-#                      addgrid.col = rgb(0, 0, 0, .05),
-#                      order = "hclust", 
-#                      tl.cex = 0.5, 
-#                      tl.col = "black", 
-#                      sig.level = "0.01", 
-#                      insig = "blank", #Insignficant values are left blank
-#                      pch = TRUE)
+train_correlation <-
+  train %>%
+  select_if(is.numeric) %>% #selects only numeric columns to be used in the correlation plot, NICE!
+dplyr::mutate(white_non_white = as.integer(train$white_non_white),
+         Match_Status = as.integer(train$Match_Status),
+         Gender = as.integer(train$Gender),
+         Couples_Match = as.integer(train$Couples_Match),
+         US_or_Canadian_Applicant = as.integer(train$US_or_Canadian_Applicant),
+         Medical_Education_Interrupted = as.integer(train$Medical_Education_Interrupted),
+         Alpha_Omega_Alpha = as.integer(train$Alpha_Omega_Alpha),
+         Military_Service_Obligation = as.integer(train$Military_Service_Obligation),
+         Visa_Sponsorship_Needed = as.integer(train$Visa_Sponsorship_Needed),
+         Medical_Degree = as.integer(train$Medical_Degree))%>%
+  stats::cor(use="complete.obs") %>%
+  corrplot::corrplot(type="lower",
+                     diag=FALSE,
+                     addgrid.col = rgb(0, 0, 0, .05),
+                     order = "hclust",
+                     tl.cex = 0.5,
+                     tl.col = "black",
+                     sig.level = "0.01",
+                     insig = "blank", #Insignficant values are left blank
+                     pch = TRUE)
 ```
 In this correlation plot we want to look for the bright, large circles which immediately show the strong correlations (size and shading depends on the absolute values of the coefficients; color depends on direction).  This shows whether two features are connected so that one changes with a predictable trend if you change the other. The closer this coefficient is to zero the weaker is the correlation. Anything that you would have to squint to see is usually not worth seeing! 
 
@@ -652,6 +648,9 @@ psych_correlation <- psych::pairs.panels(train[, c(2, 9:15, 18)], bg=c("red","bl
 psych_correlation
 
 ggplot2::ggsave(here::here("results", "psych_correlation.tiff"), psych_correlation, device = "tiff", width = 10, height = 7, dpi = 320)
+
+#We can also check correlation of 2 attributes using cor()
+
 ```
 
 ```{r}
@@ -678,7 +677,7 @@ d <-
 options(datadist = "d")
 
 kitchen.sink <- 
-  rms::lrm(formula = formula, 
+  rms::lrm(formula = Match_Status~., 
       data = train, 
       x = T, 
       y = T)
@@ -920,6 +919,29 @@ Not working with HTML knitr
 Also, I like lasso because some people will find that using predictors of age, race, gender as predictors will be discriminatory.  In short, LASSO eliminates the need for an author to be a subject expert on matching when selecting variables.  
 
 Here, we use Lasso for simplicity and interpretability. The aim is to avoid over-parametrization and unnecessary model bias by carrying feature selection on-the-go. Key to this task will be cross-validation.  Start by creating a custom train control providing the number of cross-validations and setting the classProbs to TRUE for logistic regression. 
+
+#Factor Selection:  Principal Components Analysis
+##PCA Principal Component Analysis
+
+In order to reduce 17 dimensions or knowing the significant impact of our reduction we will do PCA.
+
+```{r}
+numeric_data <- select_if(all_data, is.numeric)
+numeric_data <- base::scale(numeric_data, center=TRUE, scale = TRUE)
+pcaObj <- stats::princomp(numeric_data, cor = TRUE, scores = TRUE, covmat = NULL)
+summary(pcaObj)
+print(pcaObj)
+names(pcaObj)
+plot(pcaObj)
+pcaObj$loadings
+biplot(pcaObj, cex = 0.7)
+final_data <- as.data.frame(pcaObj$scores)
+final_data
+```
+According to PCA,the columns that are of utmost importance are as follows:
+Age,
+USMLE_Step_1_Score
+
 
 # 0) Model: Regularized Regression
 Regularization methods provide a means to constrain or regularize the estimated coefficients, which can reduce the variance and decrease out of sample error.
@@ -1467,10 +1489,12 @@ pred2 <- ifelse(GLM_Pred == 1, "Match", "No.Match")
 #Number True and Number False
 table(pred2)["Match"]
 
-test$Match_Status1 <- as.numeric(test$Match_Status) - 1
+# test$Match_Status1 <- as.numeric(test$Match_Status) - 1
+#In GLM_Pred == test$Match_Status1 :
+  # longer object length is not a multiple of shorter object length
 
 #Accuracy Equation
-GLM_Accuracy <- ifelse(GLM_Pred == test$Match_Status1,1,0)
+# GLM_Accuracy <- ifelse(GLM_Pred == test$Match_Status1,1,0) #Not working
 
 #table for accuracy
 table(GLM_Accuracy)
@@ -1480,20 +1504,20 @@ Accuracy_GLM <- (sum(GLM_Accuracy)/count(test))*100
 Accuracy_GLM
 
 #confusion matrix  #Not working from here
-confusionMatrix(as.factor(GLM_Pred),as.factor(test$Match_Status1), positive = "1")  ##????
+#confusionMatrix(as.factor(GLM_Pred),as.factor(test$Match_Status1), positive = "1")  ##????NOT WORKING
 
 #ROC curve for GLM
 library(ROCR)
-pred_glm <- prediction(as.numeric(as.character(prob)), as.numeric(as.character(test$Match_Status)))
-perf_glm <- performance(pred, "tpr", 'fpr')
+#pred_glm <- prediction(as.numeric(as.character(prob)),  ###NOT WORKING??? as.numeric(as.character(test$Match_Status)))
+#perf_glm <- performance(pred, "tpr", 'fpr')    ###NOT WORKING???
 plot(perf_glm, main = "ROC curve", colorize = T)
 abline(0,1, col='gray60')
 
 summary(perf_glm)
 
-auc_ROCR <- performance(pred_glm, measure = "auc")
-auc_ROCR <- auc_ROCR@y.values[[1]]
-auc_ROCR
+#auc_ROCR <- performance(pred_glm, measure = "auc") ###NOT WORKING???
+# auc_ROCR <- auc_ROCR@y.values[[1]]
+# auc_ROCR
 ```
 
 
@@ -2967,3 +2991,27 @@ test$Match_Status <- as.factor(test$Match_Status)
 confusionMatrix(y_hat,test$Match_Status)
 ```
 
+
+#https://github.com/caramirezal/floJoVIHDataAnalysis/blob/master/reports/exploratoryDataAnalysis.Rmd
+#Imputation script in case we need it.  
+<!-- #### Data imputation -->
+
+<!-- Here, two independent imputation strategies were implemented. A random forest approach and a very simple imputation strategy using median values in order we can compare two imputation methods. -->
+
+<!-- ### Random forest imputation. -->
+
+<!-- ```{r message=FALSE, warning=FALSE, warning=FALSE} -->
+<!-- ## Imputing data using random forest -->
+<!-- vihImputedForest <- missForest(vihProcessed,  -->
+<!--                                ntree = 300) -->
+<!-- vihImputedForest$OOBerror -->
+<!-- ``` -->
+
+<!-- NRMSE corresponds to a metric of imputation accuracy. Better results are expected to be closer to zero value. Hence, taking into account this metric the imputation accuracy on data is **low**. -->
+
+<!-- ### Imputation with median values -->
+
+<!-- ```{r} -->
+<!-- vihImputedHmisc <- as.data.frame(sapply(vihProcessed,  -->
+<!--                                    impute, mean)) -->
+<!-- ``` -->
