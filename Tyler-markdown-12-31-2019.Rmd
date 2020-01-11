@@ -119,6 +119,12 @@ Package installation, data download from Dropbox.com, and functions written for 
 source(file="~/Dropbox/Nomogram/nomogram/Code/Additional_functions_nomogram.R", echo=TRUE, verbose=TRUE)
 ```
 
+The first few rows of the data loaded are given below:
+```{r}
+head(all_data) %>% knitr::kable(format = "pandoc", caption = "Example rows")
+```
+
+
 # Ingest Data:  Load and Tidy the Data
 `all_data` is a dataframe of the independent and the dependent variables for review. Each variable is contained in a column, and each row represents a single unique medical student. If students applied in more than one year the most contemporary data was used.
 ```{r Download cleaned data from Dropbox, echo=TRUE, include=FALSE, cache=FALSE}
@@ -3100,17 +3106,21 @@ summary(results)
 
 ```{r}
 dotplot(results)
+#MUST SAVE THIS!!!!
 ```
 
 ## Make Predictions
 We can now proceed to make predictions based on the AdaBoost Classification Trees
 ```{r}
 #predict 
-y_hat <- predict(fit.ab,test)
+y_hat <- predict(fit.rf,test)
 ```
 
 
 ```{r}
+class(test$Match_Status)
+test$Match_Status <- as.factor(test$Match_Status)
+
 confusionMatrix(y_hat,test$Match_Status)
 ```
 
