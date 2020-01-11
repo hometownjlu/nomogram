@@ -92,7 +92,7 @@ Packrat is in use to control package versions and a packrat.lock file is posted 
 
 # I want to use packrate to make the project more: isolated, portable and reproducible.  Please see packrat/packrat.lock for a list of the precise packages used and their versions.  Be sure to check in the .Rprofile, packrat.lock files, and everything under packrat/src/. 
 packrat::packrat_mode(on = TRUE)
-packrat::status()
+#packrat::status()
 #packrat::clean()
 #packrat::restore()
 #packrat::snapshot(infer.dependencies = TRUE)  #Run each time a new library is installed.
@@ -121,7 +121,7 @@ source(file="~/Dropbox/Nomogram/nomogram/Code/Additional_functions_nomogram.R", 
 
 The first few rows of the data loaded are given below:
 ```{r}
-head(all_data) %>% knitr::kable(format = "pandoc", caption = "Example rows")
+head(all_data) %>% knitr::kable(format = "pandoc", caption = "Example observations (rows) and the features (columns)")
 ```
 
 
@@ -161,6 +161,38 @@ all_data$Count_of_Online_Publications <- as.numeric(all_data$Count_of_Online_Pub
 inspectdf::inspect_types(all_data) %>% show_plot()
 ```
 
+```{r}
+#https://github.com/manojmukkamala/DiabeticPatientsReadmission/blob/master/Project_V4.R
+
+#Just writing the names of all the variables under one term to avoid re-writing when we apply model multiple times
+drivers <- c("white_non_white",
+             "Age", 
+             "Gender",
+             "Couples_Match",
+             "US_or_Canadian_Applicant",
+             "Medical_Education_Interrupted",
+             "Alpha_Omega_Alpha",
+             "Military_Service_Obligation",
+             "USMLE_Step_1_Score", 
+             "Visa_Sponsorship_Needed",
+             "Count_of_Poster_Presentation", 
+             "Count_of_Oral_Presentation", 
+             "Count_of_Articles_Abstracts",
+             "Count_of_Peer_Reviewed_Book_Chapter",
+             "Count_of_Other_than_Published",
+             "Count_of_Online_Publications",
+             "Visa_Sponsorship_Needed",
+             "Medical_Degree")
+
+#Writing the name of dependent variable seperately
+dependentVar <- "Match_Status"
+
+#Bringing all the column names under one term
+formula <- paste(dependentVar, "~", paste(drivers, collapse = " + "))
+formula
+```
+
+
 ```{r Describe data, include=FALSE}
 Hmisc::describe(all_data)
 ```
@@ -177,7 +209,6 @@ DataExplorer::plot_intro(all_data)
 ```
 
 The new data set in `all_data`, includes `r nrow(all_data)` rows and `r ncol(all_data)` columns.  The `r (english::words(nrow(all_data)))` applicants are missing `r (english::words(sum(is.na(all_data))))` values.    
-
 ## Shows four different ways to check for missingness in the data 
 ```{r, four ways to look for missingness, include=FALSE, out.width="50%"}
 #Cool but a little overkill with three ways for checking if we have missing data.  
@@ -647,27 +678,7 @@ d <-
 options(datadist = "d")
 
 kitchen.sink <- 
-  rms::lrm(Match_Status ~
-        white_non_white +
-        Age +
-        #rms::rcs(Age, 5) ## Removed splined variable
-        Gender +
-        Couples_Match +
-        US_or_Canadian_Applicant +
-        Medical_Education_Interrupted +
-        Alpha_Omega_Alpha +
-        Military_Service_Obligation +
-        USMLE_Step_1_Score +
-        #rms::rcs(USMLE_Step_1_Score, 4) ## Removed splined variable
-        Count_of_Poster_Presentation +
-        #rms::rcs(Count_of_Poster_Presentation,3)  ## Removed splined variable
-        Count_of_Oral_Presentation +
-        Count_of_Articles_Abstracts +
-        Count_of_Peer_Reviewed_Book_Chapter +
-        Count_of_Other_than_Published +
-        Count_of_Online_Publications +
-        Visa_Sponsorship_Needed +
-        Medical_Degree, 
+  rms::lrm(formula = formula, 
       data = train, 
       x = T, 
       y = T)
@@ -684,7 +695,7 @@ kitchen.sink[[26]]
 #https://thepoliticalmethodologist.com/2013/11/25/making-high-resolution-graphics-for-academic-publishing/
 #See custom-made function in Additional_functions_nomogram.R for specific settings on nomogram build. 
 tm_nomogram_prep(kitchen.sink)
-dev.print(tiff, '/results/tm_nomogram_prep_kitchen_sink.tiff', compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
+dev.print(tiff, '~/Dropbox/Nomogram/nomogram/results/tm_nomogram_prep_kitchen_sink.tiff', compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
 dev.off()
 ```
 
@@ -741,28 +752,7 @@ train$Match_Status
 str(train)
 
 lm.fit2 <- 
-  stats::lm(Match_Status ~ 
-       (white_non_white +  
-        Age +   
-        #rms::rcs(Age, 5) ## Removed splined variable
-        Gender +  
-        Couples_Match + 
-        US_or_Canadian_Applicant +  
-        Medical_Education_Interrupted + 
-        Alpha_Omega_Alpha +  
-        Military_Service_Obligation + 
-        USMLE_Step_1_Score +   
-        #rms::rcs(USMLE_Step_1_Score, 4) ## Removed splined variable
-        Count_of_Poster_Presentation +
-        #rms::rcs(Count_of_Poster_Presentation,3)  ## Removed splined variable
-        Count_of_Oral_Presentation + 
-        Count_of_Articles_Abstracts + 
-        Count_of_Peer_Reviewed_Book_Chapter + 
-        Count_of_Other_than_Published + 
-        Count_of_Online_Publications + 
-        Visa_Sponsorship_Needed + 
-          #Rank + 
-        Medical_Degree),  
+  stats::lm(formula = formula,  
      data = train)
 
 summary(lm.fit2)
@@ -880,7 +870,7 @@ Try forwards stepwise regression here:
 null_model <- glm(formula = Match_Status ~ 1, data = train, family = "binomial")
 
 # Specify the full model using all of the potential predictors
-full_model <- glm(Match_Status ~ ., data = train, family = "binomial")
+full_model <- glm(formula = formula, data = train, family = "binomial")
 
 # Use a forward stepwise algorithm to build a parsimonious model
 step_model <- stats::step(null_model, scope = list(lower = null_model, upper = full_model), direction = "forward")
@@ -904,10 +894,10 @@ Try BACKWARDS stepwise regression here:
 ```{r, echo=TRUE, include = FALSE}
 #BACKWARDS regression!!  #https://campus.datacamp.com/courses/supervised-learning-in-r-classification/chapter-3-logistic-regression?ex=15
 # Specify a null model with no predictors
-null_model <- glm(Match_Status ~ 1, data = train, family = "binomial")
+null_model <- glm(formula = formula, data = train, family = "binomial")
 
 # Specify the full model using all of the potential predictors
-full_model <- glm(Match_Status ~ ., data = train, family = "binomial")
+full_model <- glm(formula = formula, data = train, family = "binomial")
 
 # Use a forward stepwise algorithm to build a parsimonious model
 back_step_model <- stats::step(full_model, scope = list(lower = null_model, upper = full_model), direction = "backward")
@@ -986,7 +976,7 @@ The alpha parameter tells glmnet to perform a ridge (alpha = 0), lasso (alpha = 
 
 # Train glmnet with custom trainControl and tuning: model
 set.seed(1978)
-glm.kitchen.sink <- glm(Match_Status ~ ., family = "binomial", train)
+glm.kitchen.sink <- glm(formula = formula, family = "binomial", train)
 glm.kitchen.sink
 
 lasso.mod <- 
@@ -1234,18 +1224,7 @@ knitr::kable(variables, caption = "Variables Chosen by LASSO to Predict Matching
 Creating a more parsiomonious model using the variables selected by LASSO in the train dataset. 
 
 ```{r}
-limited.to.lasso.variables <- glm(Match_Status ~ 
-                                    white_non_white + 
-                                    Age +
-                                    Gender +
-                                    Couples_Match +
-                                    US_or_Canadian_Applicant +
-                                    Medical_Education_Interrupted + 
-                                    Alpha_Omega_Alpha + 
-                                    USMLE_Step_1_Score + 
-                                    Count_of_Oral_Presentation + 
-                                    Visa_Sponsorship_Needed +
-                                    Medical_Degree, 
+limited.to.lasso.variables <- glm(formula = formula, 
                  family = "binomial", data = train)
 
 vif(limited.to.lasso.variables)
@@ -1301,7 +1280,7 @@ https://bradleyboehmke.github.io/HOML/mars.html
 ```{r}
 # Fit a basic MARS model
 mars1 <- earth(
-  Match_Status ~ .,  
+  formula = Match_Status ~ .,  
   data = train   
 )
 
@@ -1352,7 +1331,7 @@ The  grid search helps to focus where we can further refine our model tuning. As
 # Cross-validated model
 set.seed(123)  # for reproducibility
 cv_mars <- caret::train(
-  x = subset(train, select = -Match_Status),
+  x = subset(train, select = -Match_Status),  #Cool
   y = train$Match_Status,
   method = "earth",
   metric = "Accuracy",
@@ -1427,7 +1406,7 @@ Build both a glm (train.glm.with.lasso.variables) and a lrm model (train.lrm.wit
 #test$Match_Status
 
 train.glm.with.lasso.variables  <- 
-  stats::glm(Match_Status ~ 
+  stats::glm(Match_Status ~
                                     white_non_white + 
                                     Age +
                                     Gender +
@@ -1590,7 +1569,7 @@ Exploratory random forest was also performed. The variable importance for the ra
 #https://bradleyboehmke.github.io/HOML/logistic-regression.html
 
 model3 <- glm(
-  Match_Status ~  .,
+  formula = formula,
   family = "binomial", 
   data = train
   )
@@ -1722,7 +1701,7 @@ Here we intentionally grow a large and complex tree then prune it to be smaller 
 #https://bradleyboehmke.github.io/HOML/DT.html
 t.model <-
   rpart(as.factor(Match_Status) ~.,
-        data = train,    #Do not use binned data for God's sake.  
+        data = train,     
         method = "class", #Builds a classification tree
         control = rpart.control(cp = 0, maxdepth = 6), #Decreaseing this CP control made the tree much more complicated
         minsplit = 20) 
@@ -1762,7 +1741,7 @@ printcp(t.model)
 The figure shows the pruning complexity parameter plot for a fully grown tree. Significant reduction in the cross validation error is achieved with tree sizes 88-100 and then the cross validation error levels off with minimal or no additional improvements.
 ```{r}
 t.model2 <- rpart(
-    formula = Match_Status ~ .,
+    formula = formula,
     data    = train,
     method  = "anova", 
     control = list(cp = 0, xval = 10)
@@ -1829,7 +1808,7 @@ pred = predict(pruned.t.model, test, type = "class")
 
 confusionMatrix(as.factor(test$Match_Status), pred)  #In Ops.factor(predictedScores, threshold) : ‘<’ not meaningful for factors
 
-varImp(pruned.t.model)
+(pruned.t.model)
 
 #Not working
 pred_ct <- prediction(as.numeric(as.character(pred)), as.numeric(as.character(test$Match_Status)))
@@ -1862,7 +1841,7 @@ We want to find the “most optimal” solution. What will then be the character
 #SVM with caret
 set.seed(2017)
 
-caret_svm <- caret::train(Match_Status ~ white_non_white + Age + Gender + Couples_Match + US_or_Canadian_Applicant + Medical_Education_Interrupted + Alpha_Omega_Alpha + Military_Service_Obligation + USMLE_Step_1_Score + Count_of_Poster_Presentation + Count_of_Oral_Presentation + Count_of_Articles_Abstracts + Count_of_Peer_Reviewed_Book_Chapter + Count_of_Other_than_Published + Count_of_Online_Publications + Visa_Sponsorship_Needed + Medical_Degree, data=train, method='svmLinear', preProcess= c('center', 'scale'), trControl=trainControl(method="cv", number=5))
+caret_svm <- caret::train(Match_Status ~ ., data=train, method='svmLinear', preProcess= c('center', 'scale'), trControl=trainControl(method="cv", number=5))
 
 caret_svm
 caret_svm$results
@@ -1987,7 +1966,7 @@ train_rf1 <- ranger(
 )
 train_rf1
 
-rf_model <- randomForest::randomForest(Match_Status ~., data = train)
+rf_model <- randomForest::randomForest(formula, data = train)
 # Show model error
 plot(rf_model, ylim=c(0,0.36))
 legend('topright', colnames(rf_model$err.rate), col=1:3, fill=1:3)
@@ -2035,7 +2014,7 @@ hyper_grid %>%
 # re-run model with impurity-based variable importance
 #https://bradleyboehmke.github.io/HOML/random-forest.html
 rf_impurity <- ranger(
-  formula = Match_Status ~ ., 
+  formula = formula, 
   data = train, 
   num.trees = 2000,          # 10 times number of features
   mtry = 5,
@@ -2050,7 +2029,7 @@ rf_impurity <- ranger(
 
 # re-run model with permutation-based variable importance
 rf_permutation <- ranger(
-  formula = Match_Status ~ ., 
+  formula = formula, 
   data = train, 
   num.trees = 2000,
   mtry = 5,
@@ -2100,7 +2079,8 @@ caret_matrix$results
 #Special function!  
 tm_variable_importance(caret_matrix)
 
-dev.print(tiff, '~/Dropbox/Nomogram/nomogram/results/tm_variable_importance_caret_matrix.tiff',  width=2000, height=2000, bg="transparent", res = 200,units = "px" )
+dev.print(tiff, filename = '~/Dropbox/Nomogram/nomogram/results/tm_variable_importance_caret_matrix.tiff',  width=2000, height=2000, bg="transparent", res = 200,units = "px",
+compression = "lzw+p")  #????????
 dev.off()
 ```
 The random Forest classification suffers in terms of interpretability. We are unable to visualize the 500 trees and identify important features of the model. However, we can assess the Feature Importance using the Gini index measure. Let’s plot mean Gini index across all trees and identify important features.
@@ -2260,7 +2240,7 @@ arrange(hyper_grid, rmse)
 
 ```{r, include = T}
 set.seed(2017)
-caret_boost <- caret::train(Match_Status~ white_non_white + Age + Gender + Couples_Match + US_or_Canadian_Applicant + Medical_Education_Interrupted + Alpha_Omega_Alpha + Military_Service_Obligation + USMLE_Step_1_Score + Count_of_Poster_Presentation + Count_of_Oral_Presentation + Count_of_Articles_Abstracts + Count_of_Peer_Reviewed_Book_Chapter + Count_of_Other_than_Published + Count_of_Online_Publications + Visa_Sponsorship_Needed + Medical_Degree, 
+caret_boost <- caret::train(Match_Status~ ., 
                      data=train, method='gbm', preProcess= c('center', 'scale'), trControl=trainControl(method="cv", number=7), verbose=FALSE)
 print(caret_boost)
 ```
@@ -2281,7 +2261,7 @@ caret::confusionMatrix(solution_boost, test$Match_Status)
 # NAIVE BAYES 
 # e1071 implementation # https://github.com/tobiolatunji/Readmission_Prediction/blob/master/diabetes_readmission.R
 
-nbayesmodel <- naiveBayes(Match_Status ~ ., 
+nbayesmodel <- naiveBayes(formula, 
                           data = train)
 print(nbayesmodel)
 
@@ -2311,7 +2291,7 @@ model_04_xgboost <- parsnip::boost_tree(mode = "classification",
         learn_rate = 0.35, 
         loss_reduction = 0.0001) %>%
     set_engine("xgboost") %>%
-    fit(Match_Status ~ ., data = train)
+    fit(formula, data = train)
 
 model_04_xgboost
 
@@ -2332,7 +2312,7 @@ dev.off()
 
 ```{r}
 library(recipes)
-xgb_prep <- recipe(Match_Status ~ ., data = train) %>%
+xgb_prep <- recipe(formula = formula, data = train) %>%
   step_integer(all_nominal()) %>%
   prep(training = train, retain = TRUE) %>%
   juice()
@@ -2518,7 +2498,7 @@ train <- training(split)
 test <- testing(split)
 
 # Make sure we have consistent categorical levels
-blueprint <- recipe(Match_Status ~ ., data = train) %>%
+blueprint <- recipe(formula = formula, data = train) %>%
   step_other(all_nominal(), threshold = 0.005)
 
 # Create training & test sets for h2o
@@ -2532,7 +2512,7 @@ test_h2o <- prep(blueprint, training = train) %>%
 
 # Get response and feature names
 Y <- "Match_Status"
-X <- setdiff(names(ames_train), Y)
+X <- setdiff(names(ames_train), Y)  #Why are we using ames_train ???????
 ```
 
 ```{r Train & cross-validate mutliple models}
@@ -2898,30 +2878,9 @@ The funModeling package will first give distributions for numerical data and fin
 # Appendix, Supplemental Table:  Descriptive analysis of all variables considered in the training set along with their association to matching.
 
 ```{r, echo=TRUE, warning=FALSE, message=FALSE, include=TRUE, results="asis"}
-table1_all_data <- arsenal::tableby(Match_Status ~
-                                      white_non_white +
-                                      Age +
-                                      Gender +
-                                      Couples_Match +
-                                      #Expected_Visa_Status_Dichotomized +
-                                      US_or_Canadian_Applicant +
-                                      #Medical_School_Type +
-                                      Medical_Education_Interrupted +
-                                      #Misdemeanor_Conviction +
-                                      Alpha_Omega_Alpha +
-                                      #Gold_Humanism_Honor_Society +
-                                      Military_Service_Obligation +
-                                      USMLE_Step_1_Score +
-                                      Military_Service_Obligation +
-                                      Count_of_Poster_Presentation +
-                                      Count_of_Oral_Presentation +
-                                      # Count_of_Peer_Reviewed_Articles_Abstracts +
-                                      Count_of_Peer_Reviewed_Book_Chapter +
-                                      # Count_of_Peer_Reviewed_Other_than_Published +
-                                      Count_of_Online_Publications +
-                                      Visa_Sponsorship_Needed +
-                                      Medical_Degree,
-                                    data=train, control = arsenal::tableby.control(test = TRUE, total = TRUE, digits = 1L, digits.p = 2L, digits.count = 0L, numeric.simplify = F, numeric.stats = c("median", "q1q3"), cat.stats = c("Nmiss","countpct"), stats.labels = list(Nmiss = "N Missing", Nmiss2 ="N Missing", meansd = "Mean (SD)", medianrange = "Median (Range)", median ="Median", medianq1q3 = "Median (Q1, Q3)", q1q3 = "Q1, Q3", iqr = "IQR",range = "Range", countpct = "Count (Pct)", Nevents = "Events", medSurv ="Median Survival", medTime = "Median Follow-Up")))
+table1_all_data <- arsenal::tableby(formula = formula,
+                                    data=train, 
+                                    control = arsenal::tableby.control(test = TRUE, total = TRUE, digits = 1L, digits.p = 2L, digits.count = 0L, numeric.simplify = F, numeric.stats = c("median", "q1q3"), cat.stats = c("Nmiss","countpct"), stats.labels = list(Nmiss = "N Missing", Nmiss2 ="N Missing", meansd = "Mean (SD)", medianrange = "Median (Range)", median ="Median", medianq1q3 = "Median (Q1, Q3)", q1q3 = "Q1, Q3", iqr = "IQR",range = "Range", countpct = "Count (Pct)", Nevents = "Events", medSurv ="Median Survival", medTime = "Median Follow-Up")))
 
 summary(table1_all_data, text=T, title='Supplemental Table: Descriptive analysis of all variables considered in the training set along with their association to matching', pfootnote=TRUE)
 ```
@@ -2998,19 +2957,7 @@ DynNom.model.lrm  <-
 
 
 ```{r generalized logistic regression, include=FALSE, echo=TRUE, cache=FALSE}
-DynNom.model.glm <- stats::glm(Match_Status ~
-                          Age +
-                          Alpha_Omega_Alpha +
-                          Count_of_Oral_Presentation +
-                          Count_of_Peer_Reviewed_Book_Chapter +
-                          Couples_Match +
-                          Gender +
-                          Medical_Degree +
-                          Military_Service_Obligation +
-                          US_or_Canadian_Applicant +
-                          USMLE_Step_1_Score +
-                          Visa_Sponsorship_Needed +
-                          white_non_white,
+DynNom.model.glm <- stats::glm(formula = formula,
                         family = "binomial",  #Removed the relax cubic splines for age and USMLE step 1
                         data = test, x = TRUE, y= TRUE)
 summary(DynNom.model.glm)
@@ -3057,16 +3004,6 @@ rmarkdown::clean_site()
 
 
 
-#I liked how they did this:
-#https://github.com/manojmukkamala/DiabeticPatientsReadmission/blob/master/Project_V4.R
-```{r}
-#Just writing the names of all the variables under one term to avoid re-writing when we apply model multiple times
-drivers <- c("race", "gender", "age", "admission_type_id", "discharge_disposition_id", "admission_source_id", "time_in_hospital", "num_lab_procedures", "num_procedures", "num_medications", "number_diagnoses", "A1Cresult", "metformin", "glipizide", "glyburide", "insulin", "change", "diabetesMed")
-
-#Writing the name of dependent variable seperately
-dependentVar <- "readmitted"
-```
-
 ## Evaluate Algorithms to create a model
 ```{r}
 
@@ -3110,7 +3047,7 @@ dotplot(results)
 ```
 
 ## Make Predictions
-We can now proceed to make predictions based on the AdaBoost Classification Trees
+We can now proceed to make predictions based on the RandomForest
 ```{r}
 #predict 
 y_hat <- predict(fit.rf,test)
