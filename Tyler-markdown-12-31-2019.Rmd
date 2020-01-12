@@ -90,6 +90,7 @@ Packrat is in use to control package versions and a packrat.lock file is posted 
 ```{r directory paths and packrat settings, include=FALSE}
 #Helpful, https://www.kaggle.com/pjmcintyre/titanic-first-kernel/code
 
+cat("\014")  #Clear console
 # I want to use packrate to make the project more: isolated, portable and reproducible.  Please see packrat/packrat.lock for a list of the precise packages used and their versions.  Be sure to check in the .Rprofile, packrat.lock files, and everything under packrat/src/. 
 packrat::packrat_mode(on = TRUE)
 #packrat::status()
@@ -644,8 +645,8 @@ scatterplotMatrix(~Age+USMLE_Step_1_Score, data=train, main="Correlations of Num
 
 corrplot(cormat, method="circle")
 corrplot(cormat, method="circle", addCoef.col="black") # With correlation 
-dev.print(tiff, '~/Dropbox/Nomogram/nomogram/results/plot_numeric_variable_correlation.tiff', compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
-dev.off()
+# dev.print(tiff, '~/Dropbox/Nomogram/nomogram/results/plot_numeric_variable_correlation.tiff', compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
+# dev.off()
 ```
 
 Correlation plot 
@@ -988,12 +989,9 @@ pROC::auc(backwards_ROC)
 
 Not working with HTML knitr
 
-#Factor Selection: LASSO (Least Absolute Shrinkage and Selection Operator)
-Also, I like lasso because some people will find that using predictors of age, race, gender as predictors will be discriminatory.  In short, LASSO eliminates the need for an author to be a subject expert on matching when selecting variables.  
-
-Here, we use Lasso for simplicity and interpretability. The aim is to avoid over-parametrization and unnecessary model bias by carrying feature selection on-the-go. Key to this task will be cross-validation.  Start by creating a custom train control providing the number of cross-validations and setting the classProbs to TRUE for logistic regression. 
-
 #Factor Selection:  Principal Components Analysis
+Principal Component Analysis (PCA) is a very powerful technique that has wide applicability in data science, bioinformatics, and further afield. It was initially developed to analyse large volumes of data in order to tease out the differences/relationships between the logical entities being analysed. It extracts the fundamental structure of the data without the need to build any model to represent it. This 'summary' of the data is arrived at through a process of reduction that can transform the large number of variables into a lesser number that are uncorrelated (i.e. the ‘principal components'), whilst at the same time being capable of easy interpretation on the original data (Blighe, Lewis, and Lun 2018) (Blighe 2013).
+
 In order to reduce 17 dimensions or knowing the significant impact of our reduction we will do PCA.
 
 ```{r}
@@ -1005,7 +1003,7 @@ print(pcaObj)
 names(pcaObj)
 plot(pcaObj)
 pcaObj$loadings
-biplot(pcaObj, cex = 0.7)
+stats::biplot(pcaObj, cex = 1.0)
 tiff(file=paste("Principal_Components_for_numeric_data.tiff", sep=""), width=2000, height=2000, bg="transparent", res = 200,units = "px" )
 dev.off()
 
@@ -1014,6 +1012,111 @@ final_data <- as.data.frame(pcaObj$scores)
 According to PCA,the columns that are of utmost importance are as follows:
 Age, AND
 USMLE_Step_1_Score
+
+```{r}
+#http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/118-principal-component-analysis-in-r-prcomp-vs-princomp/
+res.pca <- prcomp(numeric_data, scale = TRUE)
+factoextra::fviz_eig(res.pca)  #Visualize eigenvalues (scree plot). Show the percentage of variances explained by each principal component.
+tiff(file=paste("scree_plot_PCA.tiff", sep=""), width=2000, height=2000, bg="transparent", res = 200,units = "px" )
+dev.off()
+
+#Graph of individuals. Individuals with a similar profile are grouped together.
+# fviz_pca_ind(res.pca,
+#              col.ind = "cos2", # Color by the quality of representation
+#              gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+#              repel = TRUE     # Avoid text overlapping
+#              )
+# tiff(file=paste("individuals_plot_PCA.tiff", sep=""), width=2000, height=2000, bg="transparent", res = 200,units = "px" )
+# dev.off()
+# 
+# #Graph of variables. Positive correlated variables point to the same side of the plot. Negative correlated variables point to opposite sides of the graph.
+# fviz_pca_var(res.pca,
+#              col.var = "contrib", # Color by contributions to the PC
+#              gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+#              repel = TRUE     # Avoid text overlapping
+#              )
+# tiff(file=paste("graph_of_vars_plot_PCA.tiff", sep=""), width=2000, height=2000, bg="transparent", res = 200,units = "px" )
+# dev.off()
+# 
+# #Biplot of individuals and variables
+# fviz_pca_biplot(res.pca, repel = TRUE,
+#                 col.var = "#2E9FDF", # Variables color
+#                 col.ind = "#696969"  # Individuals color
+#                 )
+# tiff(file=paste("barpot_plot_PCA.tiff", sep=""), width=2000, height=2000, bg="transparent", res = 200,units = "px" )
+# dev.off()
+# 
+# # Eigenvalues
+# # eig.val <- get_eigenvalue(res.pca)
+# # eig.val
+#   
+# # Results for Variables
+# res.var <- get_pca_var(res.pca)
+# # res.var$coord          # Coordinates
+# # res.var$contrib        # Contributions to the PCs
+# # res.var$cos2           # Quality of representation 
+# # Results for individuals
+# res.ind <- get_pca_ind(res.pca)
+# # res.ind$coord          # Coordinates
+# # res.ind$contrib        # Contributions to the PCs
+# # res.ind$cos2           # Quality of representation 
+```
+
+#Factor Selection: LASSO (Least Absolute Shrinkage and Selection Operator)
+Also, I like lasso because some people will find that using predictors of age, race, gender as predictors will be discriminatory.  In short, LASSO eliminates the need for an author to be a subject expert on matching when selecting variables.  
+
+Here, we use Lasso for simplicity and interpretability. The aim is to avoid over-parametrization and unnecessary model bias by carrying feature selection on-the-go. Key to this task will be cross-validation.  Start by creating a custom train control providing the number of cross-validations and setting the classProbs to TRUE for logistic regression. 
+
+#Feature Selection: Genetic algo
+This script select the 'best' subset of variables based on genetic algorithms in R.
+```{r}
+#Excellent reference:  https://github.com/pablo14/genetic-algorithm-feature-selection
+#https://blog.datascienceheroes.com/feature-selection-using-genetic-algorithms-in-r/
+data=all_data
+
+data$Match_Status1 <- as.numeric(data$Match_Status) - 1
+
+data_y=as.factor(data$Match_Status1)
+data_x=select(data, -Match_Status1, -Match_Status)
+
+# GA parameters
+param_nBits=ncol(data_x)
+col_names=colnames(data_x)
+
+# Executing the GA 
+ga_GA_1 = ga(fitness = function(vars) custom_fitness(vars = vars, 
+                                                     data_x =  data_x, 
+                                                     data_y = data_y, 
+                                                     p_sampling = 0.7), # custom fitness function
+             type = "binary", # optimization data type
+             crossover=gabin_uCrossover,  # cross-over method
+             elitism = 5, # number of best ind. to pass to next iteration
+             pmutation = 0.03, # mutation rate prob
+             popSize = 100, # the number of indivduals/solutions
+             nBits = param_nBits, # total number of variables
+             names=col_names, # variable name
+             run=5, # max iter without improvement (stopping criteria)
+             maxiter = 50, # total runs or generations
+             monitor=plot, # plot the result at each iteration
+             keepBest = TRUE, # keep the best solution at the end
+             parallel = T, # allow parallel procesing
+             seed=84211 # for reproducibility purposes
+)
+
+# Checking the results
+summary(ga_GA_1)
+plot(ga_GA_1) #Blue dot: Population fitness average
+              #Green dot: Best fitness value
+
+# Following line will return the variable names of the final and best solution
+best_vars_ga=col_names[ga_GA_1@solution[1,]==1]
+
+# Checking the variables of the best solution...
+best_vars_ga
+
+# Checking the accuracy
+get_accuracy_metric(data_tr_sample = data_x, target = data_y, best_vars_ga)
+```
 
 
 # 0) Model: Regularized Regression
@@ -1570,11 +1673,11 @@ table(pred2)["Match"]
 # GLM_Accuracy <- ifelse(GLM_Pred == test$Match_Status1,1,0) #Not working
 
 #table for accuracy
-table(GLM_Accuracy)
+#table(GLM_Accuracy)
 
 #Calculating True vs. total
-Accuracy_GLM <- (sum(GLM_Accuracy)/count(test))*100
-Accuracy_GLM
+# Accuracy_GLM <- (sum(GLM_Accuracy)/count(test))*100
+# Accuracy_GLM
 
 #confusion matrix  #Not working from here
 #confusionMatrix(as.factor(GLM_Pred),as.factor(test$Match_Status1), positive = "1")  ##????NOT WORKING
@@ -1583,10 +1686,10 @@ Accuracy_GLM
 library(ROCR)
 #pred_glm <- prediction(as.numeric(as.character(prob)),  ###NOT WORKING??? as.numeric(as.character(test$Match_Status)))
 #perf_glm <- performance(pred, "tpr", 'fpr')    ###NOT WORKING???
-plot(perf_glm, main = "ROC curve", colorize = T)
-abline(0,1, col='gray60')
-
-summary(perf_glm)
+# plot(perf_glm, main = "ROC curve", colorize = T)
+# abline(0,1, col='gray60')
+# 
+# summary(perf_glm)
 
 #auc_ROCR <- performance(pred_glm, measure = "auc") ###NOT WORKING???
 # auc_ROCR <- auc_ROCR@y.values[[1]]
@@ -1908,10 +2011,10 @@ confusionMatrix(as.factor(test$Match_Status), pred)  #In Ops.factor(predictedSco
 (pruned.t.model)
 
 #Not working
-pred_ct <- prediction(as.numeric(as.character(pred)), as.numeric(as.character(test$Match_Status)))
-perf_ct <- performance(pred_ct, "tpr", 'fpr')
-plot(perf_ct, main = "ROC curve", colorize = T)
-abline(0,1, col='gray60')
+# pred_ct <- prediction(as.numeric(as.character(pred)), as.numeric(as.character(test$Match_Status)))
+# perf_ct <- performance(pred_ct, "tpr", 'fpr')
+# plot(perf_ct, main = "ROC curve", colorize = T)
+# abline(0,1, col='gray60')
 ```
 
 
@@ -2099,12 +2202,6 @@ for(i in seq_len(nrow(hyper_grid))) {
   # export OOB error 
   hyper_grid$rmse[i] <- sqrt(fit$prediction.error)
 }
-
-# assess top 10 models
-hyper_grid %>%
-  arrange(rmse) %>%
-  mutate(perc_gain = (default_rmse - rmse) / default_rmse * 100) %>%
-  head(10)
 ```
 
 ```{r}
@@ -2177,7 +2274,7 @@ caret_matrix$results
 tm_variable_importance(caret_matrix)
 
 dev.print(tiff, filename = '~/Dropbox/Nomogram/nomogram/results/tm_variable_importance_caret_matrix.tiff',  width=2000, height=2000, bg="transparent", res = 200,units = "px",
-compression = "lzw+p")  #????????
+compression = "lzw+p") 
 dev.off()
 ```
 The random Forest classification suffers in terms of interpretability. We are unable to visualize the 500 trees and identify important features of the model. However, we can assess the Feature Importance using the Gini index measure. Let’s plot mean Gini index across all trees and identify important features.
@@ -2190,8 +2287,8 @@ mean(solution_rf == test$Match_Status)  #Accuracy
 
 #for confusion Matrix
 test$Match_Status
-y_test <- test[test, "Matched"]  #Not sure what is wrong here.  #https://github.com/mufflyt/Diabetes-Patient-Readdmission-Prediction/blob/master/Patient%20Readmission%20Risk%20Prediction.r
-confusionMatrix(solution_rf, y_test)
+#y_test <- test[test, "Matched"]  #Not sure what is wrong here.  #https://github.com/mufflyt/Diabetes-Patient-Readdmission-Prediction/blob/master/Patient%20Readmission%20Risk%20Prediction.r
+#confusionMatrix(solution_rf, y_test)
 ```
 Random forest has accuracy of `r round(mean(solution_rf == test$Match_Status), digits=2)`.  
 \pagebreak
