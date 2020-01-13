@@ -11,7 +11,7 @@ output:
     code_folding: show
     dev: svg
     df_print: paged
-    theme: united
+    theme: journal
   pdf_document:
     pandoc_args:
     - --wrap=none
@@ -326,7 +326,7 @@ s
 ```
 
 # Cross plots of predictors by outcome
-```{r funModeling4, echo=TRUE, message=FALSE, warning=TRUE, include=TRUE, out.width="75%"}
+```{r funModeling4, echo=TRUE, message=FALSE, warning=TRUE, include=TRUE, out.width="75%", cache = TRUE}
 DataExplorer::plot_boxplot(all_data, by = "Match_Status", nrow = 2L, ncol = 2L)
 #Shows the variable frequency charted by matching status
 create_plot_cross_plot(all_data)   
@@ -579,6 +579,20 @@ skewed_feature_names <- train %>%
 ```
 
 # Factor Selection: Scatterplot Matrix and Correlation
+Get a correlation matrix for elementary feature selection and remove highly correlated features.  
+```{r}
+# get a correlation matrix for elementary feature selection and
+# remove highly correlated fields
+numeric_data <- select_if(all_data, is.numeric)
+thres <- 0.75
+corr.m <- cor(numeric_data)
+highly.corr <- findCorrelation(corr.m, cutoff = thres)
+highly.corr
+data.clean <- numeric_data[,-highly.corr]
+
+```
+None of the numeric data are correlated to each other.  So we can't remove any numeric features because they are not highly correlated.  
+
 ```{r}
 stats::t.test(y=train$Age[train$Match_Status == "Matched"],
               x=train$Age[train$Match_Status == "Did not match"],
@@ -635,13 +649,13 @@ chisq.test(train$Visa_Sponsorship_Needed,train$Match_Status,correct = FALSE)#Vis
 chisq.test(train$Medical_Degree,train$Match_Status,correct = FALSE)#Medical Degree is significant
 
 cnum <- train[,c("Age", "USMLE_Step_1_Score")]
-cormat <- cor(cnum) # Select only numeric variables. 
+cormat <- cor(cnum) # Select only numeric variables that are significant on univariate testing.  
 pairs(cnum)
  
 dev.print(tiff, '~/Dropbox/Nomogram/nomogram/results/significant_numeric_variable_correlation.tiff', compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
 dev.off()
 
-scatterplotMatrix(~Age+USMLE_Step_1_Score, data=train, main="Correlations of Numeric Variables in the Cars Data")
+scatterplotMatrix(~Age+USMLE_Step_1_Score, data=train, main="Correlations of Numeric Variables in the Matching Data")
 
 corrplot(cormat, method="circle")
 corrplot(cormat, method="circle", addCoef.col="black") # With correlation 
@@ -683,10 +697,11 @@ Observations:  Match_Status is most correlated to US_or_Canadian_Applicant and t
 
 ```{r, echo=TRUE, include = TRUE}
 inspect_cor_plot <- inspectdf::inspect_cor(train, method = "pearson", alpha = 0.05) %>% show_plot()  
+inspect_cor_plot
 
 ggplot2::ggsave(here::here("results", "inspect_cor_plot.tiff"), inspect_cor_plot, device = "tiff", width = 10, height = 7, dpi = 320)
 ```
-Correlation was found with Count_of_Poster_Presentation, Age, and USMLE_Step_1_Score in the train data set.  The lower the age (correlation -0.33)  the patient the more likely they are to match.  The higher the USMLE_Step_1 scores the more likely they are to match (correlation 0.344).  The younger you are the more likely that you get a higher USMLE_Step_1 score.  The number of posters and the number of abstract articles are positively correleated as well.  The strongest positive correlation was between the count of articles and the count of posters.  No shocker there.  Strong negative correlations were between Age and USMLE step 1 score.  Also match status and age were negatively correlated (the younger you are the more likely you are to match).   
+Correlation was found with Count_of_Poster_Presentation, Age, and USMLE_Step_1_Score to Match_Status in the train data set.  The lower the age (correlation -0.33)  the patient the more likely they are to match.  The higher the USMLE_Step_1 scores the more likely they are to match (correlation 0.344).  The younger you are the more likely that you get a higher USMLE_Step_1 score.  The number of posters and the number of abstract articles are positively correleated as well.  The strongest positive correlation was between the count of articles and the count of posters.  No shocker there.  Strong negative correlations were between Age and USMLE step 1 score.  Also match status and age were negatively correlated (the younger you are the more likely you are to match).   
 
 Take a brief look at potential collinearity. We want to see strong correlations between our outcome and the predictors, but modest correlations between the predictors.  There are no correlations between predictors according to the above scatterplots.  If we did see signs of meaningful collinearity, we might rethink our selected set of predictors.
 
@@ -694,7 +709,7 @@ You can see that there is a natural separation between the Match status and USML
 
 The values of correlation range from -1 to 1.  If there is a value of 0 there is no correlation between the variables.  Perfect correlation is 1.  Perfect negative correlation is -1.  
 
-One way to look at correlation is with a correlation funnel.  
+Another way to look at correlation is with a correlation funnel.
 ```{r, include=TRUE, echo=FALSE}
 all_data_binarized_tbl <- all_data %>%
   correlationfunnel::binarize(n_bins = 4, thresh_infreq = 0.01)
@@ -715,27 +730,24 @@ static_correlation_funnel <- all_data_correlated_tbl %>%
 ggplot2::ggsave(here::here("results", "static_correlation_funnel.tiff"), static_correlation_funnel, device = "tiff", width = 10, height = 7, dpi = 320)
 ```
 
-A second way to look at correlation is with pairs of variables plotted.   
+Another way to look at correlation is with pairs of variables plotted.   
 ```{r, include = TRUE, fig.width=8, fig.height=4, fig.cap="Figure: Evaluation of the variable interactions in the train data set."}
 #https://jamesmarquezportfolio.com/correlation_matrices_in_r.html
 psych_correlation <- psych::pairs.panels(train[, c(2, 9:15, 18)], bg=c("red","blue")[as.factor(train$Match_Status)], pch=21, jiggle = TRUE, scale = TRUE)
+
 psych_correlation
 
 ggplot2::ggsave(here::here("results", "psych_correlation.tiff"), psych_correlation, device = "tiff", width = 10, height = 7, dpi = 320)
-
-#We can also check correlation of 2 attributes using cor()
-
 ```
 
+Billizionth way to review correlation.  
 ```{r}
 #Correlation plot
 library("PerformanceAnalytics")
 library(corrplot)
 library(corrgram)
 M <- corrgram(all_data)
-
 ```
-
 
 # Fitting and Summarizing the Kitchen Sink Model: (aka throw everything at it)
 Create a Kitchen Sink or a "large" model with all factors in the `train` data set first. This is essentially a screening model with all variables. 
@@ -744,7 +756,8 @@ Logistic regression model from the `rms` package on the `kitchen.sink` model
 ```{r, echo=TRUE, include = TRUE}
 train$Match_Status <- as.factor(train$Match_Status)
 class(train$Match_Status)  
-
+#train <- train %>% select(-Match_Status1)
+require(rms)
 d <- 
   rms::datadist(train)
 
@@ -753,6 +766,7 @@ options(datadist = "d")
 kitchen.sink <- 
   rms::lrm(formula = Match_Status~., 
       data = train, 
+      method = "lrm.fit",
       x = T, 
       y = T)
 
@@ -774,8 +788,9 @@ dev.off()
 
 Create a Confusion Matrix
 ```{r}
-train$Match_Status <- as.factor(train$Match_Status)
+test$Match_Status <- as.factor(test$Match_Status)
 
+# test model
 ###Not working!!!
 # prediction_test <- stats::predict(kitchen.sink, newdata = test, 
 #                             type = "response")
@@ -1016,6 +1031,7 @@ USMLE_Step_1_Score
 ```{r}
 #http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/118-principal-component-analysis-in-r-prcomp-vs-princomp/
 res.pca <- prcomp(numeric_data, scale = TRUE)
+library(factoextra)
 factoextra::fviz_eig(res.pca)  #Visualize eigenvalues (scree plot). Show the percentage of variances explained by each principal component.
 tiff(file=paste("scree_plot_PCA.tiff", sep=""), width=2000, height=2000, bg="transparent", res = 200,units = "px" )
 dev.off()
@@ -1067,7 +1083,7 @@ Also, I like lasso because some people will find that using predictors of age, r
 
 Here, we use Lasso for simplicity and interpretability. The aim is to avoid over-parametrization and unnecessary model bias by carrying feature selection on-the-go. Key to this task will be cross-validation.  Start by creating a custom train control providing the number of cross-validations and setting the classProbs to TRUE for logistic regression. 
 
-#Feature Selection: Genetic algo
+#Feature Selection: Genetic algo for feature selection
 This script select the 'best' subset of variables based on genetic algorithms in R.
 ```{r}
 #Excellent reference:  https://github.com/pablo14/genetic-algorithm-feature-selection
@@ -1084,38 +1100,38 @@ param_nBits=ncol(data_x)
 col_names=colnames(data_x)
 
 # Executing the GA 
-ga_GA_1 = ga(fitness = function(vars) custom_fitness(vars = vars, 
-                                                     data_x =  data_x, 
-                                                     data_y = data_y, 
-                                                     p_sampling = 0.7), # custom fitness function
-             type = "binary", # optimization data type
-             crossover=gabin_uCrossover,  # cross-over method
-             elitism = 5, # number of best ind. to pass to next iteration
-             pmutation = 0.03, # mutation rate prob
-             popSize = 100, # the number of indivduals/solutions
-             nBits = param_nBits, # total number of variables
-             names=col_names, # variable name
-             run=5, # max iter without improvement (stopping criteria)
-             maxiter = 50, # total runs or generations
-             monitor=plot, # plot the result at each iteration
-             keepBest = TRUE, # keep the best solution at the end
-             parallel = T, # allow parallel procesing
-             seed=84211 # for reproducibility purposes
-)
-
-# Checking the results
-summary(ga_GA_1)
-plot(ga_GA_1) #Blue dot: Population fitness average
-              #Green dot: Best fitness value
-
-# Following line will return the variable names of the final and best solution
-best_vars_ga=col_names[ga_GA_1@solution[1,]==1]
-
-# Checking the variables of the best solution...
-best_vars_ga
-
-# Checking the accuracy
-get_accuracy_metric(data_tr_sample = data_x, target = data_y, best_vars_ga)
+# ga_GA_1 = ga(fitness = function(vars) custom_fitness(vars = vars, 
+#                                                      data_x =  data_x, 
+#                                                      data_y = data_y, 
+#                                                      p_sampling = 0.7), # custom fitness function
+#              type = "binary", # optimization data type
+#              crossover=gabin_uCrossover,  # cross-over method
+#              elitism = 10, # number of best ind. to pass to next iteration
+#              pmutation = 0.03, # mutation rate prob
+#              popSize = 1000, # the number of indivduals/solutions
+#              nBits = param_nBits, # total number of variables
+#              names=col_names, # variable name
+#              run=5, # max iter without improvement (stopping criteria)
+#              maxiter = 50, # total runs or generations
+#              monitor=plot, # plot the result at each iteration
+#              keepBest = TRUE, # keep the best solution at the end
+#              parallel = T, # allow parallel procesing
+#              seed=84211 # for reproducibility purposes
+# )
+# str(ga_GA_1)
+# # Checking the results
+# summary(ga_GA_1)
+# plot(ga_GA_1) #Blue dot: Population fitness average
+#               #Green dot: Best fitness value
+# 
+# # Following line will return the variable names of the final and best solution
+# best_vars_ga=col_names[ga_GA_1@solution[1,]==1]
+# 
+# # Checking the variables of the best solution...
+# best_vars_ga
+# 
+# # Checking the accuracy
+# get_accuracy_metric(data_tr_sample = data_x, target = data_y, best_vars_ga)
 ```
 
 
