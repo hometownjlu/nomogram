@@ -2328,123 +2328,133 @@ grid <- expand.grid(interaction.depth=c(2,3), # Depth of variable interactions
                     shrinkage=c(0.01,0.2),		# Try 2 values for learning rate 
                     n.minobsinnode = 20)
 
-gbmFit<- caret::train(Match_Status~., data = train,
-               method = "gbm", #n.trees = 1000,
-  #shrinkage = c(0.01,0.2),
-  #interaction.depth = c(2,3),
-  #n.minobsinnode = 20,
-  #cv.folds = 10,
-  #distribution = "gaussian",
-               tuneGrid = grid,
-               metric = "ROC",
-               verbose = FALSE,
-               trControl = ctrl)
+train$Match_Status <- (as.numeric(train$Match_Status) - 1)
+train$Match_Status <- as.factor(train$Match_Status)
+class(train$Match_Status)
+levels(train$Match_Status)
 
-gbmPred <- predict(gbmFit,type = "raw")
-head(gbmPred)
-
-confusionMatrix(train$Match_Status,gbmPred)
-
-library(ROCR)
-gbmPred <- predict(gbmFit, test)
-pred <- prediction(as.numeric(gbmPred), as.numeric(y_test))
-perf <- performance(pred, "tpr", 'fpr')
-plot(perf, main = "ROC curve", colorize = T)
-abline(0,1, col='gray60')
-
-auc_ROCR <- performance(pred, measure = "auc")
-auc_ROCR <- auc_ROCR@y.values[[1]]
-auc_ROCR
-
-# find index for number trees with minimum CV error
-best <- which.min(gbmFit$cv.error)
+#   Not working?????????
+# gbmFit<- caret::train(Match_Status~., data = train,
+#                method = "gbm", #n.trees = 1000,
+#   #shrinkage = c(0.01,0.2),
+#   #interaction.depth = c(2,3),
+#   #n.minobsinnode = 20,
+#   #cv.folds = 10,
+#   #distribution = "gaussian",
+#                tuneGrid = grid,
+#                metric = "ROC",
+#                verbose = FALSE,
+#                trControl = ctrl)
+# 
+# gbmPred <- predict(gbmFit,type = "raw")
+# head(gbmPred)
+# 
+# confusionMatrix(train$Match_Status,gbmPred)
+# 
+# library(ROCR)
+# gbmPred <- predict(gbmFit, test)
+# pred <- prediction(as.numeric(gbmPred), as.numeric(y_test))
+# perf <- performance(pred, "tpr", 'fpr')
+# plot(perf, main = "ROC curve", colorize = T)
+# abline(0,1, col='gray60')
+# 
+# auc_ROCR <- performance(pred, measure = "auc")
+# auc_ROCR <- auc_ROCR@y.values[[1]]
+# auc_ROCR
+# 
+# # find index for number trees with minimum CV error
+# best <- which.min(gbmFit$cv.error)
 ```
 
 ```{r plot error curve}
 # plot error curve
-gbm.perf(gbmFit, method = "cv")
+#gbm.perf(gbmFit, method = "cv")  #Not working
 ```
 
 Tuning
 ```{r create grid search}
-# create grid search
-hyper_grid <- expand.grid(
-  learning_rate = c(0.3),
-  #  learning_rate = c(0.3, 0.1, 0.05, 0.01, 0.005),  #original
-  RMSE = NA,
-  trees = NA,
-  time = NA
-)
+#Not working
 
-# execute grid search
-for(i in seq_len(nrow(hyper_grid))) {
-
-  # fit gbm
-  set.seed(123)  # for reproducibility
-  train_time <- system.time({
-    m <- gbm::gbm(
-      formula = Match_Status ~ .,
-      data = train,
-      distribution = "gaussian",
-      n.trees = 5000, 
-      shrinkage = hyper_grid$learning_rate[i], 
-      interaction.depth = 3, 
-      n.minobsinnode = 10,
-      cv.folds = 10 
-   )
-  })
-  
-  # add SSE, trees, and training time to results
-  hyper_grid$trees[i] <- which.min(m$cv.error)
-  hyper_grid$Time[i]  <- train_time[["elapsed"]]
-
-}
+# # create grid search
+# hyper_grid <- expand.grid(
+#   learning_rate = c(0.3),
+#   #  learning_rate = c(0.3, 0.1, 0.05, 0.01, 0.005),  #original
+#   RMSE = NA,
+#   trees = NA,
+#   time = NA
+# )
+# 
+# # execute grid search
+# for(i in seq_len(nrow(hyper_grid))) {
+# 
+#   # fit gbm
+#   set.seed(123)  # for reproducibility
+#   train_time <- system.time({
+#     m <- gbm::gbm(
+#       formula = Match_Status ~ .,
+#       data = train,
+#       distribution = "gaussian",
+#       n.trees = 5000, 
+#       shrinkage = hyper_grid$learning_rate[i], 
+#       interaction.depth = 3, 
+#       n.minobsinnode = 10,
+#       cv.folds = 10 
+#    )
+#   })
+#   
+#   # add SSE, trees, and training time to results
+#   hyper_grid$trees[i] <- which.min(m$cv.error)
+#   hyper_grid$Time[i]  <- train_time[["elapsed"]]
+# 
+# }
 ```
 
 ```{r search grid}
-# search grid
-hyper_grid <- expand.grid(
-  n.trees = 1000,
-  shrinkage = 0.01,
-  interaction.depth = c(3),
-  n.minobsinnode = c(5)
-  #   n.trees = 6000, #original
-  # shrinkage = 0.01, #original
-  # interaction.depth = c(3, 5, 7), #original
-  # n.minobsinnode = c(5, 10, 15) #original
-  
-)
+#Not working.  
 
-# create model fit function
-model_fit <- function(n.trees, shrinkage, interaction.depth, n.minobsinnode) {
-  set.seed(123)
-  m <- gbm(
-    formula = Match_Status ~ .,
-    data = train,
-    distribution = "gaussian",
-    n.trees = n.trees,
-    shrinkage = shrinkage,
-    interaction.depth = interaction.depth,
-    n.minobsinnode = n.minobsinnode,
-    cv.folds = 10
-  )
-  # compute RMSE
-  sqrt(min(m$cv.error))
-}
-
-# perform search grid with functional programming
-hyper_grid$rmse <- purrr::pmap_dbl(
-  hyper_grid,
-  ~ model_fit(
-    n.trees = ..1,
-    shrinkage = ..2,
-    interaction.depth = ..3,
-    n.minobsinnode = ..4
-    )
-)
-
-# results
-arrange(hyper_grid, rmse)
+# # search grid
+# hyper_grid <- expand.grid(
+#   n.trees = 1000,
+#   shrinkage = 0.01,
+#   interaction.depth = c(3),
+#   n.minobsinnode = c(5)
+#   #   n.trees = 6000, #original
+#   # shrinkage = 0.01, #original
+#   # interaction.depth = c(3, 5, 7), #original
+#   # n.minobsinnode = c(5, 10, 15) #original
+#   
+# )
+# 
+# # create model fit function
+# model_fit <- function(n.trees, shrinkage, interaction.depth, n.minobsinnode) {
+#   set.seed(123)
+#   m <- gbm(
+#     formula = Match_Status ~ .,
+#     data = train,
+#     distribution = "gaussian",
+#     n.trees = n.trees,
+#     shrinkage = shrinkage,
+#     interaction.depth = interaction.depth,
+#     n.minobsinnode = n.minobsinnode,
+#     cv.folds = 10
+#   )
+#   # compute RMSE
+#   sqrt(min(m$cv.error))
+# }
+# 
+# # perform search grid with functional programming
+# hyper_grid$rmse <- purrr::pmap_dbl(
+#   hyper_grid,
+#   ~ model_fit(
+#     n.trees = ..1,
+#     shrinkage = ..2,
+#     interaction.depth = ..3,
+#     n.minobsinnode = ..4
+#     )
+# )
+# 
+# # results
+# arrange(hyper_grid, rmse)
 ```
 
 
@@ -2458,7 +2468,7 @@ print(caret_boost)
 ```{r}
 #using the model to make Survival predictions on the test set
 solution_boost <- predict(caret_boost, newdata = test, type = "raw")
-caret::confusionMatrix(solution_boost, test$Match_Status)
+#caret::confusionMatrix(solution_boost, test$Match_Status) #not working
 ```
 
 
@@ -2520,118 +2530,120 @@ dev.print(tiff, '~/Dropbox/Nomogram/nomogram/results/XGBoost_Feature_Importance.
 dev.off()
 ```
 
-```{r}
-library(recipes)
-xgb_prep <- recipe(formula = formula, data = train) %>%
-  step_integer(all_nominal()) %>%
-  prep(training = train, retain = TRUE) %>%
-  juice()
+#Not working.  
 
-X <- as.matrix(xgb_prep[setdiff(names(xgb_prep), "Match_Status")])
-Y <- xgb_prep$Match_Status
-```
+<!-- ```{r} -->
+<!-- library(recipes) -->
+<!-- xgb_prep <- recipe(x = formula, data = train) %>% -->
+<!--   step_integer(all_nominal()) %>% -->
+<!--   prep(training = train, retain = TRUE) %>% -->
+<!--   juice() -->
 
-Tuning
-```{r}
-set.seed(123)
-train_xgb <- xgb.cv(
-  data = X,
-  label = Y,
-  nrounds = 6000,
-  objective = "reg:linear",
-  early_stopping_rounds = 50, 
-  nfold = 10,
-  params = list(
-    eta = 0.1,
-    max_depth = 3,
-    min_child_weight = 3,
-    subsample = 0.8,
-    colsample_bytree = 1.0),
-  verbose = 0
-)  
+<!-- X <- as.matrix(xgb_prep[setdiff(names(xgb_prep), "Match_Status")]) -->
+<!-- Y <- xgb_prep$Match_Status -->
+<!-- ``` -->
 
-# minimum test CV RMSE
-min(train_xgb$evaluation_log$test_rmse_mean)
-```
+<!-- Tuning -->
+<!-- ```{r} -->
+<!-- set.seed(123) -->
+<!-- train_xgb <- xgb.cv( -->
+<!--   data = X, -->
+<!--   label = Y, -->
+<!--   nrounds = 6000, -->
+<!--   objective = "reg:linear", -->
+<!--   early_stopping_rounds = 50,  -->
+<!--   nfold = 10, -->
+<!--   params = list( -->
+<!--     eta = 0.1, -->
+<!--     max_depth = 3, -->
+<!--     min_child_weight = 3, -->
+<!--     subsample = 0.8, -->
+<!--     colsample_bytree = 1.0), -->
+<!--   verbose = 0 -->
+<!-- )   -->
 
-Grid Search
-```{r}
-#This takes FOREVER!  Oh man!
+<!-- # minimum test CV RMSE -->
+<!-- min(train_xgb$evaluation_log$test_rmse_mean) -->
+<!-- ``` -->
 
-# hyperparameter grid
-hyper_grid <- expand.grid(
-  eta = 0.01,
-  max_depth = 3, 
-  min_child_weight = 3,
-  subsample = 0.5, 
-  colsample_bytree = 0.5,
-  gamma = c(0, 1, 10, 100, 1000),
-  lambda = c(0, 1e-2, 0.1, 1, 100, 1000, 10000),
-  alpha = c(0, 1e-2, 0.1, 1, 100, 1000, 10000),
-  rmse = 0,          # a place to dump RMSE results
-  trees = 0          # a place to dump required number of trees
-)
+<!-- Grid Search -->
+<!-- ```{r} -->
+<!-- #This takes FOREVER!  Oh man! -->
 
-#This takes FOREVER!  Oh man!
-# grid search
-for(i in seq_len(nrow(hyper_grid))) {
-  set.seed(123)
-  m <- xgb.cv(
-    data = X,
-    label = Y,
-    nrounds = 4, #4000
-    objective = "reg:linear",
-    early_stopping_rounds = 50, 
-    nfold = 10,
-    verbose = 0,
-    params = list( 
-      eta = hyper_grid$eta[i], 
-      max_depth = hyper_grid$max_depth[i],
-      min_child_weight = hyper_grid$min_child_weight[i],
-      subsample = hyper_grid$subsample[i],
-      colsample_bytree = hyper_grid$colsample_bytree[i],
-      gamma = hyper_grid$gamma[i], 
-      lambda = hyper_grid$lambda[i], 
-      alpha = hyper_grid$alpha[i]
-    ) 
-  )
-  hyper_grid$rmse[i] <- min(m$evaluation_log$test_rmse_mean)
-  hyper_grid$trees[i] <- m$best_iteration
-}
+<!-- # hyperparameter grid -->
+<!-- hyper_grid <- expand.grid( -->
+<!--   eta = 0.01, -->
+<!--   max_depth = 3,  -->
+<!--   min_child_weight = 3, -->
+<!--   subsample = 0.5,  -->
+<!--   colsample_bytree = 0.5, -->
+<!--   gamma = c(0, 1, 10, 100, 1000), -->
+<!--   lambda = c(0, 1e-2, 0.1, 1, 100, 1000, 10000), -->
+<!--   alpha = c(0, 1e-2, 0.1, 1, 100, 1000, 10000), -->
+<!--   rmse = 0,          # a place to dump RMSE results -->
+<!--   trees = 0          # a place to dump required number of trees -->
+<!-- ) -->
 
-# results
-hyper_grid %>%
-  filter(rmse > 0) %>%
-  arrange(rmse) %>%
-  glimpse()
-```
+<!-- #This takes FOREVER!  Oh man! -->
+<!-- # grid search -->
+<!-- for(i in seq_len(nrow(hyper_grid))) { -->
+<!--   set.seed(123) -->
+<!--   m <- xgb.cv( -->
+<!--     data = X, -->
+<!--     label = Y, -->
+<!--     nrounds = 4, #4000 -->
+<!--     objective = "reg:linear", -->
+<!--     early_stopping_rounds = 50,  -->
+<!--     nfold = 10, -->
+<!--     verbose = 0, -->
+<!--     params = list(  -->
+<!--       eta = hyper_grid$eta[i],  -->
+<!--       max_depth = hyper_grid$max_depth[i], -->
+<!--       min_child_weight = hyper_grid$min_child_weight[i], -->
+<!--       subsample = hyper_grid$subsample[i], -->
+<!--       colsample_bytree = hyper_grid$colsample_bytree[i], -->
+<!--       gamma = hyper_grid$gamma[i],  -->
+<!--       lambda = hyper_grid$lambda[i],  -->
+<!--       alpha = hyper_grid$alpha[i] -->
+<!--     )  -->
+<!--   ) -->
+<!--   hyper_grid$rmse[i] <- min(m$evaluation_log$test_rmse_mean) -->
+<!--   hyper_grid$trees[i] <- m$best_iteration -->
+<!-- } -->
 
-```{r Optimal parameters}
-#Optimal parameters
-# optimal parameter list
-params <- list(
-  eta = 0.01,
-  max_depth = 3,
-  min_child_weight = 3,
-  subsample = 0.5,
-  colsample_bytree = 0.5
-)
+<!-- # results -->
+<!-- hyper_grid %>% -->
+<!--   filter(rmse > 0) %>% -->
+<!--   arrange(rmse) %>% -->
+<!--   glimpse() -->
+<!-- ``` -->
 
-# train final model
+<!-- ```{r Optimal parameters} -->
+<!-- #Optimal parameters -->
+<!-- # optimal parameter list -->
+<!-- params <- list( -->
+<!--   eta = 0.01, -->
+<!--   max_depth = 3, -->
+<!--   min_child_weight = 3, -->
+<!--   subsample = 0.5, -->
+<!--   colsample_bytree = 0.5 -->
+<!-- ) -->
 
-#Error in UseMethod("xgboost") : 
-  #no applicable method for 'xgboost' applied to an object of class "list"
-  
+<!-- # train final model -->
 
-# xgb.fit.final <- xgboost(
-#   params = params,
-#   data = X,
-#   label = Y,
-#   nrounds = 3944,
-#   objective = "reg:linear",
-#   verbose = 0
-# )
-```
+<!-- #Error in UseMethod("xgboost") :  -->
+<!--   #no applicable method for 'xgboost' applied to an object of class "list" -->
+
+
+<!-- # xgb.fit.final <- xgboost( -->
+<!-- #   params = params, -->
+<!-- #   data = X, -->
+<!-- #   label = Y, -->
+<!-- #   nrounds = 3944, -->
+<!-- #   objective = "reg:linear", -->
+<!-- #   verbose = 0 -->
+<!-- # ) -->
+<!-- ``` -->
 
 ```{r}
 # variable importance plot,   Error in vip::vip(xgb.fit.final) : object 'xgb.fit.final' not found
@@ -2657,7 +2669,7 @@ categorise=function(x){
 }
 predNew=apply(predNew,2,categorise)
 head(predNew,10)
-confusionMatrix(as.factor(test$Match_Status),as.factor(predNew))
+#confusionMatrix(as.factor(test$Match_Status),as.factor(predNew))  #Not working
 
 ############### WITH CROSS VALIDATION###########
 train_control <- trainControl(method = "cv", number = 10)
@@ -2673,20 +2685,22 @@ pred_cv <- predict(linearCrossMod, test)
 predNew_cv = as.data.frame(pred_cv)
 predNew_cv=apply(predNew_cv,2,categorise)
 head(predNew_cv,10)
-confusionMatrix(as.factor(predNew_cv),as.factor(test$Match_Status))
+#confusionMatrix(as.factor(predNew_cv),as.factor(test$Match_Status))  #Not working
 
 ############### Roc curve for NNET MODEL################
-library(ROCR)
 
-pred_roc <- prediction(as.numeric(as.character(pred_cv)), as.numeric(as.character(test$Match_Status)))
-perf <- performance(pred_roc, "tpr", 'fpr')
-plot(perf, main = "ROC curve for Neural Net", colorize = T)
-abline(0,1, col='gray60')
-
-auc_ROCR <- performance(pred_roc, measure = "auc")
-auc_ROCR <- auc_ROCR@y.values[[1]]
-
-auc_ROCR
+#Not working ????
+# library(ROCR)
+# 
+# pred_roc <- prediction(as.numeric(as.character(pred_cv)), as.numeric(as.character(test$Match_Status)))
+# perf <- performance(pred_roc, "tpr", 'fpr')
+# plot(perf, main = "ROC curve for Neural Net", colorize = T)
+# abline(0,1, col='gray60')
+# 
+# auc_ROCR <- performance(pred_roc, measure = "auc")
+# auc_ROCR <- auc_ROCR@y.values[[1]]
+# 
+# auc_ROCR
 ```
 
 # 8) Model: Ensembles model
@@ -2712,7 +2726,8 @@ blueprint <- recipe(Match_Status~., data = train) %>%
   step_other(all_nominal(), threshold = 0.005)
 
 # Create training & test sets for h2o
-h2o.init()
+library(h2o)
+h2o::h2o.init()
 train_h2o <- prep(blueprint, training = train, retain = TRUE) %>%
   juice() %>%
   as.h2o()
@@ -2722,7 +2737,7 @@ test_h2o <- prep(blueprint, training = train) %>%
 
 # Get response and feature names
 Y <- "Match_Status"
-X <- setdiff(names(ames_train), Y)  #Why are we using ames_train ???????
+X <- setdiff(names(train), Y)  #Why are we using ames_train ???????
 ```
 
 ```{r Train & cross-validate mutliple models}
@@ -2739,7 +2754,7 @@ best_rf <- h2o.randomForest(
   #  x = X, y = Y, training_frame = train_h2o, ntrees = 1000, mtries = 10,  #original
   max_depth = 30, min_rows = 1, sample_rate = 0.8, nfolds = 3,
   fold_assignment = "Modulo", keep_cross_validation_predictions = TRUE,
-  seed = 123, stopping_rounds = 50, stopping_metric = "RMSE",
+  seed = 123, stopping_rounds = 50, stopping_metric = "AUC",
   stopping_tolerance = 0
 )
 
@@ -2819,14 +2834,17 @@ search_criteria <- list(
 )
 
 # Build random grid search 
-random_grid <- h2o.grid(
-  algorithm = "gbm", grid_id = "gbm_grid", x = X, y = Y,
-  training_frame = train_h2o, hyper_params = hyper_grid,
-  search_criteria = search_criteria, ntrees = 5000, stopping_metric = "RMSE",     
-  stopping_rounds = 10, stopping_tolerance = 0, nfolds = 10, 
-  fold_assignment = "Modulo", keep_cross_validation_predictions = TRUE,
-  seed = 123
-)
+
+#Not working, Illegal argument: training_frame of function: grid: Cannot append new models to a grid with different training input
+
+# random_grid <- h2o.grid(
+#   algorithm = "rf", grid_id = "rf_grid", x = X, y = Y,
+#   training_frame = train_h2o, hyper_params = hyper_grid,
+#   search_criteria = search_criteria, ntrees = 5000, stopping_metric = "AUC",     
+#   stopping_rounds = 10, stopping_tolerance = 0, nfolds = 10, 
+#   fold_assignment = "Modulo", keep_cross_validation_predictions = TRUE,
+#   seed = 123
+# )
 ```
 
 ```{r Sort results by RMSE}
@@ -2839,7 +2857,7 @@ h2o.getGrid(
 
 ```{r Grab the model_id for the top model, chosen by validation error}
 # Grab the model_id for the top model, chosen by validation error
-best_model_id <- random_grid_perf@model_ids[[1]]
+#best_model_id <- random_grid_perf@model_ids[[1]]
 best_model <- h2o.getModel(best_model_id)
 h2o.performance(best_model, newdata = test_h2o)
 ```
