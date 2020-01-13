@@ -24,7 +24,7 @@ data_file <- "all_years_filter_112.rds"
 # Set libPaths.
 .libPaths("/Users/tylermuffly/.exploratory/R/3.6")
 
-pkg <- (c('R.methodsS3', 'caret', 'readxl', 'XML', 'reshape2', 'devtools', 'purrr', 'readr', 'ggplot2', 'dplyr', 'magick', 'janitor', 'lubridate', 'hms', 'tidyr', 'stringr', 'openxlsx', 'forcats', 'RcppRoll', 'tibble', 'bit64', 'munsell', 'scales', 'rgdal', 'tidyverse', "foreach", "PASWR", "rms", "pROC", "ROCR", "nnet", "packrat", "DynNom", "export", "caTools", "mlbench", "randomForest", "ipred", "xgboost", "Metrics", "RANN", "AppliedPredictiveModeling", "nomogramEx", "shiny", "earth", "fastAdaboost", "Boruta", "glmnet", "ggforce", "tidylog", "InformationValue", "pscl", "scoring", "DescTools", "gbm", "Hmisc", "arsenal", "pander", "moments", "leaps", "MatchIt", "car", "mice", "rpart", "beepr", "fansi", "utf8", "zoom", "lmtest", "ResourceSelection", "rmarkdown", "rattle", "rmda", "funModeling", "tinytex", "caretEnsemble", "Rmisc", "corrplot", "GGally", "alluvial", "progress", "perturb", "vctrs", "highr", "labeling", "DataExplorer", "rsconnect", "inspectdf", "ggpubr", "esquisse", "stargazer", "tableone", "knitr", "drake", "visNetwork", "woeBinning", "OneR", "rpart.plot", "RColorBrewer", "kableExtra", "kernlab", "naivebayes", "e1071", "data.table", "skimr", "naniar", "english", "mosaic", "broom", "mltools", "tidymodels", "tidyquant", "rsample", "yardstick", "parsnip", "tensorflow", "keras", "sparklyr", "dials", "cowplot", "lime", "flexdashboard", "shinyjs", "shinyWidgets", "plotly", "odbc", "BH", "discrim", "vip", "ezknitr"))
+pkg <- (c('R.methodsS3', 'caret', 'readxl', 'XML', 'reshape2', 'devtools', 'purrr', 'readr', 'ggplot2', 'dplyr', 'magick', 'janitor', 'lubridate', 'hms', 'tidyr', 'stringr', 'openxlsx', 'forcats', 'RcppRoll', 'tibble', 'bit64', 'munsell', 'scales', 'rgdal', 'tidyverse', "foreach", "PASWR", "rms", "pROC", "ROCR", "nnet", "packrat", "DynNom", "export", "caTools", "mlbench", "randomForest", "ipred", "xgboost", "Metrics", "RANN", "AppliedPredictiveModeling", "nomogramEx", "shiny", "earth", "fastAdaboost", "Boruta", "glmnet", "ggforce", "tidylog", "InformationValue", "pscl", "scoring", "DescTools", "gbm", "Hmisc", "arsenal", "pander", "moments", "leaps", "MatchIt", "car", "mice", "rpart", "beepr", "fansi", "utf8", "zoom", "lmtest", "ResourceSelection", "rmarkdown", "rattle", "rmda", "funModeling", "tinytex", "caretEnsemble", "Rmisc", "corrplot", "GGally", "alluvial", "progress", "perturb", "vctrs", "highr", "labeling", "DataExplorer", "rsconnect", "inspectdf", "ggpubr", "esquisse", "stargazer", "tableone", "knitr", "drake", "visNetwork", "woeBinning", "OneR", "rpart.plot", "RColorBrewer", "kableExtra", "kernlab", "naivebayes", "e1071", "data.table", "skimr", "naniar", "english", "mosaic", "broom", "mltools", "tidymodels", "tidyquant", "rsample", "yardstick", "parsnip", "tensorflow", "keras", "sparklyr", "dials", "cowplot", "lime", "flexdashboard", "shinyjs", "shinyWidgets", "plotly", "odbc", "BH", "discrim", "vip", "ezknitr", "here", "usethis", "gbm", "corrgram", "BiocManager", "factoextra", "parallel", "doParallel", "GA"))
 
 #install.packages(pkg, dependencies = TRUE, repos = "https://cloud.r-project.org")  #run this first time
 lapply(pkg, require, character.only = TRUE)
@@ -41,6 +41,11 @@ library(discrim)
 #pacman::p_install_gh("cran/doMC")
 library("doMC")
 doMC::registerDoMC(cores = detectCores()-1) #Use multiple cores for processing
+
+if (!requireNamespace('BiocManager', quietly = TRUE))
+  install.packages('BiocManager')
+BiocManager::install('PCAtools')
+library(PCAtools)
 
 #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
 # Package functions customization
@@ -867,25 +872,87 @@ plot_ggpairs <- function(data, color = NULL, density_alpha = 0.5) {
   
 }
 
-ggsave(here::here("results", "whomatched.tiff"), whomatched, device = "tiff", width = 10, height = 7, dpi = 320)
 
-df = whomatched
+###Genetic algorithm
 
-tm_ggsave1 <- function(df) 
-  {
-  ggsave(here::here("results", (paste0(df, ".tiff"))), df, device = "tiff", scale = 1, width = 12, height = 10, units = c("cm"), dpi = 500,  bg = "transparent")
-         }
-
-tm_ggsave1(df=whomatched)
-
-
-
-ggsave(paste0("from_npi_physician_class", format(Sys.time(),'_%Y%m%d_%H%M%S'), ".png"), plot = last_plot(), device = "png", scale = 1, width = 12, height = 10, units = c("cm"), dpi = 500,  bg = "transparent")
-
-tm_ggsave <- function(df) {
-  ggsave(paste0(df, format(Sys.time(),'_%Y%m%d_%H%M%S'), ".TIFF"), plot = last_plot(), device = "tiff", scale = 1, width = 12, height = 10, units = c("cm"), dpi = 500,  bg = "transparent")
+custom_fitness <- function(vars, data_x, data_y, p_sampling)
+{
+  # speeding up things with sampling
+  ix=get_sample(data_x, percentage_tr_rows = p_sampling)
+  data_2=data_x[ix,]
+  data_y_smp=data_y[ix]
+  
+  # keep only vars from current solution
+  names=colnames(data_2)
+  names_2=names[vars==1]
+  # get the columns of the current solution
+  data_sol=data_2[, names_2]
+  
+  # get the roc value from the created model
+  roc_value=get_roc_metric(data_sol, data_y_smp, names_2)
+  
+  # get the total number of vars for the current selection
+  q_vars=sum(vars)
+  
+  # time for your magic
+  fitness_value=roc_value/q_vars
+  
+  return(fitness_value)
 }
 
-tm_ggsave(df = whomatched)
+get_roc_metric <- function(data_tr_sample, target, best_vars) 
+{
+  # data_tr_sample=data_sol
+  # target = target_var_s
+  # best_vars=names_2
+  
+  fitControl <- caret::trainControl(method = "cv", 
+                                    number = 3, 
+                                    summaryFunction = twoClassSummary,
+                                    classProbs = TRUE)
+  
+  data_model=select(data_tr_sample, one_of(best_vars))
+  
+  mtry = sqrt(ncol(data_model))
+  tunegrid = expand.grid(.mtry=round(mtry))
+  
+  fit_model_1 = caret::train(x=data_model, 
+                             y= target, 
+                             method = "rf", 
+                             trControl = fitControl,
+                             metric = "ROC",
+                             tuneGrid=tunegrid
+  )
+  
+  metric=fit_model_1$results["ROC"][1,1]
+  
+  return(metric)
+}
 
-ggsave(here::here("results", "whomatched.tiff"), whomatched, device = "tiff", width = 10, height = 7, dpi = 320)
+
+
+
+get_accuracy_metric <- function(data_tr_sample, target, best_vars) 
+{
+  data_model=select(data_tr_sample, one_of(best_vars))
+  
+  fitControl <- trainControl(method = "cv", 
+                             number = 3, 
+                             summaryFunction = twoClassSummary)
+  
+  data_model=select(data_tr_sample, one_of(best_vars))
+  
+  mtry = sqrt(ncol(data_model))
+  tunegrid = expand.grid(mtry=round(mtry))
+  
+  fit_model_1 = caret::train(x=data_model, 
+                             y= target, 
+                             method = "rf",
+                             tuneGrid = tunegrid)
+  
+  
+  
+  metric=fit_model_1$results["Accuracy"][1,1]
+  return(metric)
+}  
+
