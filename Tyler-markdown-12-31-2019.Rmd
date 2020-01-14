@@ -70,10 +70,10 @@ A codebook is a technical description of the data that was collected for a parti
 2. `all_data$Age` - Age at the time of the match, numerical variable
 3. `all_data$Year` - Year of participation in the match, 4 level categorical
 4. `all_data$Gender` - Male or Female, 2 level categorical
-5. `all_data$Couples_Match` - PArticipating in the couples match? 2 level categorical
-6. `all_data$US_or_Canadian_Applicant` - Are they a US Senior or an IMG, 2 level categorical 
+5. `all_data$Couples_Match` - PArticipating in the couples match? 2 level categorical.  We are unsure if there are any couples who are both matching into OBGYN.  
+6. `all_data$US_or_Canadian_Applicant` - Are they a US/Canadian Senior "Yes" or an International medical graduate "No"?  , 2 level categorical 
 7. `all_data$Medical_Education_Interrupted` - Taking breaks, 2 level categorical
-8. `all_data$Alpha_Omega_Alpha` - Membership in AOA, 3 level categorical
+8. `all_data$Alpha_Omega_Alpha` - Membership in AOA, 3 level categorical.  Yes means elected in their junior year or elections are early.  Could combine with Sigma Sigma Phi?  Passing minimum score is 194 and theoretical maximum score is 300.  
 9. `all_data$Military_Service_Obligation`
 10. `all_data$USMLE_Step_1_Score` - I did not use Step 2 score because most students will not have those numbers at the time they apply, numerical variable
 11. `all_data$Count_of_Poster_Presentation` - numerical variable
@@ -118,11 +118,27 @@ Package installation, data download from Dropbox.com, and functions written for 
 #May need to run this file line-by-line (CRTL+Enter) by hand.  
 
 source(file="~/Dropbox/Nomogram/nomogram/Code/Additional_functions_nomogram.R", echo=TRUE, verbose=TRUE)
+conflicts()
 ```
 
 The first few rows of the data loaded are given below:
 ```{r}
 head(all_data) %>% knitr::kable(format = "pandoc", caption = "Example observations (rows) and the features (columns)")
+```
+
+```{r}
+getwd()
+library(fs)
+make_project_dir <- function() {
+    
+    dir_names <- c(
+        "Code",
+        "results")
+    dir_create(dir_names)
+    dir_ls()
+}
+getwd()
+make_project_dir()
 ```
 
 
@@ -135,6 +151,8 @@ all_data <- na.omit(all_data)
 dim(all_data)
 data.table::data.table(all_data)
 funModeling::freq(data=all_data, plot = FALSE, na.rm = FALSE)
+
+view(summarytools::dfSummary(x = all_data, justify = "l", style = "multiline", varnumbers = FALSE, valid.col = FALSE, tmp.img.dir = "./img", max.distinct.values = 5))
 
 # orginal response distribution
 tmp <- table(all_data$Match_Status)
