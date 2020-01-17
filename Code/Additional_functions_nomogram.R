@@ -10,13 +10,26 @@
 #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
 # Directory Paths for Data and Results
 #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
+
+#Builds the file directory structure necessary for the project
+# getwd()
+# library(fs)
+# make_project_dir <- function() {
+#     
+#     dir_names <- c("Code",
+#         "results",
+#         "Saved_Models")
+#     dir_create(dir_names)
+#     dir_ls()
+# }
+# make_project_dir()
+system("ls ..")
+
 data_folder <- paste0(getwd(), "/Data/")
 results_folder <- paste0(getwd(), "/Results/")
 
 #data_file <- "all_years_mutate_124.csv"
 data_file <- "all_years_filter_112.rds" 
-
-
 
 #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
 #Install and Load needed R packages.
@@ -24,28 +37,13 @@ data_file <- "all_years_filter_112.rds"
 # Set libPaths.
 .libPaths("/Users/tylermuffly/.exploratory/R/3.6")
 
-pkg <- (c('R.methodsS3', 'caret', 'readxl', 'XML', 'reshape2', 'devtools', 'purrr', 'readr', 'ggplot2', 'dplyr', 'magick', 'janitor', 'lubridate', 'hms', 'tidyr', 'stringr', 'openxlsx', 'forcats', 'RcppRoll', 'tibble', 'bit64', 'munsell', 'scales', 'rgdal', 'tidyverse', "foreach", "PASWR", "rms", "pROC", "ROCR", "nnet", "packrat", "DynNom", "export", "caTools", "mlbench", "randomForest", "ipred", "xgboost", "Metrics", "RANN", "AppliedPredictiveModeling", "nomogramEx", "shiny", "earth", "fastAdaboost", "Boruta", "glmnet", "ggforce", "tidylog", "InformationValue", "pscl", "scoring", "DescTools", "gbm", "Hmisc", "arsenal", "pander", "moments", "leaps", "MatchIt", "car", "mice", "rpart", "beepr", "fansi", "utf8", "zoom", "lmtest", "ResourceSelection", "rmarkdown", "rattle", "rmda", "funModeling", "tinytex", "caretEnsemble", "Rmisc", "corrplot", "GGally", "alluvial", "progress", "perturb", "vctrs", "highr", "labeling", "DataExplorer", "rsconnect", "inspectdf", "ggpubr", "esquisse", "stargazer", "tableone", "knitr", "drake", "visNetwork", "woeBinning", "OneR", "rpart.plot", "RColorBrewer", "kableExtra", "kernlab", "naivebayes", "e1071", "data.table", "skimr", "naniar", "english", "mosaic", "broom", "mltools", "tidymodels", "tidyquant", "rsample", "yardstick", "parsnip", "tensorflow", "keras", "sparklyr", "dials", "cowplot", "lime", "flexdashboard", "shinyjs", "shinyWidgets", "plotly", "odbc", "BH", "discrim", "vip", "ezknitr", "here", "usethis", "gbm", "corrgram", "BiocManager", "factoextra", "parallel", "doParallel", "GA"))
+pkg <- (c('R.methodsS3', 'caret', 'readxl', 'XML', 'reshape2', 'devtools', 'purrr', 'readr', 'ggplot2', 'dplyr', 'magick', 'janitor', 'lubridate', 'hms', 'tidyr', 'stringr', 'openxlsx', 'forcats', 'RcppRoll', 'tibble', 'bit64', 'munsell', 'scales', 'rgdal', 'tidyverse', "foreach", "PASWR", "rms", "pROC", "ROCR", "nnet", "packrat", "DynNom", "export", "caTools", "mlbench", "randomForest", "ipred", "xgboost", "Metrics", "RANN", "AppliedPredictiveModeling", "nomogramEx", "shiny", "earth", "fastAdaboost", "Boruta", "glmnet", "ggforce", "tidylog", "InformationValue", "pscl", "scoring", "DescTools", "gbm", "Hmisc", "arsenal", "pander", "moments", "leaps", "MatchIt", "car", "mice", "rpart", "beepr", "fansi", "utf8", "zoom", "lmtest", "ResourceSelection", "rmarkdown", "rattle", "rmda", "funModeling", "tinytex", "caretEnsemble", "Rmisc", "corrplot", "progress", "perturb", "vctrs", "highr", "labeling", "DataExplorer", "rsconnect", "inspectdf", "ggpubr", "tableone", "knitr", "drake", "visNetwork", "rpart.plot", "RColorBrewer", "kableExtra", "kernlab", "naivebayes", "e1071", "data.table", "skimr", "naniar", "english", "mosaic", "broom", "mltools", "tidymodels", "tidyquant", "rsample", "yardstick", "parsnip", "tensorflow", "keras", "sparklyr", "dials", "cowplot", "lime", "flexdashboard", "shinyjs", "shinyWidgets", "plotly", "odbc", "BH", "discrim", "vip", "ezknitr", "here", "usethis", "gbm", "corrgram", "BiocManager", "factoextra", "parallel", "doParallel", "GA", "PCAtools", "odbc", "RSQLite", "discrim", "doMC", "BiocManager", "summarytools", "pander", "remotes", "fs"))
 
 #install.packages(pkg, dependencies = TRUE, repos = "https://cloud.r-project.org")  #run this first time
 lapply(pkg, require, character.only = TRUE)
-
-# Database
-library("odbc")
-library("RSQLite")
-
-#install.packages("dplR", dependencies = TRUE)
-#library(dplR)
-#devtools::install_github("tidymodels/discrim") #for naive bayes with tidymodels
-library(discrim)
-
-#pacman::p_install_gh("cran/doMC")
-library("doMC")
 doMC::registerDoMC(cores = detectCores()-1) #Use multiple cores for processing
 
-if (!requireNamespace('BiocManager', quietly = TRUE))
-  install.packages('BiocManager')
-BiocManager::install('PCAtools')
-library(PCAtools)
+#BiocManager::install('PCAtools')
 
 #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
 # Package functions customization
@@ -105,6 +103,7 @@ create_plot_cross_plot <-
                             path_out = results_folder,
                             auto_binning = TRUE)
   } #, auto_binning = FALSE, #Export results
+#For numerical variables, cross_plot has by default the auto_binning=T, which automatically calls the equal_freq function with n_bins=10 (or the closest number).
 
 create_profiling_num <- 
   function(data) {
@@ -956,3 +955,42 @@ get_accuracy_metric <- function(data_tr_sample, target, best_vars)
   return(metric)
 }  
 
+# https://github.com/tobiolatunji/Readmission_Prediction/blob/master/diabetes_readmission.R
+# pseudo R-squared for logistic regression model
+logisticPseudoR2s <- function(LogModel) {
+  dev <- LogModel$deviance 
+  nullDev <- LogModel$null.deviance 
+  modelN <-  length(LogModel$fitted.values)
+  R.l <-  1 -  dev / nullDev
+  R.cs <- 1- exp ( -(nullDev - dev) / modelN)
+  R.n <- R.cs / ( 1 - ( exp (-(nullDev / modelN))))
+  cat("Pseudo R^2 for logistic regression\n")
+  cat("Hosmer and Lemeshow R^2  ", round(R.l, 3), "\n")
+  cat("Cox and Snell R^2        ", round(R.cs, 3), "\n")
+  cat("Nagelkerke R^2           ", round(R.n, 3),    "\n")
+}
+
+
+#Variable Importance Function
+tm_vip <- function (object, title, ...) {
+  vip <- vip::vip(object = object, 
+                  bar = TRUE,
+                  horizontal = TRUE,
+                  shape = 1,
+                  color = "grey35",
+                  fill = "grey35",
+                  all_permutations = TRUE,
+                  num_features = 10L,
+                  alpha = 1) +
+    ggtitle(title)
+  return(vip)
+}
+
+tm_ggsave <- function (object, filename, ...){  #make sure the file name has quotation marks around it.  
+  ggplot2::ggsave(here::here("results", filename), object, device = "tiff", width = 10, height = 7, dpi = 200)
+}
+
+tm_print_save <- function (filename) {
+  dev.print(tiff, (here("results", filename)), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
+  dev.off()
+}

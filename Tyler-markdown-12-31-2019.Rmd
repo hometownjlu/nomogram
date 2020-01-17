@@ -67,7 +67,7 @@ A codebook is a technical description of the data that was collected for a parti
 * Predictors under consideration:
 1. `all_data$white_non_white` - Dichotomoized from ethnicity fields in ERAS data, 2 level categorical
 2. `all_data$Age` - Age at the time of the match, numerical variable
-3. `all_data$Year` - Year of participation in the match, 4 level categorical
+3. `all_data$Year` - Year of participation in the match, 4 level categorical.  Will not have data of year in future so to remove.  
 4. `all_data$Gender` - Male or Female, 2 level categorical
 5. `all_data$Couples_Match` - PArticipating in the couples match? 2 level categorical.  We are unsure if there are any couples who are both matching into OBGYN.  
 6. `all_data$US_or_Canadian_Applicant` - Are they a US/Canadian Senior "Yes" or an International medical graduate "No"?  , 2 level categorical 
@@ -220,8 +220,11 @@ Shows four different ways to check for missingness in the data
 
 colSums(is.na(all_data))
 purrr::map_df(all_data, ~ sum(is.na(.)))
+
 naniar::gg_miss_var(all_data)
-Hmisc::na.pattern(all_data)
+tm_print_save(filename = "na_pattern.tiff")
+
+na_pattern <- Hmisc::na.pattern(all_data)
 ```
 
 # Exploratory data analysis
@@ -238,7 +241,7 @@ whomatched <-
         theme_grey(base_size = 18)
 whomatched
 
-ggsave(here::here("results", "whomatched.tiff"), whomatched, device = "tiff", width = 10, height = 7, dpi = 320)
+tm_ggsave(object = whomatched, filename = "whomatched.tiff")
 ```
 
 # Data Description and *Univariate* analysis of variables. 
@@ -247,7 +250,7 @@ Categorical and numerical variable plots:
 #General Data Description
 inspect_cat_plot <- inspectdf::inspect_cat(all_data) %>% show_plot()  #Please use `cols = c(data)` is the error message I get here.  But it still runs.  
 inspect_cat_plot
-ggplot2::ggsave(here::here("results", "inspect_cat_plot.tiff"), inspect_cat_plot, device = "tiff", width = 10, height = 7, dpi = 320)
+tm_ggsave(object = inspect_cat_plot, filename = "inspect_cat_plot.tiff")
 
 plot_histogram_plot <- DataExplorer::plot_histogram(all_data, nrow = 2L, ncol = 2L)  
 plot_histogram_plot
@@ -258,7 +261,7 @@ DataExplorer::plot_bar(all_data, nrow = 2L, ncol = 2L)  #Not useful whatsoever.
 inspect_num_plot <- inspectdf::inspect_num(all_data) %>% show_plot()  
 inspect_num_plot
 
-ggplot2::ggsave(here::here("results", "inspect_num_plot.tiff"), inspect_num_plot, device = "tiff", width = 10, height = 7, dpi = 320)
+tm_ggsave(inspect_num_plot, "inspect_num_plot.tiff")
 ```
 
 ```{r, include=TRUE, echo=TRUE, include=TRUE, align = 'left', cache=FALSE, out.width="75%"}
@@ -271,14 +274,14 @@ expl_plots_box <- purrr::map(expl, ~box_fun_plot(data = all_data, x = "Match_Sta
 plot_grid_plot <- cowplot::plot_grid(plotlist = expl_plots_box)
 plot_grid_plot
 
-ggplot2::ggsave(here::here("results", "plot_grid_plot.tiff"), plot_grid_plot, device = "tiff", width = 10, height = 7, dpi = 320)
+tm_ggsave(plot_grid_plot, "plot_grid_plot.tiff")
 
 # Loop vector with map
 expl_plots_density <- purrr::map(expl, ~density_fun_plot(data = all_data, x = "Match_Status", y = .x) )
 plot_grid_plot_density <- cowplot::plot_grid(plotlist = expl_plots_density)
 plot_grid_plot_density
 
-ggplot2::ggsave(here::here("results", "plot_grid_plot_density.tiff"), plot_grid_plot_density, device = "tiff", width = 10, height = 7, dpi = 320)
+tm_ggsave(plot_grid_plot_density, "plot_grid_plot_density.tiff")
 ```
 
 
@@ -286,7 +289,7 @@ ggplot2::ggsave(here::here("results", "plot_grid_plot_density.tiff"), plot_grid_
 create_plot_num_plot <- create_plot_num(all_data)  
 create_plot_num_plot
 
-ggplot2::ggsave(here::here("results", "create_plot_num_plot.tiff"), create_plot_num_plot, device = "tiff", width = 10, height = 7, dpi = 320)
+tm_ggsave(create_plot_num_plot, "create_plot_num_plot.tiff")
 ```
 
 ```{r funModeling1, echo=TRUE, message=FALSE, warning=TRUE, results='asis', include=FALSE}
@@ -657,16 +660,13 @@ chisq.test(train$Medical_Degree,train$Match_Status,correct = FALSE)#Medical Degr
 cnum <- train[,c("Age", "USMLE_Step_1_Score")]
 cormat <- cor(cnum) # Select only numeric variables that are significant on univariate testing.  
 pairs(cnum)
- 
-dev.print(tiff, (here("results", "significant_numeric_variable_correlation.tiff")), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
-dev.off()
+tm_print_save("significant_numeric_variable_correlation.tiff")
 
 scatterplotMatrix(~Age+USMLE_Step_1_Score, data=train, main="Correlations of Numeric Variables in the Matching Data")
 
 corrplot(cormat, method="circle")
 corrplot(cormat, method="circle", addCoef.col="black") # With correlation 
-# dev.print(tiff, '~/Dropbox/Nomogram/nomogram/results/plot_numeric_variable_correlation.tiff', compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
-# dev.off()
+tm_print_save("corrplot.tiff")
 ```
 
 Correlation plot 
@@ -694,8 +694,7 @@ dplyr::mutate(white_non_white = as.integer(train$white_non_white),
                      sig.level = "0.01",
                      insig = "blank", #Insignficant values are left blank
                      pch = TRUE)
-dev.print(tiff, (here("results", "train_correlation.tiff")), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
-dev.off()
+tm_print_save("train_correlation.tiff")
 ```
 In this correlation plot we want to look for the bright, large circles which immediately show the strong correlations (size and shading depends on the absolute values of the coefficients; color depends on direction).  This shows whether two features are connected so that one changes with a predictable trend if you change the other. The closer this coefficient is to zero the weaker is the correlation. Anything that you would have to squint to see is usually not worth seeing! 
 
@@ -705,7 +704,7 @@ Observations:  Match_Status is most correlated to US_or_Canadian_Applicant and t
 inspect_cor_plot <- inspectdf::inspect_cor(train, method = "pearson", alpha = 0.05) %>% show_plot()  
 inspect_cor_plot
 
-ggplot2::ggsave(here::here("results", "inspect_cor_plot.tiff"), inspect_cor_plot, device = "tiff", width = 10, height = 7, dpi = 320)
+tm_ggsave(inspect_cor_plot, "inspect_cor_plot.tiff")
 ```
 Correlation was found with Count_of_Poster_Presentation, Age, and USMLE_Step_1_Score to Match_Status in the train data set.  The lower the age (correlation -0.33)  the patient the more likely they are to match.  The higher the USMLE_Step_1 scores the more likely they are to match (correlation 0.344).  The younger you are the more likely that you get a higher USMLE_Step_1 score.  The number of posters and the number of abstract articles are positively correleated as well.  The strongest positive correlation was between the count of articles and the count of posters.  No shocker there.  Strong negative correlations were between Age and USMLE step 1 score.  Also match status and age were negatively correlated (the younger you are the more likely you are to match).   
 
@@ -733,7 +732,7 @@ all_data_correlated_tbl %>%
 static_correlation_funnel <- all_data_correlated_tbl %>%
   correlationfunnel::plot_correlation_funnel(interactive = FALSE, limits = c(-1, 1))
 
-ggplot2::ggsave(here::here("results", "static_correlation_funnel.tiff"), static_correlation_funnel, device = "tiff", width = 10, height = 7, dpi = 320)
+tm_ggsave(static_correlation_funnel, "static_correlation_funnel.tiff")
 ```
 
 Another way to look at correlation is with pairs of variables plotted.   
@@ -743,7 +742,7 @@ psych_correlation <- psych::pairs.panels(train[, c(2, 9:15, 18)], bg=c("red","bl
 
 psych_correlation
 
-ggplot2::ggsave(here::here("results", "psych_correlation.tiff"), psych_correlation, device = "tiff", width = 10, height = 7, dpi = 320)
+tm_ggsave(psych_correlation, "psych_correlation.tiff")
 ```
 
 Billizionth way to review correlation.  
@@ -788,9 +787,7 @@ kitchen.sink[[26]]
 #https://thepoliticalmethodologist.com/2013/11/25/making-high-resolution-graphics-for-academic-publishing/
 #See custom-made function in Additional_functions_nomogram.R for specific settings on nomogram build. 
 tm_nomogram_prep(kitchen.sink)
-dev.print(tiff, dev.print(tiff, (here("results", "tm_nomogram_prep_kitchen_sink.tiff")), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" , compression = "lzw"))
-
-dev.off()
+tm_print_save("tm_nomogram_prep_kitchen_sink.tiff")
 ```
 
 Create a Confusion Matrix
@@ -799,11 +796,10 @@ test$Match_Status <- as.factor(test$Match_Status)
 
 # test model
 ###Not working!!!
-# prediction_test <- stats::predict(kitchen.sink, newdata = test, 
-#                             type = "response")
-# prediction_categories <- ifelse(prediction_test > 0.5, 1, 0)
-# confusion <- table(prediction_categories, test$Match_Status)
-# (confusion.limited.vif.model.kitchen.sink <- caret::confusionMatrix(confusion, positive = "1"))
+prediction_test <- rms::Predict(x = kitchen.sink)
+prediction_categories <- ifelse(prediction_test > 0.5, 1, 0)
+confusion <- table(prediction_categories, test$Match_Status)
+(confusion.limited.vif.model.kitchen.sink <- caret::confusionMatrix(confusion, positive = "1"))
 ```
 
 Calculates the Brier score for the `kitchen.sink` model.  
@@ -831,11 +827,6 @@ The `kitchen.sink` p.value (`r kitchen.sink$stats[[5]]`, which is zero for all r
 
 Effect Sizes: Interpreting Coefficient Estimates
 Specify the size, magnitude and meaning of all coefficients, and identify appropriate conclusions regarding effect sizes with 90% confidence intervals.
-
-```{r}
-#Need to find some way to get coefficients out of a lrm.  
-```
-
 
 This is messy (and maybe unncecessary) but I have to create a linear model using stats::lm to pull out values like R squared into the Rmarkdown inline values.
 ```{r, echo=TRUE, include=FALSE}
@@ -869,8 +860,7 @@ Our model formula is intercept of `r round(coefficients[[1, 2]], digit=1)`+`r ro
 The r squared for model `lmfit2` is: `r round(summary.lmfit2[[8]], digit=3)`.  
 
 ```{r}
-prediction_test <- stats::predict.lm(lm.fit2, newdata = test, 
-                           type = "response")
+prediction_test <- rms::Predict(x = lm.fit2)
 prediction_categories <- ifelse(prediction_test > 0.5, 1, 0)
 confusion <- table(prediction_categories, test$Match_Status)
 confusion
@@ -900,13 +890,10 @@ rms::vif(limited.vif.model.kitchen.sink)
 
 Perform In Sample Prediction - Run train model on the `train` data
 ```{r}
-prediction_train <- predict(limited.vif.model.kitchen.sink, newdata = train, 
-                            type = "response")
+prediction_train <- rms::Predict(x = limited.vif.model.kitchen.sink)
 
 hist(prediction_train)
-
-dev.print(tiff, (here("results", "hist_prediction_train.tiff")), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
-dev.off()
+tm_print_save("hist_prediction_train.tiff")
 ```
 
 Out of data set prediction, predicting probability on test data set with collinear variable of `train$Medical_Degree` removed.  
@@ -917,9 +904,7 @@ prediction_test <- predict(limited.vif.model.kitchen.sink, newdata = test,
                            type = "response")
 
 hist(prediction_test)
-
-dev.print(tiff, (here("results", "hist_prediction_test.tiff")), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
-dev.off()
+tm_print_save("hist_prediction_test.tiff")
 ```
 
 ```{r}
@@ -955,6 +940,8 @@ tm_chart_strength_of_variables(limited.vif.model.kitchen.sink)
 # Factor Selection using Regression
 https://livebook.datascienceheroes.com/selecting-best-variables.html
 
+A predictive model with a high number of variables will tend to do overfitting. While on the other hand, a model with a low number of variables will lead to doing underfitting.
+
 After splitting the model in training and validation data, it is necessary to evaluate the variables with a major predictive power. The best method is reviewing the p-values in the regression model, however there are many variables in the model so it will take considerable time to do so manually. In this case, the LASSO regularization algorithm is implemented to identify the variables to be significant on the model. 
 
 Using Regression to Calculate Variable Importance: The summary function in regression also describes features and how they affect the dependent feature through significance.
@@ -974,6 +961,14 @@ full_model <- glm(formula = formula, data = train, family = "binomial")
 # Use a forward stepwise algorithm to build a parsimonious model
 step_model <- stats::step(null_model, scope = list(lower = null_model, upper = full_model), direction = "forward")
 
+step_model$formula[[c(3)]]
+
+# The chosen features by forward stepwise:  
+# US_or_Canadian_Applicant + USMLE_Step_1_Score + Medical_Degree + 
+#     Age + white_non_white + Medical_Education_Interrupted + Gender + 
+#     Visa_Sponsorship_Needed + Alpha_Omega_Alpha + Couples_Match + 
+#     Count_of_Other_than_Published
+
 # Estimate the stepwise matching probability
 step_prob <- predict(step_model, type = "response")
 
@@ -983,12 +978,9 @@ forwards_ROC <- pROC::roc(train$Match_Status, step_prob,
 plot(forwards_ROC, col = "red", main="Forwards Stepwise Regression \n for Factor Selection")
 pROC::auc(forwards_ROC) 
 
-dev.print(tiff, (here("results", "forward_ROC.tiff")), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
-dev.off()
-
-#Fowards step-wise regression model step_model has an AUC of `r round(pROC::auc(forwards_ROC)[[1]], digits=2) ` using these predictors `r step_model$formula[[c(3)]]`
+tm_print_save("forward_ROC.tiff")
 ```
-
+Fowards step-wise regression model step_model has an AUC of `r round(pROC::auc(forwards_ROC)[[1]], digits=2) ` using these predictors `r step_model$formula[[c(3)]]`
 
 Try BACKWARDS stepwise regression here:  
 ```{r, echo=TRUE, include = FALSE}
@@ -1002,6 +994,15 @@ full_model <- glm(formula = formula, data = train, family = "binomial")
 # Use a forward stepwise algorithm to build a parsimonious model
 back_step_model <- stats::step(full_model, scope = list(lower = null_model, upper = full_model), direction = "backward")
 
+# Selected factors:  
+# white_non_white + Age + Gender + Couples_Match + US_or_Canadian_Applicant + 
+#     Medical_Education_Interrupted + Alpha_Omega_Alpha + Military_Service_Obligation + 
+#     USMLE_Step_1_Score + Visa_Sponsorship_Needed + Count_of_Poster_Presentation + 
+#     Count_of_Oral_Presentation + Count_of_Articles_Abstracts + 
+#     Count_of_Peer_Reviewed_Book_Chapter + Count_of_Other_than_Published + 
+#     Count_of_Online_Publications + Visa_Sponsorship_Needed + 
+#     Medical_Degree
+
 # Estimate the stepwise matching probability
 back_step_prob <- predict(back_step_model, data = test, type = "response")  #train or test data here?
 
@@ -1010,9 +1011,9 @@ backwards_ROC <- pROC::roc(train$Match_Status, back_step_prob,
     levels=c("1", "0"), direction = "auto")
 plot(backwards_ROC, col = "red", main="Backwards Stepwise Regression \n for Feature Selection")
 pROC::auc(backwards_ROC) 
-
-#<!-- BACKWARDS step-wise regression model `step_model` has an AUC of `r round(pROC::auc(backwards_ROC)[[1]], digits=2) ` using these predictors `r step_model$formula[[c(3)]]` -->
 ```
+BACKWARDS step-wise regression model `step_model` has an AUC of `r round(pROC::auc(backwards_ROC)[[1]], digits=2) ` using these predictors `r back_step_model$formula[[c(3)]]`
+
 
 Not working with HTML knitr
 
@@ -1031,8 +1032,7 @@ names(pcaObj)
 plot(pcaObj, main="Principal Component Analysis \n Reduction in Number of Variables")
 pcaObj$loadings
 stats::biplot(pcaObj, cex = 1.0, main="Biplot of Principal Component Analysis \n Reduction in Number of Variables")
-dev.print(tiff, (here("results", "Principal_Components_for_numeric_data.tiff")), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
-dev.off()
+tm_print_save("Principal_Components_for_numeric_data.tiff")
 
 final_data <- as.data.frame(pcaObj$scores)
 ```
@@ -1045,8 +1045,8 @@ USMLE_Step_1_Score
 res.pca <- prcomp(numeric_data, scale = TRUE)
 library(factoextra)
 factoextra::fviz_eig(res.pca)  #Visualize eigenvalues (scree plot). Show the percentage of variances explained by each principal component.
-dev.print(tiff, (here("results", "scree_plot_PCA.tiff")), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
-dev.off()
+
+tm_print_save("scree_plot_PCA.tiff")
 
 #Graph of individuals. Individuals with a similar profile are grouped together.
 # fviz_pca_ind(res.pca,
@@ -1090,28 +1090,105 @@ dev.off()
 # # res.ind$cos2           # Quality of representation 
 ```
 
+```{r}
+#https://bradleyboehmke.github.io/HOML/pca.html
+
+# convert data to h2o object
+my_basket.h2o <- as.h2o(all_data)
+
+# run PCA
+my_pca <- h2o.prcomp(
+  training_frame = my_basket.h2o,
+  pca_method = "GramSVD",
+  k = ncol(my_basket.h2o), 
+  transform = "STANDARDIZE", 
+  impute_missing = TRUE,
+  max_runtime_secs = 1000
+)
+
+my_pca@model$importance
+```
+
+Naturally, the first PC (PC1) captures the most variance followed by PC2, then PC3, etc. We can identify which of our original features contribute to the PCs by assessing the loadings. 
+```{r}
+#https://bradleyboehmke.github.io/HOML/pca.html
+my_pca@model$eigenvectors %>% 
+  as.data.frame() %>% 
+  mutate(feature = row.names(.)) %>%
+  ggplot(aes(pc1, reorder(feature, pc1))) +
+  geom_point() + 
+  ggtitle("Principal Components 1 \n Feature Selection")
+```
+
+```{r}
+#https://bradleyboehmke.github.io/HOML/pca.html
+
+# Compute eigenvalues
+eigen <- my_pca@model$importance["Standard deviation", ] %>%
+  as.vector() %>%
+  .^2
+  
+# Sum of all eigenvalues equals number of variables
+sum(eigen)
+## [1] 42
+
+# Find PCs where the sum of eigenvalues is greater than or equal to 1
+which(eigen >= 1)
+#Consequently, using this criteria would have us retain the first 3 PCs in my_basket.  
+
+#Scree Plot
+data.frame(
+  PC  = my_pca@model$importance %>% seq_along,
+  PVE = my_pca@model$importance %>% .[2,] %>% unlist()
+) %>%
+  ggplot(aes(PC, PVE, group = 1, label = PC)) +
+  geom_point() +
+  geom_line() +
+  geom_text(nudge_y = -.002)
+
+#Needs to be saved.  
+```
+So how many principal components should we use in the my_basket example? The frank answer is that there is no one best method for determining how many components to use. In this case, differing criteria suggest to retain 5 (scree plot criterion), and 3 (eigenvalue criterion).  
+
+
 # Feature Selection: MARS model (Multivariate Adaptive Regression Splines)
-MARS allows for non-linear models.  
+MARS allows for non-linear models.  The MARS method and algorithm can be extended to handle classification problems and GLMs in general.
 https://bradleyboehmke.github.io/HOML/mars.html
+```{r}
+# cross validated model
+tuned_mars <- caret::train(
+  x = subset(train, select = -Match_Status),
+  y = train$Match_Status,
+  method = "earth",
+  trControl = trainControl(method = "cv", number = 10),
+  tuneGrid = hyper_grid
+)
+
+# best model
+tuned_mars$bestTune
+##   nprune degree
+## 2     12      1
+
+# plot results
+tuned_mars <- ggplot(tuned_mars)
+tm_ggsave(object = tuned_mars, filename = "tuned_mars.tiff")
+#Need to save this
+```
+
+Separate approach
 ```{r}
 # Fit a basic MARS model
 mars1 <- earth(
   formula = Match_Status ~ .,  
   data = train   
 )
-
-# Print model summary
-print(mars1)
-dev.print(tiff, (here("results", "mars1_feature_selection.tiff")), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
-dev.off()
-
+mars1
 summary(mars1) %>% .$coefficients %>% head(20)
 ```
 
 ```{r}
 plot(mars1, which = 1, , main="Model summary capturing GCV  R2 (left-hand y-axis and solid black line) based on the number of terms retained (x-axis) which is based on the number of predictors used to make those terms (right-hand side y-axis). For this model, 11 non-intercept terms were retained which are based on 18 predictors. Any additional terms retained in the model, over and above these 11, result in less than 0.001 improvement in the GCV R2")
-dev.print(tiff, (here("results", "mars1_model_selection.tiff")), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
-dev.off()
+tm_print_save(filename = "mars1_model_selection.tiff")
 ```
 
 In addition to pruning the number of knots, earth::earth() allows us to also assess potential interactions between different hinge functions. The following illustrates this by including a degree = 2 argument. 
@@ -1142,7 +1219,7 @@ hyper_grid <- expand.grid(
 head(hyper_grid)
 ```
 
-#Cross-validated RMSE for the 30 different hyperparameter combinations in our grid search. The optimal model retains 45 terms and includes up to 3rd degree interactions.
+Cross-validated RMSE for the 30 different hyperparameter combinations in our grid search. The optimal model retains 45 terms and includes up to 3rd degree interactions.
 
 The  grid search helps to focus where we can further refine our model tuning. As a next step, we could perform a grid search that focuses in on a refined grid space for nprune (e.g., comparing 5–20 terms retained).
 ```{r}
@@ -1164,8 +1241,7 @@ cv_mars$bestTune
 ## 22     12      3  #The model that provides the optimal combination includes third degree interaction effects and retains 12 terms.
 cv_mars_plot <- ggplot(cv_mars) + ggtitle("The model that provides the optimal combination \n includes third degree interaction effects \n and retains 12 terms.")
 cv_mars_plot
-
-ggplot2::ggsave(here::here("results", "cv_mars_plot.tiff"), cv_mars_plot, device = "tiff", width = 10, height = 7, dpi = 200)
+tm_ggsave(cv_mars_plot, "cv_mars_plot.tiff") 
 ```
 
 GCV = Generalized cross-validation (GCV) procedure,
@@ -1175,13 +1251,11 @@ Variable importance based on impact to GCV (left) and RSS (right) values as pred
 ```{r}
 # variable importance plots
 # https://bradleyboehmke.github.io/HOML/mars.html
-p1 <- vip(cv_mars, num_features = 40, bar = FALSE, value = "gcv") + ggtitle("GCV")
-p2 <- vip(cv_mars, num_features = 40, bar = FALSE, value = "rss") + ggtitle("RSS")
 
+p1 <- tm_vip(object = cv_mars, value = "gcv", title = "Generalized cross-validation \n(GCV) procedure")
+p2 <- tm_vip(object = cv_mars, value = "rss", title = "Residual Sums of Squares")
 gridExtra::grid.arrange(p1, p2, ncol = 2)
-
-dev.print(tiff, (here("results", "p1_and_p2.tiff")), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
-dev.off()
+tm_print_save(filename = "p1p2.tiff")
 ```
 
 Its important to realize that variable importance will only measure the impact of the prediction error as features are included; however, it does not measure the impact for particular hinge functions created for a given feature.
@@ -1194,22 +1268,25 @@ cv_mars$finalModel %>%
   broom::tidy() %>%  
   filter(stringr::str_detect(names, "\\*")) 
 ```
+Interaction between features show that younger Age and international/US_or_Canadian_Applicant interact positively.  A medical education interruption and USMLE Step 1 score are negative interaction.  There is a three way interaction between (Age-34.6), international applicants (US_or_Canadian_Applicantinternational), Visa_Sponsorship_needed_yes (Visa_Sponsorship_NeededYes) that is negative.  
 
 ```{r}
 #Method 5:  Variable important from ML algorithm 
 # Train the model using randomForest and predict on the training data itself.
 model_mars = caret::train(Match_Status ~ ., data=train, method='earth')
-fitted <- predict(model_mars)
 model_mars
-plot(model_mars, main="Model Accuracies with MARS") #Iterations of hyperparameter search performed.
-dev.print(tiff, (here("results", "model_mars.tiff")), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
-dev.off()
+fitted <- predict(model_mars)
+fitted
+
+plot(model_mars, main="Model Accuracies based on \n the number of terms with MARS") 
+tm_print_save(filename = "model_mars_plot.tiff")
 
 varimp_mars <- varImp(model_mars)
 plot(varimp_mars, main="Variable Importance with MARS") #Visual of the most important factors
-dev.print(tiff, (here("results", "varimp_mars.tiff")), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
-dev.off()
+tm_print_save("varimp_mars.tiff")
 ```
+The MARS model shows that 6-10 terms were likely to improve accuracy (`model_mars`).  Variable importance shows that US_or_Canadian_applicants, USMLE_Step_1_Score, Age, Medial_Degree, and Visa_Sponsorship_Needed all show significant importance (`varimp_mars`).  
+
 
 #Factor Selection: LASSO (Least Absolute Shrinkage and Selection Operator)
 Also, I like lasso because some people will find that using predictors of age, race, gender as predictors will be discriminatory.  In short, LASSO eliminates the need for an author to be a subject expert on matching when selecting variables.  
@@ -1312,12 +1389,11 @@ imps <- attStats(roughFixMod)
 imps2 = imps[imps$decision != 'Rejected', c('meanImp', 'decision')]
 head(imps2[order(-imps2$meanImp), ])  # descending sort
 plot(boruta_output, cex.axis=0.35, las=2, xlab="", main="Boruta Variable Importance")  # Plot variable importance
-dev.print(tiff, (here("results", "boruta_output_variable_importance")), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
-dev.off()
+tm_print_save("Boruta_Variable_Importance.tiff")
 ```
 
 
-# 0) Model: Regularized Regression
+# Factor Selection: GLMNet to do factor selection with the previously made LASSO model
 Regularization methods provide a means to constrain or regularize the estimated coefficients, which can reduce the variance and decrease out of sample error.
 
 The glmnet package is extremely efficient and fast, even on very large data sets (mostly due to its use of Fortran to solve the lasso problem via coordinate descent); note, however, that it only accepts the non-formula XY interface so prior to modeling we need to separate our feature and target sets.
@@ -1404,35 +1480,27 @@ Plot the results of the lasso.mod so we can see if this is more ridge or more la
 
 ```{r, fig.width=7, fig.asp=1, fig.cap="Figure: Plotting the results of ridge or lasso in regression"}
 plot(lasso.mod, main = "More ridge regression than LASSO")
-
-dev.print(tiff, (here("results", "plot_lasso_mod.tiff")), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
-dev.off()
+tm_print_save("lasso_mod.tiff")
 ```
   
 Plot LASSO factors - Plot the individual variables by lambda.  Saves the lasso.mod to an RDS file for later use.  Coefficients for our ridge regression model as λ grows from  0 → ∞
  
 ```{r,  fig.asp=1}
-lasso.mod.plot <- plot(lasso.mod$finalModel, xvar = 'lambda', label = TRUE)
-
-dev.print(tiff, (here("results", "lasso_mod_plot.tiff")), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
-dev.off()
+lasso.mod.plot <- plot(lasso.mod$finalModel, xvar = 'lambda', label = TRUE, main = "Plot of the LASSO factors")
+tm_print_save(filename = "lasso_mod_plot.tiff")
 
 print("Coefficients for our ridge regression model as λ grows from  0 → ∞")
 #legend("topright", lwd = 1, col = 1:5, legend = colnames(train), cex = .6)
 #https://www.datacamp.com/community/tutorials/tutorial-ridge-lasso-elastic-net
-ggplot2::ggsave(here::here("results", "lasso.mod.plot.tiff"), lasso.mod.plot, device = "tiff", width = 10, height = 7, dpi = 200)
 
 colnames(train[1:17])
 saveRDS(lasso.mod, "best.LASSO.rds")  #save the model
 ```
 
-
 Makes predictions of matching based on the lasso.mod using the training data.  
 ```{r, echo=TRUE, warning=FALSE, include=FALSE}
 predict(lasso.mod, newx = x[1:5,], type = "prob", s = c(0.05, 0.01))
 ```
-
-## Factor Selection: GLMNet to do factor selection with the previously made LASSO model
 
 And we use the glmnet library to determine the optimal penalization parameter. Note that this must be assigned through cross validation; here, we use 50-fold cross validation (only suitable in small datasets).  GLMnet accepts data in a matrix format so the data format was changed before giving it to glmnet.cv. Match_Status ~ . is shorthand for all predictors.
 
@@ -1459,7 +1527,7 @@ glmnet1 <-
 misclassification_error <- plot(glmnet1,main = "Misclassification Error")
 misclassification_error
 
-ggplot2::ggsave(here::here("results", "misclassification_error.tiff"), misclassification_error, device = "png", width = 10, height = 7, dpi = 200)
+tm_ggsave(misclassification_error, "misclassification_error.tiff")
 ```
 The left vertical line represents the minimum error, and the right vertical line represents the cross-validated error within 1 standard error of the minimum. LASSO, least absolute shrinkage and selection operator
 
@@ -1476,10 +1544,7 @@ ridge <- cv.glmnet(
   y=train$Match_Status,
   alpha = 0, 
   family="binomial")
-
-plot(ridge, xvar = "lambda", main = "Plot of Ridge Regression after Cross-Validations")
-dev.print(tiff, (here("results", "ridge.tiff")), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
-dev.off()
+tm_print_save("ridge.tiff")
 ```
 
 We can also access the coefficients for a particular model using coef(). glmnet stores all the coefficients for each model in order of largest to smallest λ. 
@@ -1502,9 +1567,7 @@ lasso <- cv.glmnet(
 par(mfrow = c(1, 2))
 plot(ridge, main = "Ridge penalty\n\n")
 plot(lasso, main = "Lasso penalty\n\n")
-
-dev.print(tiff, (here("results", "ridgeandlassopenalty.tiff")), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
-dev.off()
+tm_print_save("ridgeandlassopenalty.tiff")
 ```
 
 ```{r}
@@ -1544,15 +1607,36 @@ par(mfrow = c(1, 2))
 plot(ridge_min, xvar = "lambda", main = "Ridge penalty\n\n")
 abline(v = log(ridge$lambda.min), col = "red", lty = "dashed")
 abline(v = log(ridge$lambda.1se), col = "blue", lty = "dashed")
+tm_print_save(filename = "tidge_abline.tiff")
 
 # plot lasso model
 plot(lasso_min, xvar = "lambda", main = "Lasso penalty\n\n")
 abline(v = log(lasso$lambda.min), col = "red", lty = "dashed")
 abline(v = log(lasso$lambda.1se), col = "blue", lty = "dashed")
-
-dev.print(tiff, (here("results", "ridge_lass_min_max.tiff")), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
-dev.off()
+tm_print_save(filename = "lasso_abline.tiff")
 ```
+
+So far we’ve implemented a pure ridge and pure lasso model. However, we can implement an elastic net the same way as the ridge and lasso models, by adjusting the alpha parameter. Any alpha value between 0–1 will perform an elastic net. 
+
+When alpha = 0.5 we perform an equal combination of penalties whereas alpha <0.5 will have a heavier ridge penalty applied and alpha  > 0.5 will have a heavier lasso penalty.
+```{r}
+elastic_net_one_quarter <- glmnet(
+  x = x,
+  y=train$Match_Status,
+  alpha = 0.25,  #
+  family="binomial")
+plot(elastic_net_one_quarter, main = "Elastic net with alpha 0f 0.25")
+tm_print_save(filename = "elastic_net_one_quarter.tiff")
+
+elastic_net_three_quarter <- glmnet(
+  x = x,
+  y=train$Match_Status,
+  alpha = 0.75,  #
+  family="binomial")
+plot(elastic_net_three_quarter, main = "Elastic net with alpha 0f 0.75")
+tm_print_save("elastic_net_three_quarter.tiff")
+```
+
 
 ```{r}
 # for reproducibility
@@ -1573,13 +1657,12 @@ cv_glmnet <- caret::train(
 cv_glmnet$bestTune
 
 # plot cross-validated RMSE
-cv_glmnet_plot <- ggplot(cv_glmnet)
+cv_glmnet_plot <- ggplot(cv_glmnet) + ggtitle("The 10-fold cross valdation accuracy of cv_glmnet_plot \n across 10 alpha values (x-axis) \n and 10 lambda values (line color)")
 cv_glmnet_plot
 
-ggplot2::ggsave(here::here("results", "cv_glmnet_plot.tiff"), cv_glmnet_plot, device = "tiff", width = 10, height = 7, dpi= 200)
-
-print("The 10-fold cross valdation RMSE across 10 alpha values (x-axis) and 10 lambda values (line color)")
+tm_ggsave(cv_glmnet_plot, "cv_glmnet_plot.tiff")
 ```
+So how does this compare to our previous best model for the train data set? Introducing a penalty parameter to constrain the coefficients provided some improvement over our previously obtained dimension reduction approach.  See figure with The 10-fold cross valdation accuracy across 10 alpha values (x-axis) and 10 lambda values (line color).  
 
 ```{r}
 # predict matching_status on training data
@@ -1591,15 +1674,53 @@ pred
 Variable importance for regularized models provides a similar interpretation as in logistic regression. Importance is determined by magnitude of the standardized coefficients and we can see in figure below.  
 
 ```{r}
-library(vip)
-feature_interpretation_regularized_regression <- vip::vip(cv_glmnet, num_features = 20, bar = FALSE)
+
+feature_interpretation_regularized_regression <- tm_vip(object = cv_glmnet, title = "Variable Importance for \n Regularized Regression Model")
 feature_interpretation_regularized_regression
 
-ggplot2::ggsave(here::here("results", "feature_interpretation_regularized_regression.tiff"), feature_interpretation_regularized_regression, device = "tiff", width = 10, height = 7, dpi = 200)
+tm_ggsave(object = feature_interpretation_regularized_regression, filename = "feature_interpretation_regularized_regression.tiff")
+```
+Penalized regression model shows that USMLE Step 1 Score is the most important followed by IMG and followed by Age.  
+
+
+Comparing logistic regression model with penalized regression model. 
+```{r}
+# train logistic regression model
+set.seed(123)
+glm_mod <- caret::train(
+  Match_Status ~ ., 
+  data = train, 
+  method = "glm",
+  family = "binomial",
+  preProc = c("zv", "center", "scale"),
+  trControl = trainControl(method = "cv", number = 10)
+  )
+
+# train regularized logistic regression model
+set.seed(123)
+penalized_mod <- caret::train(
+  Match_Status ~ ., 
+  data = train, 
+  method = "glmnet",
+  family = "binomial",
+  preProc = c("zv", "center", "scale"),
+  trControl = trainControl(method = "cv", number = 10),
+  tuneLength = 10
+  )
 ```
 
 
-## Factor Selection: Variable selection using LASSO in the train dataset
+```{r}
+# extract out of sample performance measures
+summary(resamples(list(
+  logistic_model = glm_mod, 
+  penalized_model = penalized_mod, 
+  mars_model = tuned_mars
+  )))$statistics$Accuracy
+```
+The output shows minimal improvement with the penalized model (median accuracy = 0.809) compared to the logistic model (median accuracy = 0.803). 
+
+# Factor Selection: Variable selection using LASSO in the train dataset
 ```{r, echo=TRUE, warning=FALSE, message=FALSE}
 c <- 
   coef(glmnet1,s='lambda.min',exact=TRUE)  #Bring in the coefficients from LASSO
@@ -1612,7 +1733,10 @@ variables <-    #Select the row names for the coefficients that are not zero by 
 
 variables <-    #List out the variables LASSO chose exempting the intercept variable
   variables[variables %nin% '(Intercept)']
+
+variables
 ```
+This feature selection with LASSO was not very helpful because it eliminated zero features (see `variables`).  See VIP figure above (`feature_interpretation_regularized_regression`) for a clearer answer as to what features to select.  
 
 ```{r, results="asis"}
 knitr::kable(variables, caption = "Variables Chosen by LASSO to Predict Matching into OBGYN based on the Train Data")
@@ -1625,7 +1749,7 @@ Creating a more parsiomonious model using the variables selected by LASSO in the
 limited.to.lasso.variables <- glm(formula = formula, 
                  family = "binomial", data = train)
 
-vif(limited.to.lasso.variables)
+rms::vif(limited.to.lasso.variables)
 ```
 
 ```{r, echo=TRUE, results="asis", warning=FALSE, include=TRUE}
@@ -1680,8 +1804,7 @@ Odds ratios in graph form in the train dataset.
 plot(summary(lrm.with.lasso.variables), cex=1.2, cex.lab=0.7, cex.axis = 0.7)
 #https://rstudio-pubs-static.s3.amazonaws.com/283447_fd922429e1f0415c89b93b6da6dc1ccc.html
 
-dev.print(tiff, (here("results", "odds_ratio_image.tiff")), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
-dev.off()
+tm_print_save("odds_ratio_image.tiff")
 ```
 
 ```{r, results="asis"}
@@ -1696,13 +1819,12 @@ knitr::kable(oddsratios, digits = 2)
 Annotation for Manuscript Table:  A:  Nonlinear component A of the function describing the variable and the probability of matching into OBGYN.  B:  Nonlinear component B of the function describing the variable and the probability of matching into OBGYN.  C:  Nonlinear component C of the function describing the variable and the probability of matching into OBGYN.  
 
 
-# 1) Model: Generalized logistic regression model Use Model to predict match for Test Data
+# 1) Model: General logistic regression model Use Model to predict match for Test Data
 Shift Gears: Test Accuracy of Model on Training Data, Use glmnet model on 207 and 2018 `test` data.   Run the 2017, 2018 data through the train model.  
 
 Build both a glm (train.glm.with.lasso.variables) and a lrm model (train.lrm.with.lasso.variables) here with the same predictor variables.  
 
 ```{r, echo=TRUE, warning=FALSE}
-
 #It would be nice to create a character variable that we drop features from.  
 train.glm.with.lasso.variables  <- 
   stats::glm(Match_Status ~
@@ -1724,6 +1846,14 @@ summary(train.glm.with.lasso.variables)  #check the model
 exp(train.glm.with.lasso.variables$coefficients)
 confint(train.glm.with.lasso.variables)
 
+#Zhang book page 75
+Predprob <- predict(train.glm.with.lasso.variables, type = "response")
+library(Deducer)
+plot(train.glm.with.lasso.variables, main = "ROC curve", colorize = T)
+```
+
+
+```{r, echo=TRUE, warning=FALSE}
 train.lrm.with.lasso.variables <- 
   rms::lrm(formula = Match_Status ~ 
                                     white_non_white + 
@@ -1748,6 +1878,15 @@ Use Model to predict match Status for Test Data
 ```{r}
 #Use Model to predict match Status for Test Data
 ##For prediction
+# predict class
+pred_class <- rms::Predict(train.glm.with.lasso.variables)
+
+# create confusion matrix
+confusionMatrix(
+  data = relevel(pred_class, ref = "Matched"), 
+  reference = relevel(train$Match_Status, ref = "Matched")
+)
+
 prob <- 
   predict(train.glm.with.lasso.variables, newdata = test, type="response")
 dim(test)
@@ -1822,7 +1961,7 @@ roc_plot <- ggplot(roc.data, aes(x=fpr, ymin=0, ymax=tpr)) +
        subtitle = "Model: train.glm.with.lasso.variables")
 roc_plot
 
-ggplot2::ggsave(here::here("results", "roc_plot.tiff"), roc_plot, device = "tiff", width = 10, height = 7, dpi = 200)
+tm_ggsave(roc_plot, "roc_plot.tiff")
 ```
 
 ROC: ROC with nice labels on the x and y
@@ -1865,7 +2004,6 @@ plot(perf2, colorize = TRUE, text.adj = c(-0.2,1.7), main="Precision and Recall 
 ```
 
 Exploratory random forest was also performed. The variable importance for the random forest model was summarized in the figure below. 
-
 ```{r}
 #https://bradleyboehmke.github.io/HOML/logistic-regression.html
 
@@ -1932,15 +2070,12 @@ m3_prob <- predict(cv_model3, train, type = "prob")$Yes
 # Plot ROC curves for cv_model1 and cv_model3
 #plot(perf1, col = "black", lty = 2)
 plot(perf2, col = "black", lty = 2)
-legend(0.8, 0.2, legend = c("cv_model3"),
+legend(0.75, 0.2, legend = c("cv_model3"),
        col = c("black", "blue"), lty = 2:1, cex = 0.6)
-
-
-dev.print(tiff, (here("results", "cv_model3.tiff")), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
-dev.off()
+tm_print_save(filename = "cv_model3.tiff")
 ```
 
-
+We can perform a partial least squares (PLS) logistic regression to assess if reducing the dimension of our numeric predictors helps to improve accuracy. There are 17 numeric features in our data set so the following code performs a 10-fold cross-validated PLS model while tuning the number of principal components to use from 1–17. The optimal model uses 1 or 5 principal components, which is not reducing the dimension. However, the mean accuracy of 0.876 is no better than the average CV accuracy of cv_model3 (0.876).
 ```{r}
 # Perform 10-fold CV on a PLS model tuning the number of PCs to 
 # use as predictors
@@ -1955,25 +2090,24 @@ cv_model_pls <- caret::train(
   tuneLength = 10
 )
 
-# Model with lowest RMSE
+# Model with lowest AUC
 cv_model_pls$bestTune
 ##    ncomp
 ## 14    14
 
-# Plot cross-validated RMSE
-cv_model_pls_plot <- ggplot2::ggplot(cv_model_pls)
+# Plot cross-validated AUC
+cv_model_pls_plot <- ggplot2::ggplot(cv_model_pls) + ggtitle(label = "The 10-fold cross-validation AUC \n obtained using PLS with \n 1–10 principal components.")
 cv_model_pls_plot
 
-ggplot2::ggsave(here::here("results", "cv_model_pls_plot.tiff"), cv_model_pls_plot, device = "tiff", width = 10, height = 7, dpi = 200)
+tm_ggsave(cv_model_pls_plot, "cv_model_pls_plot.tiff")
 ```
-The 10-fold cross-validation RMSE obtained using PLS with 1–16 principal components.
+The 10-fold cross-validation AUC obtained using partial least squares with 1–10 principal components.
 
 ```{r}
-vip::vip(cv_model3, num_features = 20)
-
-dev.print(tiff, (here("results", "varicable_importance_logistic_regression_glm.tiff")), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
-dev.off()
+tm_vip(object = cv_model3)
+tm_print_save("cv_model3.tiff")
 ```
+Using vip::vip() we can extract our top 10 influential variables. The figures illustrates that 'USMLE_Step_1_Score' is the most influential followed by 'US_or_Canadian_Applicant - International', and 'Age'.
 
 ```{r}
 # https://github.com/tobiolatunji/Readmission_Prediction/blob/master/diabetes_readmission.R
@@ -2003,8 +2137,7 @@ t.model$variable.importance
 ```{r fancyR plot rpart EDA, include=TRUE}
 # Tree visualization
 tm_rpart_plot(t.model)
-dev.print(tiff, (here("results", "tm_rpart_plot.tiff")), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
-dev.off()
+tm_print_save(filename = "tm_rpart_plot.tiff")
 ```
 Using the model to make Match_Status predictions on the test dataframe
 ```{r}
@@ -2022,13 +2155,10 @@ The accuracy or correct classification rate of the decision tree called `t.model
 Look at pruning the tree branches to determine the optimal complexity vs. accuracy point for stopping branch growth.  Pruning complexity parameter (cp) plot illustrating the relative cross validation error (y-axis) for various cp values (lower x-axis). Smaller cp values lead to larger trees (upper x-axis). Using the 1-SE rule, a tree size of 10-12 provides optimal cross validation results.
 ```{r}
 plotcp(t.model)
-
-dev.print(tiff, (here("results", "plotcp.tiff")), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
-dev.off()
+tm_print_save(filename = "plotcp.tiff")
 
 printcp(t.model)
-dev.print(tiff, (here("results", "tree_sizes.tiff")), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
-dev.off()
+tm_print_save(filename = "tree_sizes.tiff")
 ```
 
 The figure shows the pruning complexity parameter plot for a fully grown tree. Significant reduction in the cross validation error is achieved with tree sizes 88-100 and then the cross validation error levels off with minimal or no additional improvements.
@@ -2043,9 +2173,7 @@ t.model2 <- rpart(
 plotcp(t.model2)
 abline(v = 34, lty = "dashed")  #Not sure if 11 is ideal.  
 #https://bradleyboehmke.github.io/HOML/DT.html
-
-dev.print(tiff, (here("results", "plotcp_for_t_model2.tiff")), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
-dev.off()
+tm_print_save("plotcp_for_t_model2.tiff")
 ```
 
 ```{r}
@@ -2064,15 +2192,14 @@ t.model3 <- caret::train(
 t.model3.plot <- ggplot(t.model3)
 t.model3.plot
 
-ggplot2::ggsave(here::here("results", "t.model3.plot.tiff"), t.model3.plot, device = "tiff", width = 10, height = 7, dpi = 200)
+tm_ggsave(t.model3.plot, "t_model3_plot.tiff")
 ```
 
 Feature interpretation of Decision Trees
 Variable importance based on the total reduction in accuracy for the Match_Status decision tree.
 ```{r}
-vip(t.model3, num_features = 40, bar = T)
-dev.print(tiff, (here("results", "vip_for_t.model3.plot.tiff")), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
-dev.off()
+tm_vip(t.model3)
+tm_print_save("vip_for_t.model3.plot.tiff")
 ```
 
 ```{r}
@@ -2094,8 +2221,7 @@ dev.off()
 ```{r}
 pruned.t.model <- rpart::prune(t.model, cp = 0.005) #Set the cp where the complexity to accuraty rate plateaued.  
 tm_rpart_plot(pruned.t.model)
-dev.print(tiff, (here("results", "pruned_t_model.tiff")), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
-dev.off()
+tm_print_save("pruned_t_model.tiff")
 
 summary(pruned.t.model)
 ```
@@ -2136,16 +2262,19 @@ The next algorithm that I want to use is SVM, as it is known to work well with s
 We want to find the “most optimal” solution. What will then be the characteristic of this most optimal line? We have to remember that this is just the training data and we can have more data points which can lie anywhere in the subspace. If our line is too close to any of the datapoints, noisy test data is more likely to get classified in a wrong segment. 
 
 ```{r, include=TRUE}
-#SVM with caret
+#SVM with caret, method #1
 set.seed(2017)
 
-caret_svm <- caret::train(Match_Status ~ ., data=train, method='svmLinear', preProcess= c('center', 'scale'), trControl=trainControl(method="cv", number=5))
+caret_svm <- caret::train(Match_Status ~ ., 
+                          data=train, 
+                          method='svmLinear', 
+                          preProcess= c('center', 'scale'), trControl=trainControl(method="cv", number=5))
 
 caret_svm
 caret_svm$results
 caret_svm$finalModel
 ```
-The in-sample accuracy of the supported vector machine model is `r round(caret_svm$results[[2]], digits=2)`.  
+The in-sample accuracy of the supported vector machine model is `r round(caret_svm$results[[2]], digits=3)`.  
 
 ```{r}
 #using the model to make Survival predictions on the test set
@@ -2155,14 +2284,13 @@ mean(solution_svm == test$Match_Status)
 #ROC Curve
 SVM_ROC <-roc(response=test$Match_Status, predictor= factor(solution_svm,ordered = TRUE), plot=TRUE) 
 plot(SVM_ROC, main = "ROC Curve for Supported \n Vector Machines Model")
-dev.print(tiff, (here("results", "SVM_ROC.tiff")), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
-dev.off()
+tm_print_save("SVM_ROC.tiff")
 ```
 
 ```{r}
 #https://bradleyboehmke.github.io/HOML/svm.html
 
-# Tune an SVM with radial basis kernel
+# Tune an SVM with radial basis kernel, method #2
 set.seed(1854)  # for reproducibility
 churn_svm <- caret::train(
   Match_Status ~ ., 
@@ -2178,15 +2306,19 @@ churn_svm <- caret::train(
 # Plot results
 #https://bradleyboehmke.github.io/HOML/svm.html
 churn_svm_plot <- ggplot(churn_svm) + theme_light()
+churn_svm_plot
 
-ggplot2::ggsave(here::here("results", "churn_svm_plot.tiff"), churn_svm_plot, device = "tiff", width = 10, height = 7, dpi = 200)
+tm_ggsave(churn_svm_plot, "churn_svm_plot.tiff")
 ```
+Plotting the results, we see that smaller values of the cost parameter (C≈0-1) provide better cross-validated accuracy scores for these training data.
 
 ```{r}
 # Print results
 #https://bradleyboehmke.github.io/HOML/svm.html
 churn_svm$results
 ```
+Similar to before, we see that smaller values of the cost parameter ( 
+C≈0-1) provide better cross-validated AUC scores on the training data. 
 
 ```{r}
 #https://bradleyboehmke.github.io/HOML/svm.html
@@ -2198,27 +2330,27 @@ class.weights = c("No" = 1, "Yes" = 10)
 
 #https://bradleyboehmke.github.io/HOML/svm.html
 # Control params for SVM
-# ctrl <- trainControl(
-#   method = "cv", 
-#   number = 10, 
-#   classProbs = TRUE,                 
-#   summaryFunction = twoClassSummary  # also needed for AUC/ROC
-# )
+ctrl <- trainControl(
+  method = "cv",
+  number = 10,
+  classProbs = TRUE,
+  summaryFunction = twoClassSummary  # also needed for AUC/ROC
+)
 
 # Tune an SVM
-# set.seed(5628)  # for reproducibility
-# churn_svm_auc <- caret::train(
-#   Match_Status ~ ., 
-#   data = train,
-#   method = "svmRadial",               
-#   preProcess = c("center", "scale"),  
-#   metric = "ROC",  # area under ROC curve (AUC)       
-#   trControl = ctrl,
-#   tuneLength = 10
-# )
-# 
-# # Print results
-# churn_svm_auc$results
+ set.seed(5628)  # for reproducibility
+ churn_svm_auc <- caret::train(
+   Match_Status ~ .,
+   data = train,
+   method = "svmRadial",
+   preProcess = c("center", "scale"),
+   metric = "ROC",  # area under ROC curve (AUC)
+   trControl = ctrl,
+   tuneLength = 10
+ )
+
+ # Print results
+churn_svm_auc$results
 ```
 
 ```{r}
@@ -2229,18 +2361,18 @@ class.weights = c("No" = 1, "Yes" = 10)
 Feature interpretation
 ```{r}
 #https://bradleyboehmke.github.io/HOML/svm.html
-# prob_yes <- function(object, newdata) {
-#   predict(object, newdata = newdata, type = "prob")[, "Yes"]
-# }
+prob_yes <- function(object, newdata) {
+  predict(object, newdata = newdata, type = "prob")[, "Yes"]
+}
 ```
 
 ```{r}
 #https://bradleyboehmke.github.io/HOML/svm.html
-# Variable importance plot
-# set.seed(2827)  # for reproducibility
-# vip::vip(churn_svm_auc, method = "permute", nsim = 5, train = churn_train, 
-#     target = "Attrition", metric = "auc", reference_class = "Yes", 
-#     pred_wrapper = prob_yes)
+#Variable importance plot
+set.seed(2827)  # for reproducibility
+vip::vip(churn_svm_auc, method = "permute", nsim = 5, train = train,
+    target = "Match_Status", metric = "auc", reference_class = "Yes",
+    pred_wrapper = prob_yes)
 ```
 
 
@@ -2254,6 +2386,8 @@ A random forest model is a forest of decision trees. Think of random forest as a
 #https://bradleyboehmke.github.io/HOML/random-forest.html
 # number of features
 n_features <- length(setdiff(names(train), "Match_Status"))
+
+# By default, ranger sets the mtry parameter to floor (√number of features); however, for regression problems the preferred mtry to start with is floor  number of features divided by 3)
 
 train_rf1 <- ranger(
   Match_Status ~ ., 
@@ -2269,8 +2403,7 @@ rf_model <- randomForest::randomForest(Match_Status~., data = train)
 plot(rf_model, ylim=c(0,0.36), main = "Random Forest, an mtry \n value slightly lower (25) \n improves performance.", legend = TRUE, subtitles = TRUE)
 legend('topright', colnames(rf_model$err.rate), col=1:3, fill=1:3)
 
-dev.print(tiff, (here("results", "rf_model_plot.tiff")), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
-dev.off()
+tm_print_save("rf_model_plot.tiff")
 ```
 
 Tuning
@@ -2345,9 +2478,7 @@ p1 <- vip::vip(rf_impurity, num_features = 25, bar = FALSE)
 p2 <- vip::vip(rf_permutation, num_features = 25, bar = FALSE)
 
 gridExtra::grid.arrange(p1, p2, nrow = 1)
-
-dev.print(tiff, (here("results", "Feature_importance_for_Random_Forest.tiff")), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
-dev.off()
+tm_print_save("Feature_importance_for_Random_Forest.tiff")
 ```
 
 
@@ -2373,9 +2504,7 @@ caret_matrix$results
 #extracting variable importance and make graph with ggplot (looks nicer that the standard varImpPlot)
 #Special function!  
 tm_variable_importance(caret_matrix)
-
-dev.print(tiff, (here("results", "tm_variable_importance_caret_matrix.tiff")), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
-dev.off()
+tm_print_save("tm_variable_importance_caret_matrix.tiff")
 ```
 The random Forest classification suffers in terms of interpretability. We are unable to visualize the 500 trees and identify important features of the model. However, we can assess the Feature Importance using the Gini index measure. Let’s plot mean Gini index across all trees and identify important features.
 
@@ -2609,9 +2738,7 @@ calc_metrics
 model_04_xgboost$fit %>%
     xgb.importance(model = .) %>%
     xgb.plot.importance(main = "XGBoost Feature Importance")
-
-dev.print(tiff, (here("results", "XGBoost_Feature_Importance.tiff")), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
-dev.off()
+tm_print_save("XGBoost_Feature_Importance.tiff")
 ```
 
 #Not working.  
@@ -2841,6 +2968,8 @@ best_rf <- h2o.randomForest(
   seed = 123, stopping_rounds = 50, stopping_metric = "AUC",
   stopping_tolerance = 0
 )
+saveRDS(best_rf, (here::here("Saved_Models", "best_rf.rds")))
+
 
 # Train & cross-validate a GBM model
 best_gbm <- h2o.gbm(
@@ -2849,9 +2978,10 @@ best_gbm <- h2o.gbm(
   max_depth = 7, min_rows = 5, sample_rate = 0.8, nfolds = 3,
   #  max_depth = 7, min_rows = 5, sample_rate = 0.8, nfolds = 10, #original
   fold_assignment = "Modulo", keep_cross_validation_predictions = TRUE,
-  seed = 123, stopping_rounds = 50, stopping_metric = "RMSE",
+  seed = 123, stopping_rounds = 50, stopping_metric = "AUC",
   stopping_tolerance = 0
 )
+saveRDS(best_gbm, (here::here("Saved_Models", "best_gbm.rds")))
 
 # Train & cross-validate an XGBoost model
 best_xgb <- h2o.xgboost(
@@ -2861,8 +2991,9 @@ best_xgb <- h2o.xgboost(
   nfolds = 3, fold_assignment = "Modulo",
   #nfolds = 10, fold_assignment = "Modulo", #original
   keep_cross_validation_predictions = TRUE, seed = 123, stopping_rounds = 50,
-  stopping_metric = "RMSE", stopping_tolerance = 0
+  stopping_metric = "AUC", stopping_tolerance = 0
 )
+saveRDS(best_xgb, (here::here("Saved_Models", "best_xgb.rds")))
 ```
 
 
@@ -2873,20 +3004,21 @@ ensemble_tree <- h2o.stackedEnsemble(
   base_models = list(best_rf, best_gbm, best_xgb),
   metalearner_algorithm = "drf"
 )
+saveRDS(ensemble_tree, (here::here("Saved_Models", "ensemble_tree.rds")))
 ```
 
 
 ```{r et results from base learners}
 # Get results from base learners
-get_rmse <- function(model) {
+get_auc <- function(model) {
   results <- h2o.performance(model, newdata = test_h2o)
-  results@metrics$RMSE
+  results@metrics$AUC
 }
 list(best_rf, best_gbm, best_xgb) %>%
-  purrr::map_dbl(get_rmse)
+  purrr::map_dbl(get_auc)
 
 # Stacked results
-h2o.performance(ensemble_tree, newdata = test_h2o)@metrics$RMSE
+h2o.performance(ensemble_tree, newdata = test_h2o)@metrics$AUC
 ```
 
 
@@ -2935,7 +3067,7 @@ search_criteria <- list(
 # Sort results by RMSE
 h2o.getGrid(
   grid_id = "gbm_grid", 
-  sort_by = "rmse"
+  sort_by = "AUC"
 )
 ```
 
@@ -2962,15 +3094,15 @@ h2o.performance(ensemble, newdata = test_h2o)
 auto_ml <- h2o.automl(
   x = X, y = Y, training_frame = train_h2o, nfolds = 5, 
   max_runtime_secs = 60 * 120, max_models = 50,
-  keep_cross_validation_predictions = TRUE, sort_metric = "RMSE", seed = 123,
-  stopping_rounds = 50, stopping_metric = "RMSE", stopping_tolerance = 0
+  keep_cross_validation_predictions = TRUE, sort_metric = "AUC", seed = 123,
+  stopping_rounds = 50, stopping_metric = "AUC", stopping_tolerance = 0
 )
 
 # Assess the leader board; the following truncates the results to show the top 
 # and bottom 15 models. You can get the top model with auto_ml@leader
 auto_ml@leaderboard %>% 
   as.data.frame() %>%
-  dplyr::select(model_id, rmse) %>%
+  dplyr::select(model_id, auc) %>%
   dplyr::slice(1:25)
 ```
 
@@ -3035,9 +3167,7 @@ d <- rms::datadist(test)
 options(datadist = "d")
 args(tm_nomogram_prep)
 tm_nomogram_prep(train.lrm.with.lasso.variables)
-
-dev.print(tiff, (here("results", "train_lrm_with_lasso_variables.tiff")), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
-dev.off()
+tm_print_save("train_lrm_with_lasso_variables.tiff")
 ```
 Annotation:  Manuscript Figure 1:  The first row called points assigned to each variable's measurement from rows 2-12, which are variables included in predictive model.  Assigned points for all variables are then summed and total can be located on line 13 (total points).  Once total points are located, draw a vertical line down to the bottom line to obtain the predicted probability of matching.  For non-linear variables (count of oral presentations, etc.) values should be erad from left to right.
 
@@ -3056,6 +3186,9 @@ Applying to your specific plot, it appears most of the predicted probabilities a
 
 The mean absolute error is the "average" absolute difference (disregard a positive or negative error) between predicted probability and actual probability. Ideally, we want this to be small (0 would be perfect indicating no error). This seems small in this plot, but may be situation dependent on how small is small.
 
+Bootstrapping is mostly used when estimating a parameter.
+Cross-Validation is the choice when choosing among different predictive models.
+
 ```{r calibration,  fig.width=7, fig.asp=1}
 calib <- rms::calibrate(train.lrm.with.lasso.variables, 
                         method = "boot", boot=1000, 
@@ -3066,8 +3199,7 @@ calibration_plot <- plot(calib, legend = TRUE, subtitles = TRUE, xlab = "Predict
 calibration_plot
 
 plot(calibration_plot)
-dev.print(tiff, (here("results", "calibration_plot.tiff")), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
-dev.off()
+tm_print_save("train_lrm_with_lasso_variables_calibration_plot.tiff")
 ```
 
   \pagebreak
@@ -3224,10 +3356,8 @@ rmarkdown::clean_site()
 ```
 
 
-
 ## Evaluate Algorithms to create a model
 ```{r}
-
 #https://github.com/shriyarp/IndianLiverPatient/blob/master/indianLiverPatientsReport.Rmd
 control <- trainControl(method="cv", number=10)
 #Quadratic Discriminant Analysis
@@ -3264,10 +3394,7 @@ summary(results)
 
 ```{r}
 dotplot(results)
-
-dev.print(tiff, (here("results", "dotplot.tiff")), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
-dev.off()
-#MUST SAVE THIS!!!!
+tm_print_save(filename = "dotplot_results.tiff")
 ```
 
 ## Make Predictions
@@ -3312,9 +3439,7 @@ confusionMatrix(y_hat,test$Match_Status)
 
 
 #https://www.kaggle.com/nawajshaikh/neural-network-nawaj-shaikh
-
-#https://www.kaggle.com/goldsack/titanic-solution-using-neuralnet
-
+```{r}
 # Using multilayered feed forward nueral network
 # package nueralnet
 install.packages("neuralnet")
@@ -3328,25 +3453,10 @@ liver_model <- neuralnet(formula_nn,data=train1, hidden = 5, linear.output = FAL
 str(liver_model)
 plot(liver_model)
 plot(liver_model, rep="best")
+```
 
+#https://www.kaggle.com/goldsack/titanic-solution-using-neuralnet
 #https://www.kaggle.com/bdetanico/liver-disease-prediction-lr-knn-cart-and-rf
-# df.o
-wilcox.tests.o <- lapply(df.o[,c("Total_Bilirubin", "Direct_Bilirubin", "Alkaline_Phosphotase", "Alamine_Aminotransferase", "Aspartate_Aminotransferase", "Total_Protiens", "Albumin", "Albumin_and_Globulin_Ratio", "Age", "AST_ALT_ratio")], function(x) wilcox.test(x ~ df.o$Dataset)$p.value)
-
-#df.o.log
-wilcox.tests.o.log <- lapply(df.o.log[,c("Total_Bilirubin", "Direct_Bilirubin", "Alkaline_Phosphotase", "Alamine_Aminotransferase", "Aspartate_Aminotransferase", "Total_Protiens", "Albumin", "Albumin_and_Globulin_Ratio", "Age", "AST_ALT_ratio")], function(x) wilcox.test(x ~ df.o.log$Dataset)$p.value)
-
-#df.o.wo
-wilcox.tests.o.wo <- lapply(df.o.wo[,c("Total_Bilirubin", "Direct_Bilirubin", "Alkaline_Phosphotase", "Alamine_Aminotransferase", "Aspartate_Aminotransferase", "Total_Protiens", "Albumin", "Albumin_and_Globulin_Ratio", "Age", "AST_ALT_ratio")], function(x) wilcox.test(x ~ df.o.wo$Dataset)$p.value)
-
-results_wilcox <- cbind(wilcox.tests.o, wilcox.tests.o.log, wilcox.tests.o.wo)
-results_wilcox
-
-
-
-#https://www.kaggle.com/bdetanico/liver-disease-prediction-lr-knn-cart-and-rf
-
-
 
 #https://www.kaggle.com/gnodyahs/penalised-logistic-regression-model-titanic
 ## **TRAIN MODELS**
