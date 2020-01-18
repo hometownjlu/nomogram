@@ -18,12 +18,13 @@
 #     
 #     dir_names <- c("Code",
 #         "results",
+#         "tables",
 #         "Saved_Models")
 #     dir_create(dir_names)
 #     dir_ls()
 # }
 # make_project_dir()
-system("ls ..")
+#system("ls ..")
 
 data_folder <- paste0(getwd(), "/Data/")
 results_folder <- paste0(getwd(), "/Results/")
@@ -92,11 +93,13 @@ set.seed(123456)
 #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
 create_plot_num <- 
   function(data) {
+    print("Function Sanity Check: Plot Numeric Features")
     funModeling::plot_num(data, path_out = results_folder)
   } 
 
 create_plot_cross_plot <- 
   function(data) {
+    print("Function Sanity Check: Cross Plot Features")
     funModeling::cross_plot(data, 
                             input=(colnames(data)), 
                             target="Match_Status", 
@@ -107,6 +110,7 @@ create_plot_cross_plot <-
 
 create_profiling_num <- 
   function(data) {
+    print("Function Sanity Check: Plot Numeric Features")
     funModeling::profiling_num(data)
   }
 
@@ -223,6 +227,7 @@ mylabels <- list(white_non_white = "Race", Age = "Age, years", Gender = "Sex", C
 #https://www.kaggle.com/pjmcintyre/titanic-first-kernel#final-checks
 tm_nomogram_prep <- function(df){  #signature of the function
   set.seed(1978)                  #body of the function
+  print("Function Sanity Check: Creation of Nomogram")
   test <- rms::nomogram(df,
                 #lp.at = seq(-3,4,by=0.5),
                 fun = plogis,
@@ -244,6 +249,7 @@ tm_nomogram_prep <- function(df){  #signature of the function
   }
 
 tm_rpart_plot = function(df){
+  print("Function Sanity Check: Plot Decision Trees using package rpart with Leaves")
   tm_rpart_plot_leaves <- rpart.plot::rpart.plot(df, yesno = 2, type = 5, extra = +100, fallen.leaves = TRUE, varlen = 0, faclen = 0, roundint = TRUE, clip.facs = TRUE, shadow.col = "gray", main = "Tree Model of Medical Students Matching into OBGYN Residency\n(Matched or Unmatched)", box.palette = c("red", "green"))  
   tm_fancy_rpart <- fancyRpartPlot(df)
   return(c(tm_rpart_plot_leaves, tm_fancy_rpart))
@@ -251,6 +257,7 @@ tm_rpart_plot = function(df){
 
 # Draws a nice table one plot
 tm_arsenal_table = function(df, by){
+  print("Function Sanity Check: Create Arsenal Table using arsenal package")
   table_variable_within_function <- arsenal::tableby(by ~ .,
                  data=df, control = tableby.control(test = TRUE,
                                                                 total = F,
@@ -287,12 +294,14 @@ tm_arsenal_table = function(df, by){
 
 #Draws a nice plot of the variable strengths using ANOVA.  
 tm_chart_strength_of_variables <- function(df) {
+  print("Function Sanity Check: Plotting ANOVA dataframe for variable strength")
   plot <- plot(anova(df), cex=1, cex.lab=1.3, cex.axis = 0.9)
   return(plot)
 }
 
 #Helpful plot of variable importance for variable selection
 tm_variable_importance = function(df) {
+  print("Function Sanity Check: Evaluate Variable Importance")
   rf_imp <- varImp(df, scale = FALSE)
   rf_imp <- rf_imp$importance
   rf_gini <- data.frame(Variables = row.names(rf_imp), MeanDecreaseGini = rf_imp$Overall)
@@ -373,12 +382,14 @@ recipe_simple <- function(dataset) {
 
 #Now I need to create a function that contains my model that can be iterated over each split of the data. I also want a function that will make predictions using said model.
 fit_mod_func <- function(split, spec){
+  print("Function Sanity Check: Function to fit her model using parsnip package")
   parsnip::fit(object = spec,
       formula = Match_Status ~ .,
       data = rsample::analysis(split))
 }
 
 predict_func <- function(split, model){
+  print("Function Sanity Check: Prediction Function")
   # Extract the assessment data
   assess <- rsample::assessment(split)
   # Make prediction
@@ -391,6 +402,7 @@ predict_func <- function(split, model){
 
 # Create a function that will take the prediction and compare to truth
 rf_metrics <- function(pred_df){
+  print("Function Sanity Check: Compare the truth to the predictions")
   perf_metrics(
     pred_df,
     truth = Match_Status,
@@ -417,6 +429,7 @@ tm_holdout_results <- function(splits, ...) {
 }
 
 tm_confusion_matrix_graph <- function (model_name, label) {  #label should be in quotation marks
+  print("Function Sanity Check: Create Confusino Matrix Graphs")
 model_name %>%  #Plug in the model using the training data
   stats::predict(new_data = test_baked) %>%  #Predict the test_data with the new model
   bind_cols(test_baked) %>%
@@ -433,6 +446,7 @@ model_name %>%  #Plug in the model using the training data
 # CHAPTER 4: H2O MODELING ----
 # Extracts and H2O model name by a position so can more easily use h2o.getModel()
 extract_h2o_model_name_by_position <- function(h2o_leaderboard, n = 1, verbose = T) {
+  print("Function Sanity Check: Extracts H2O model name as a position")
   
   model_name <- h2o_leaderboard %>%
     as.tibble() %>%
@@ -449,7 +463,7 @@ extract_h2o_model_name_by_position <- function(h2o_leaderboard, n = 1, verbose =
 # Visualize the H2O leaderboard to help with model selection
 plot_h2o_leaderboard <- function(h2o_leaderboard, order_by = c("auc", "logloss"), 
                                  n_max = 20, size = 4, include_lbl = TRUE) {
-  
+  print("Function Sanity Check: H2O leaderboard visualization")
   # Setup inputs
   order_by <- tolower(order_by[[1]])
   
@@ -486,6 +500,7 @@ plot_h2o_leaderboard <- function(h2o_leaderboard, order_by = c("auc", "logloss")
   }
   
   # Visualization
+  print("Function Sanity Check: Creating Visualization")
   g <- data_transformed_tbl %>%
     ggplot(aes(value, model_id, color = model_type)) +
     geom_point(size = size) +
@@ -507,7 +522,7 @@ plot_h2o_leaderboard <- function(h2o_leaderboard, order_by = c("auc", "logloss")
 # containing an ROC Plot, Precision vs Recall Plot, Gain Plot, and Lift Plot
 plot_h2o_performance <- function(h2o_leaderboard, newdata, order_by = c("auc", "logloss"),
                                  max_models = 3, size = 1.5) {
-  
+  print("Function Sanity Check: Plot H2O performance")
   # Inputs
   
   leaderboard_tbl <- h2o_leaderboard %>%
@@ -523,7 +538,7 @@ plot_h2o_performance <- function(h2o_leaderboard, newdata, order_by = c("auc", "
   h2o.no_progress()
   
   # 1. Model metrics
-  
+  print("Function Sanity Check: Check Model Performance Metrics")
   get_model_performance_metrics <- function(model_id, test_tbl) {
     
     model_h2o <- h2o.getModel(model_id)
@@ -668,7 +683,7 @@ plot_h2o_performance <- function(h2o_leaderboard, newdata, order_by = c("auc", "
 
 # Precision vs Recall
 load_model_performance_metrics <- function(path, test_tbl) {
-  
+  print("Function Sanity Check: Load Model Performance Metrics")
   model_h2o <- h2o.loadModel(path)
   perf_h2o  <- h2o.performance(model_h2o, newdata = as.h2o(test_tbl)) 
   
@@ -681,7 +696,7 @@ load_model_performance_metrics <- function(path, test_tbl) {
 
 
 plot_features_tq <- function(explanation, ncol) {
-  
+  print("Function Sanity Check: Plot Features using the TQ theme")
   data_transformed <- explanation %>%
     as.tibble() %>%
     mutate(
@@ -755,7 +770,7 @@ plot_explanations_tq <- function(explanation) {
 
 plot_hist_facet <- function(data, fct_reorder = FALSE, fct_rev = FALSE, 
                             bins = 10, fill = palette_light()[[3]], color = "white", ncol = 5, scale = "free") {
-  
+  print("Function Sanity Check: Plot Histogram that is Faceted")
   data_factored <- data %>%
     mutate_if(is.character, as.factor) %>%
     mutate_if(is.factor, as.numeric) %>%
@@ -784,7 +799,7 @@ plot_hist_facet <- function(data, fct_reorder = FALSE, fct_rev = FALSE,
 
 get_cor <- function(data, target, use = "pairwise.complete.obs",
                     fct_reorder = FALSE, fct_rev = FALSE) {
-  
+  print("Function Sanity Check: Get Correlation of Features")
   feature_expr <- enquo(target)
   feature_name <- quo_name(feature_expr)
   
@@ -818,7 +833,7 @@ plot_cor <- function(data, target, fct_reorder = FALSE, fct_rev = FALSE,
                      include_lbl = TRUE, lbl_precision = 2, lbl_position = "outward",
                      size = 2, line_size = 1, vert_size = 1, 
                      color_pos = palette_light()[[1]], color_neg = palette_light()[[2]]) {
-  
+  print("Function Sanity Check: Plot Correlation of Features")
   feature_expr <- enquo(target)
   feature_name <- quo_name(feature_expr)
   
@@ -847,7 +862,7 @@ plot_cor <- function(data, target, fct_reorder = FALSE, fct_rev = FALSE,
 
 # ggpairs: A lot of repetitive typing can be reduced 
 plot_ggpairs <- function(data, color = NULL, density_alpha = 0.5) {
-  
+  print("Function Sanity Check: Plot ggpairs")
   color_expr <- enquo(color)
   
   if (rlang::quo_is_null(color_expr)) {
@@ -933,6 +948,7 @@ get_roc_metric <- function(data_tr_sample, target, best_vars)
 
 get_accuracy_metric <- function(data_tr_sample, target, best_vars) 
 {
+  print("Function Sanity Check: Check Accuracy Metrics")
   data_model=select(data_tr_sample, one_of(best_vars))
   
   fitControl <- trainControl(method = "cv", 
@@ -958,6 +974,7 @@ get_accuracy_metric <- function(data_tr_sample, target, best_vars)
 # https://github.com/tobiolatunji/Readmission_Prediction/blob/master/diabetes_readmission.R
 # pseudo R-squared for logistic regression model
 logisticPseudoR2s <- function(LogModel) {
+  print("Function Sanity Check: Calculate a logistic PseudoR2s")
   dev <- LogModel$deviance 
   nullDev <- LogModel$null.deviance 
   modelN <-  length(LogModel$fitted.values)
@@ -973,6 +990,7 @@ logisticPseudoR2s <- function(LogModel) {
 
 #Variable Importance Function
 tm_vip <- function (object, title, ...) {
+  print("Function Sanity Check: Variable Importance Function")
   vip <- vip::vip(object = object, 
                   bar = TRUE,
                   horizontal = TRUE,
@@ -987,10 +1005,52 @@ tm_vip <- function (object, title, ...) {
 }
 
 tm_ggsave <- function (object, filename, ...){  #make sure the file name has quotation marks around it.  
+  print("Function Sanity Check: Saving a ggplot image as a TIFF")
   ggplot2::ggsave(here::here("results", filename), object, device = "tiff", width = 10, height = 7, dpi = 200)
 }
 
+
 tm_print_save <- function (filename) {
-  dev.print(tiff, (here("results", filename)), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
+  print("Function Sanity Check: Saving TIFF of what is in the viewer")
+  dev.print(tiff, (here::here("results", filename)), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
   dev.off()
 }
+
+tm_write2pdf <- function(object, filename) {  
+  #pass filename and title with quotations
+  print("Function Sanity Check: Creating Arsenal Table as a PDF")
+  arsenal::write2pdf(object, (here::here("tables", (paste0(filename, ".pdf")))),
+                     keep.md = TRUE,
+                     quiet = TRUE) # passed to rmarkdown::render
+}
+
+
+tm_write2word <- function(object, filename) {  
+  #pass filename and title with quotations
+  print("Function Sanity Check: Creating Arsenal Table as a Word Document")
+  arsenal::write2word(object, (here::here("tables", (paste0(filename, ".doc")))),
+                      keep.md = TRUE,
+                      quiet = TRUE) # passed to rmarkdown::render
+}
+
+tm_t_test <- function(variable){
+  print("Function Sanity Test: t-test")
+  output <- stats::t.test(y=variable[train$Match_Status == "Matched"],
+                          x=variable[train$Match_Status == "Did not match"],
+                          alternative = ("two.sided"),
+                          paired = FALSE,
+                          conf.level = 0.95,
+                          var.equal = TRUE)
+  
+  print("X is group that did not match and Y is group that did match:")
+  return(output)
+}
+
+
+tm_chi_square_test <- function (variable) {
+  print("Function Sanity Test: chi-square test")
+  chisq <- stats::chisq.test(variable, train$Match_Status, correct = FALSE)
+  return(chisq)
+}
+
+
