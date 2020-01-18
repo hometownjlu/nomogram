@@ -434,16 +434,11 @@ Here is the code that I used for the cubic splines and it pushed the VIF through
 
 # Table: Applicant Descriptive Variables by Matched or Did Not Match from 2015 to 2018
 ```{r, echo=TRUE, warning=FALSE, message=FALSE, include=TRUE, results="asis"}
-tm_arsenal_table_output <- tm_arsenal_table(df = all_data, by = all_data$Match_Status) #(arguments are outcome of interest is all_data$Match_Status, dataframe)
+tm_arsenal_table_output <- tm_arsenal_table(df = all_data, by = all_data$Match_Status)
 tm_arsenal_table_output
 
-write2word(tm_arsenal_table_output, (here::here("results", "tm_arsenal_table_output.doc")),
-  keep.md = TRUE,
-  quiet = TRUE) # passed to rmarkdown::render
-
-write2pdf(tm_arsenal_table_output, (here::here("results", "tm_arsenal_table_output.pdf")),
-  keep.md = TRUE,
-  quiet = TRUE) # passed to rmarkdown::render
+tm_write2word(tm_arsenal_table_output, "tm_arsenal_table_output1")
+tm_write2pdf(tm_arsenal_table_output, "tm_arsenal_table_output1")
 ```
 
 # Why are we using a train and test sample data set to test the model?  
@@ -520,13 +515,8 @@ Compare the datasets of `train` and `test`using arsenal package:
 ```{r, results="asis", include=FALSE, echo=FALSE}
 compareddf <- summary(arsenal::comparedf(train, test))
 
-write2word(compareddf, (here::here("results", "compareddf.doc")),
-  keep.md = TRUE,
-  quiet = TRUE) # passed to rmarkdown::render
-
-write2pdf(compareddf, (here::here("results", "compareddf.pdf")),
-  keep.md = TRUE,
-  quiet = TRUE) # passed to rmarkdown::render
+tm_write2word(compareddf, "compareddf")
+tm_write2pdf(compareddf, "compareddf")
 ```
 
 `train` data characteristics are all reported with medians and IQR.  
@@ -535,26 +525,16 @@ train_table_characteristics <- tm_arsenal_table(
   df=train, 
   by=train$Match_Status)
 
-write2word(train_table_characteristics, (here::here("results", "train_table_characteristics.doc")),
-  keep.md = TRUE,
-  quiet = TRUE) # passed to rmarkdown::render
-
-write2pdf(train_table_characteristics, (here::here("results", "train_table_characteristics.pdf")),
-  keep.md = TRUE,
-  quiet = TRUE) # passed to rmarkdown::render
+tm_write2word(train_table_characteristics, "train_table_characteristics")
+tm_write2pdf(train_table_characteristics, "train_table_characteristics")
 ```
 
 `test` data characteristics are all reported with medians and IQR. 
 ```{r, include = TRUE, results="asis"}
 test_table_characteristics <- tm_arsenal_table(df = test, by = test$Match_Status)
 
-write2word(test_table_characteristics, (here::here("results", "test_table_characteristics.doc")),
-  keep.md = TRUE,
-  quiet = TRUE) # passed to rmarkdown::render
-
-write2pdf(test_table_characteristics, (here::here("results", "test_table_characteristics.pdf")),
-  keep.md = TRUE,
-  quiet = TRUE) # passed to rmarkdown::render
+tm_write2word(test_table_characteristics, "test_table_characteristics")
+tm_write2pdf(test_table_characteristics, "test_table_characteristics")
 ```
 
 Check Proportions of Matched/Unmatched applicants in the test and train data sets.  Orginal response distribution and then showing consistent response ratio between train & test data sets.  
@@ -601,62 +581,31 @@ data.clean <- numeric_data[,-highly.corr]
 None of the numeric data are correlated to each other.  So we can't remove any numeric features because they are not highly correlated.  
 
 ```{r}
-stats::t.test(y=train$Age[train$Match_Status == "Matched"],
-              x=train$Age[train$Match_Status == "Did not match"],
-              alternative = ("two.sided"),
-              paired = FALSE,
-              conf.level = 0.95) #Significant different in age for people who matched and did not match shown by the t-test
-
-stats::t.test(y=train$USMLE_Step_1_Score[train$Match_Status == "Matched"],
-              x=train$USMLE_Step_1_Score[train$Match_Status == "Did not match"],
-              alternative = ("two.sided"),
-              paired = FALSE,
-              conf.level = 0.95) #Significant different in USMLE_Step_1_Score for people who matched and did not match shown by the t-test
-
-stats::t.test(y=train$Count_of_Poster_Presentation[train$Match_Status == "Matched"],
-              x=train$Count_of_Poster_Presentation[train$Match_Status == "Did not match"],
-              alternative = ("two.sided"),
-              paired = FALSE,
-              conf.level = 0.95) #NO DIFFERENCE in Count_of_Poster_Presentation for people who matched and did not match shown by the t-test
-
-stats::t.test(y=train$Count_of_Oral_Presentation[train$Match_Status == "Matched"],
-              x=train$Count_of_Oral_Presentation[train$Match_Status == "Did not match"],
-              alternative = ("two.sided"),
-              paired = FALSE,
-              conf.level = 0.95) #NO DIFFERENCE in Count_of_Oral_Presentation for people who matched and did not match shown by the t-test
-
-stats::t.test(y=train$Count_of_Articles_Abstracts[train$Match_Status == "Matched"],
-              x=train$Count_of_Articles_Abstracts[train$Match_Status == "Did not match"],
-              alternative = ("two.sided"),
-              paired = FALSE,
-              conf.level = 0.95) #NO DIFFERENCE in Count_of_Articles_Abstracts for people who matched and did not match shown by the t-test
-
-stats::t.test(y=train$Count_of_Peer_Reviewed_Book_Chapter[train$Match_Status == "Matched"],
-              x=train$Count_of_Peer_Reviewed_Book_Chapter[train$Match_Status == "Did not match"],
-              alternative = ("two.sided"),
-              paired = FALSE,
-              conf.level = 0.95) #NO DIFFERENCE in Count_of_Peer_Reviewed_Book_Chapter for people who matched and did not match shown by the t-test
-
-
-stats::t.test(y=train$Count_of_Other_than_Published[train$Match_Status == "Matched"],
-              x=train$Count_of_Other_than_Published[train$Match_Status == "Did not match"],
-              alternative = ("two.sided"),
-              paired = FALSE,
-              conf.level = 0.95) #NO DIFFERENCE in Count_of_Other_than_Published for people who matched and did not match shown by the t-test
+tm_t_test(train$Age)#Significant different in age for people who matched (younger) and did not match (older) shown by the t-test
+tm_t_test(train$USMLE_Step_1_Score)#Significant different in USMLE_Step_1_Score for people who matched and did not match shown by the t-test
+tm_t_test(train$Count_of_Poster_Presentation) #NO DIFFERENCE in Count_of_Poster_Presentation for people who matched and did not match shown by the t-test
+tm_t_test(train$Count_of_Oral_Presentation)#NO DIFFERENCE in Count_of_Oral_Presentation for people who matched and did not match shown by the t-test
+tm_t_test(train$Count_of_Articles_Abstracts)#NO DIFFERENCE in Count_of_Articles_Abstracts for people who matched and did not match shown by the t-test
+tm_t_test(train$Count_of_Peer_Reviewed_Book_Chapter)#NO DIFFERENCE in Count_of_Peer_Reviewed_Book_Chapter for people who matched and did not match shown by the t-test
+tm_t_test(train$Count_of_Other_than_Published)#NO DIFFERENCE in Count_of_Other_than_Published for people who matched and did not match shown by the t-test
 ```
 
 After that, we got the train dataframe with categorization (`train`) and compared categorical variables through the chi-square test of independence (used to analyze the frequency table). The chi-squared test is a statistical test used to discover whether there is a relationship between categorical variables.
 ```{r}
-chisq.test(train$white_non_white,train$Match_Status,correct = FALSE)#Race is NOT significant
-chisq.test(train$Gender,train$Match_Status,correct = FALSE)#Gender is significant
-chisq.test(train$Couples_Match,train$Match_Status,correct = FALSE)#Couples match status is significant
-chisq.test(train$US_or_Canadian_Applicant,train$Match_Status,correct = FALSE)#US Applicant is significant
-chisq.test(train$Medical_Education_Interrupted,train$Match_Status,correct = FALSE)#Interrupting medical education is significant
-chisq.test(train$Alpha_Omega_Alpha,train$Match_Status,correct = FALSE)#AOA is significant
-chisq.test(train$Military_Service_Obligation,train$Match_Status,correct = FALSE)#Military Service obligation is NOT significant
-chisq.test(train$Visa_Sponsorship_Needed,train$Match_Status,correct = FALSE)#Visa sponsorship is significant
-chisq.test(train$Medical_Degree,train$Match_Status,correct = FALSE)#Medical Degree is significant
+tm_chi_square_test(train$white_non_white) #Race is  significant
+tm_chi_square_test(train$Gender) #Gender is significant
+tm_chi_square_test(train$Couples_Match)#Couples match status is significant
+tm_chi_square_test(train$US_or_Canadian_Applicant)#US Applicant is significant
 
+tm_chi_square_test(train$Medical_Education_Interrupted)#Interrupting medical education is significant
+tm_chi_square_test(train$Alpha_Omega_Alpha)#AOA is significant
+tm_chi_square_test(train$Military_Service_Obligation)#Military Service obligation is NOT significant
+tm_chi_square_test(train$Visa_Sponsorship_Needed)#Visa sponsorship is significant
+tm_chi_square_test(train$Medical_Degree)#Medical Degree is significant
+```
+
+
+```{r}
 cnum <- train[,c("Age", "USMLE_Step_1_Score")]
 cormat <- cor(cnum) # Select only numeric variables that are significant on univariate testing.  
 pairs(cnum)
@@ -664,8 +613,8 @@ tm_print_save("significant_numeric_variable_correlation.tiff")
 
 scatterplotMatrix(~Age+USMLE_Step_1_Score, data=train, main="Correlations of Numeric Variables in the Matching Data")
 
-corrplot(cormat, method="circle")
-corrplot(cormat, method="circle", addCoef.col="black") # With correlation 
+corrplot::corrplot(cormat, method="circle")
+corrplot::corrplot(cormat, method="circle", addCoef.col="black") # With correlation 
 tm_print_save("corrplot.tiff")
 ```
 
@@ -748,10 +697,7 @@ tm_ggsave(psych_correlation, "psych_correlation.tiff")
 Billizionth way to review correlation.  
 ```{r}
 #Correlation plot
-library("PerformanceAnalytics")
-library(corrplot)
-library(corrgram)
-M <- corrgram(all_data)
+M <- corrgram::corrgram(all_data)
 ```
 
 # Fitting and Summarizing the Kitchen Sink Model: (aka throw everything at it)
@@ -793,6 +739,9 @@ tm_print_save("tm_nomogram_prep_kitchen_sink.tiff")
 Create a Confusion Matrix
 ```{r}
 test$Match_Status <- as.factor(test$Match_Status)
+
+Predprob <- stats::predict.glm(object = kitchen.sink, type = "response")
+plot(Predprob, jitter(as.numeric(Match_Status)))
 
 # test model
 ###Not working!!!
@@ -1391,7 +1340,6 @@ head(imps2[order(-imps2$meanImp), ])  # descending sort
 plot(boruta_output, cex.axis=0.35, las=2, xlab="", main="Boruta Variable Importance")  # Plot variable importance
 tm_print_save("Boruta_Variable_Importance.tiff")
 ```
-
 
 # Factor Selection: GLMNet to do factor selection with the previously made LASSO model
 Regularization methods provide a means to constrain or regularize the estimated coefficients, which can reduce the variance and decrease out of sample error.
@@ -3097,13 +3045,16 @@ auto_ml <- h2o.automl(
   keep_cross_validation_predictions = TRUE, sort_metric = "AUC", seed = 123,
   stopping_rounds = 50, stopping_metric = "AUC", stopping_tolerance = 0
 )
+class(auto_ml)
+
+saveRDS(auto_ml, (here::here("Saved_Models", "auto_ml.rds")))
 
 # Assess the leader board; the following truncates the results to show the top 
 # and bottom 15 models. You can get the top model with auto_ml@leader
 auto_ml@leaderboard %>% 
   as.data.frame() %>%
   dplyr::select(model_id, auc) %>%
-  dplyr::slice(1:25)
+  dplyr::slice(1:10)
 ```
 
 
