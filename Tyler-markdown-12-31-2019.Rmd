@@ -886,7 +886,7 @@ Evaluating the signficance of kitchen.sink variables
 tm_chart_strength_of_variables(limited.vif.model.kitchen.sink)
 ```
 
-# Factor Selection using Regression
+# Factor Selection using Forward/Backwards Regression
 https://livebook.datascienceheroes.com/selecting-best-variables.html
 
 A predictive model with a high number of variables will tend to do overfitting. While on the other hand, a model with a low number of variables will lead to doing underfitting.
@@ -971,6 +971,21 @@ Principal Component Analysis (PCA) is a very powerful technique that has wide ap
 
 In order to reduce 17 dimensions or knowing the significant impact of our reduction we will do PCA.
 
+Feature Selection: Principal Component Analysis - Use principal components analysis to pick what predictors to use 
+```{r}
+#From nomogram_matching_medical_students.R
+
+#Method 1:  Principal Component Analysis - Use principal components analysis to pick what predictors to use 
+train_pca <- preProcess(select(all_data, - Match_Status), 
+                        method = c("center", "scale", "nzv", "pca"))
+train_pca
+train_pca$method
+train_pca$rotation
+train_pca$method$pca
+```
+
+
+Approach 2
 ```{r}
 numeric_data <- select_if(all_data, is.numeric)
 numeric_data <- base::scale(numeric_data, center=TRUE, scale = TRUE)
@@ -979,7 +994,8 @@ summary(pcaObj)
 print(pcaObj)
 names(pcaObj)
 plot(pcaObj, main="Principal Component Analysis \n Reduction in Number of Variables")
-pcaObj$loadings
+pcaObj$loadings[,1]
+#I have no idea what this plot means
 stats::biplot(pcaObj, cex = 1.0, main="Biplot of Principal Component Analysis \n Reduction in Number of Variables")
 tm_print_save("Principal_Components_for_numeric_data.tiff")
 
@@ -998,45 +1014,42 @@ factoextra::fviz_eig(res.pca)  #Visualize eigenvalues (scree plot). Show the per
 tm_print_save("scree_plot_PCA.tiff")
 
 #Graph of individuals. Individuals with a similar profile are grouped together.
-# fviz_pca_ind(res.pca,
-#              col.ind = "cos2", # Color by the quality of representation
-#              gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
-#              repel = TRUE     # Avoid text overlapping
-#              )
-# tiff(file=paste("individuals_plot_PCA.tiff", sep=""), width=2000, height=2000, bg="transparent", res = 200,units = "px" )
-# dev.off()
-# 
+factoextra::fviz_pca_ind(res.pca,
+             col.ind = "cos2", # Color by the quality of representation
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE     # Avoid text overlapping
+             )
+tm_print_save("individuals_plot_PCA.tiff")
+
 # #Graph of variables. Positive correlated variables point to the same side of the plot. Negative correlated variables point to opposite sides of the graph.
-# fviz_pca_var(res.pca,
-#              col.var = "contrib", # Color by contributions to the PC
-#              gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
-#              repel = TRUE     # Avoid text overlapping
-#              )
-# tiff(file=paste("graph_of_vars_plot_PCA.tiff", sep=""), width=2000, height=2000, bg="transparent", res = 200,units = "px" )
-# dev.off()
-# 
-# #Biplot of individuals and variables
-# fviz_pca_biplot(res.pca, repel = TRUE,
-#                 col.var = "#2E9FDF", # Variables color
-#                 col.ind = "#696969"  # Individuals color
-#                 )
-# tiff(file=paste("barpot_plot_PCA.tiff", sep=""), width=2000, height=2000, bg="transparent", res = 200,units = "px" )
-# dev.off()
-# 
-# # Eigenvalues
-# # eig.val <- get_eigenvalue(res.pca)
-# # eig.val
-#   
-# # Results for Variables
-# res.var <- get_pca_var(res.pca)
-# # res.var$coord          # Coordinates
-# # res.var$contrib        # Contributions to the PCs
-# # res.var$cos2           # Quality of representation 
-# # Results for individuals
-# res.ind <- get_pca_ind(res.pca)
-# # res.ind$coord          # Coordinates
-# # res.ind$contrib        # Contributions to the PCs
-# # res.ind$cos2           # Quality of representation 
+factoextra::fviz_pca_var(res.pca,
+             col.var = "contrib", # Color by contributions to the PC
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE     # Avoid text overlapping
+             )
+tm_print_save("graph_of_vars_plot_PCA.tiff")
+
+#Biplot of individuals and variables
+factoextra::fviz_pca_biplot(res.pca, repel = TRUE,
+                col.var = "#2E9FDF", # Variables color
+                col.ind = "#696969"  # Individuals color
+                )
+tm_print_save("barpot_plot_PCA.tiff")
+
+# Eigenvalues
+eig.val <- get_eigenvalue(res.pca)
+eig.val
+
+# Results for Variables
+res.var <- get_pca_var(res.pca)
+res.var$coord          # Coordinates
+res.var$contrib        # Contributions to the PCs
+res.var$cos2           # Quality of representation
+# Results for individuals
+res.ind <- get_pca_ind(res.pca)
+res.ind$coord          # Coordinates
+res.ind$contrib        # Contributions to the PCs
+res.ind$cos2           # Quality of representation
 ```
 
 ```{r}
@@ -1099,10 +1112,10 @@ data.frame(
 ```
 So how many principal components should we use in the my_basket example? The frank answer is that there is no one best method for determining how many components to use. In this case, differing criteria suggest to retain 5 (scree plot criterion), and 3 (eigenvalue criterion).  
 
-
 # Feature Selection: MARS model (Multivariate Adaptive Regression Splines)
 MARS allows for non-linear models.  The MARS method and algorithm can be extended to handle classification problems and GLMs in general.
 https://bradleyboehmke.github.io/HOML/mars.html
+http://uc-r.github.io/mars
 ```{r}
 # cross validated model
 tuned_mars <- caret::train(
@@ -1112,16 +1125,13 @@ tuned_mars <- caret::train(
   trControl = trainControl(method = "cv", number = 10),
   tuneGrid = hyper_grid
 )
+tuned_mars
+tm_print_save("Degree_of_products.tiff")
 
 # best model
 tuned_mars$bestTune
 ##   nprune degree
 ## 2     12      1
-
-# plot results
-tuned_mars <- ggplot(tuned_mars)
-tm_ggsave(object = tuned_mars, filename = "tuned_mars.tiff")
-#Need to save this
 ```
 
 Separate approach
@@ -1155,7 +1165,6 @@ mars2 <- earth(
 summary(mars2) %>% .$coefficients %>% head(10)
 ```
 
-
 There are two important tuning parameters associated with our MARS model: the maximum degree of interactions and the number of terms retained in the final model. We need to perform a grid search to identify the optimal combination of these hyperparameters that minimize prediction error (the above pruning process was based only on an approximation of CV model performance on the training data rather than an exact k-fold CV process). As in previous chapters, we’ll perform a CV grid search to identify the optimal hyperparameter mix. Below, we set up a grid that assesses 30 different combinations of interaction complexity (degree) and the number of terms to retain in the final model (nprune).
 ```{r}
 # https://bradleyboehmke.github.io/HOML/mars.html
@@ -1168,7 +1177,7 @@ hyper_grid <- expand.grid(
 head(hyper_grid)
 ```
 
-Cross-validated RMSE for the 30 different hyperparameter combinations in our grid search. The optimal model retains 45 terms and includes up to 3rd degree interactions.
+Cross-validated RMSE for the 30 different hyperparameter combinations in our grid search. The optimal model retains 17 terms and includes up to 3rd degree interactions.
 
 The  grid search helps to focus where we can further refine our model tuning. As a next step, we could perform a grid search that focuses in on a refined grid space for nprune (e.g., comparing 5–20 terms retained).
 ```{r}
@@ -1212,10 +1221,11 @@ Its important to realize that variable importance will only measure the impact o
 # extract coefficients, convert to tidy data frame, and
 # filter for interaction terms
 # https://bradleyboehmke.github.io/HOML/mars.html
-cv_mars$finalModel %>%
+optimal_combinations <- cv_mars$finalModel %>%
   coef() %>%  
   broom::tidy() %>%  
   filter(stringr::str_detect(names, "\\*")) 
+optimal_combinations
 ```
 Interaction between features show that younger Age and international/US_or_Canadian_Applicant interact positively.  A medical education interruption and USMLE Step 1 score are negative interaction.  There is a three way interaction between (Age-34.6), international applicants (US_or_Canadian_Applicantinternational), Visa_Sponsorship_needed_yes (Visa_Sponsorship_NeededYes) that is negative.  
 
@@ -1236,76 +1246,8 @@ tm_print_save("varimp_mars.tiff")
 ```
 The MARS model shows that 6-10 terms were likely to improve accuracy (`model_mars`).  Variable importance shows that US_or_Canadian_applicants, USMLE_Step_1_Score, Age, Medial_Degree, and Visa_Sponsorship_Needed all show significant importance (`varimp_mars`).  
 
-
-#Factor Selection: LASSO (Least Absolute Shrinkage and Selection Operator)
-Also, I like lasso because some people will find that using predictors of age, race, gender as predictors will be discriminatory.  In short, LASSO eliminates the need for an author to be a subject expert on matching when selecting variables.  
-
-Here, we use Lasso for simplicity and interpretability. The aim is to avoid over-parametrization and unnecessary model bias by carrying feature selection on-the-go. Key to this task will be cross-validation.  Start by creating a custom train control providing the number of cross-validations and setting the classProbs to TRUE for logistic regression. 
-
-#Feature Selection: Genetic algo for feature selection
-This script select the 'best' subset of variables based on genetic algorithms in R.
+#Feature Selection: Recursive Feature Elimination
 ```{r}
-#Excellent reference:  https://github.com/pablo14/genetic-algorithm-feature-selection
-#https://blog.datascienceheroes.com/feature-selection-using-genetic-algorithms-in-r/
-data=all_data
-
-data$Match_Status1 <- as.numeric(data$Match_Status) - 1
-
-data_y=as.factor(data$Match_Status1)
-data_x=select(data, -Match_Status1, -Match_Status)
-
-# GA parameters
-param_nBits=ncol(data_x)
-col_names=colnames(data_x)
-
-# Executing the GA 
-# ga_GA_1 = ga(fitness = function(vars) custom_fitness(vars = vars, 
-#                                                      data_x =  data_x, 
-#                                                      data_y = data_y, 
-#                                                      p_sampling = 0.7), # custom fitness function
-#              type = "binary", # optimization data type
-#              crossover=gabin_uCrossover,  # cross-over method
-#              elitism = 10, # number of best ind. to pass to next iteration
-#              pmutation = 0.03, # mutation rate prob
-#              popSize = 1000, # the number of indivduals/solutions
-#              nBits = param_nBits, # total number of variables
-#              names=col_names, # variable name
-#              run=5, # max iter without improvement (stopping criteria)
-#              maxiter = 50, # total runs or generations
-#              monitor=plot, # plot the result at each iteration
-#              keepBest = TRUE, # keep the best solution at the end
-#              parallel = T, # allow parallel procesing
-#              seed=84211 # for reproducibility purposes
-# )
-# str(ga_GA_1)
-# # Checking the results
-# summary(ga_GA_1)
-# plot(ga_GA_1) #Blue dot: Population fitness average
-#               #Green dot: Best fitness value
-# 
-# # Following line will return the variable names of the final and best solution
-# best_vars_ga=col_names[ga_GA_1@solution[1,]==1]
-# 
-# # Checking the variables of the best solution...
-# best_vars_ga
-# 
-# # Checking the accuracy
-# get_accuracy_metric(data_tr_sample = data_x, target = data_y, best_vars_ga)
-```
-
-```{r}
-#=================================================================
-#  Factor Selection
-#=================================================================
-#From nomogram_matching_medical_students.R
-
-#Method 1:  Principal Component Analysis - Use principal components analysis to pick what predictors to use 
-train_pca <- preProcess(select(all_data, - Match_Status), 
-                        method = c("center", "scale", "nzv", "pca"))
-train_pca
-train_pca$method
-train_pca$rotation
-
 #Method 2: Recursive Feature Elimination
 options(warn=-1)
 subsets <- c(1:17)
@@ -1320,24 +1262,29 @@ lmProfile <- rfe(x=train[, 1:17], y=train$Match_Status,
 lmProfile  #Picked 5 variables that were able to predict 
 
 #https://www.datacamp.com/community/tutorials/feature-selection-R-boruta
+```
 
+# Feature Selection: Boruta search
+```{r}
 #Method 3:  Boruta search
 #You'll see how you can use it to perform a top-down search for relevant features by comparing original attributes' importance with importance achievable at random, estimated using their permuted copies, and progressively elliminating irrelevant features.
+set.seed(123)
 boruta_output <- Boruta::Boruta(Match_Status ~ ., data=na.omit(train), doTrace=0)  
 names(boruta_output)
+Boruta::getConfirmedFormula(boruta_output)
+Boruta::attStats(boruta_output) 
 
 # Get significant variables including tentatives
 boruta_signif <-Boruta::getSelectedAttributes(boruta_output, withTentative = TRUE)
 print(boruta_signif)  
 roughFixMod <- TentativeRoughFix(boruta_output)  # Do a tentative rough fix
 boruta_signif <- getSelectedAttributes(roughFixMod)
-print(boruta_signif)
 
-# Method 4: Variable Importance Scores
 imps <- attStats(roughFixMod)
 imps2 = imps[imps$decision != 'Rejected', c('meanImp', 'decision')]
 head(imps2[order(-imps2$meanImp), ])  # descending sort
-plot(boruta_output, cex.axis=0.35, las=2, xlab="", main="Boruta Variable Importance")  # Plot variable importance
+BorutaImportance <- plot(boruta_output, cex.axis=0.35, las=2, xlab="", main="Boruta Variable Importance")  # Plot variable importance
+plot(BorutaImportance)
 tm_print_save("Boruta_Variable_Importance.tiff")
 ```
 
@@ -1348,6 +1295,8 @@ The glmnet package is extremely efficient and fast, even on very large data sets
 
 ```{r, echo=TRUE}
 # https://bradleyboehmke.github.io/HOML/regularized-regression.html#attrition-data
+#https://www.datacamp.com/community/tutorials/tutorial-ridge-lasso-elastic-net
+
 # Create custom trainControl: myControl
 set.seed(1978)
 myControl <- 
@@ -1618,7 +1567,7 @@ pred <- stats::predict(cv_glmnet, x)
 pred
 ```
 
-# Feature Interpretation
+# Feature Selection : Magnitude Feature Interpretation
 Variable importance for regularized models provides a similar interpretation as in logistic regression. Importance is determined by magnitude of the standardized coefficients and we can see in figure below.  
 
 ```{r}
@@ -1629,6 +1578,56 @@ feature_interpretation_regularized_regression
 tm_ggsave(object = feature_interpretation_regularized_regression, filename = "feature_interpretation_regularized_regression.tiff")
 ```
 Penalized regression model shows that USMLE Step 1 Score is the most important followed by IMG and followed by Age.  
+
+
+# Review of all feature Selection Results
+```{r}
+#Forward regression
+step_model$formula[[c(3)]] #Important variables
+
+#MARS
+plot(tuned_mars)
+summary(mars1) %>% .$coefficients %>% head(20)
+gridExtra::grid.arrange(p1, p2, ncol = 2)
+
+cv_mars$bestTune
+##    nprune degree
+## 22     12      3  #The model that provides the optimal combination includes third degree interaction effects and retains 12 terms.
+plot(model_mars, main="Model Accuracies based on \n the number of terms with MARS")  # Number of terms to use to optimize accuracy
+
+optimal_combinations
+
+plot(varimp_mars, main="Variable Importance with MARS") #Visual of the most important factors
+
+
+
+#Principal Components Analysis foudn thhat six factors were needed to capture 95% of the variance:
+train_pca$method$pca
+#Alternative PCA
+pcaObj$loadings[,1]
+
+#Using recursive feature eliminiation found eight variables were needed:
+lmProfile
+
+#Boruta
+boruta_output
+boruta_signif
+
+#Variable Importance of Each Variable in the Regularized Regression Model
+feature_interpretation_regularized_regression
+
+#Boruta is nice because it tells you what is rejected and what was included.  
+boruta_output
+boruta_output$finalDecision
+plot(BorutaImportance)
+boruta_signif
+
+# plot results, create grid of all importance graphs?
+par(mfrow = c(1, 2))
+plot(ridge, main = "Ridge penalty\n\n")
+plot(lasso, main = "Lasso penalty\n\n")
+```
+
 
 
 Comparing logistic regression model with penalized regression model. 
@@ -1668,7 +1667,13 @@ summary(resamples(list(
 ```
 The output shows minimal improvement with the penalized model (median accuracy = 0.809) compared to the logistic model (median accuracy = 0.803). 
 
-# Factor Selection: Variable selection using LASSO in the train dataset
+
+#Factor Selection: LASSO (Least Absolute Shrinkage and Selection Operator)
+Also, I like lasso because some people will find that using predictors of age, race, gender as predictors will be discriminatory.  In short, LASSO eliminates the need for an author to be a subject expert on matching when selecting variables.  
+
+Here, we use Lasso for simplicity and interpretability. The aim is to avoid over-parametrization and unnecessary model bias by carrying feature selection on-the-go. Key to this task will be cross-validation.  Start by creating a custom train control providing the number of cross-validations and setting the classProbs to TRUE for logistic regression. 
+
+Factor Selection: Variable selection using LASSO in the train dataset
 ```{r, echo=TRUE, warning=FALSE, message=FALSE}
 c <- 
   coef(glmnet1,s='lambda.min',exact=TRUE)  #Bring in the coefficients from LASSO
@@ -1743,7 +1748,6 @@ tm_chart_strength_of_variables(lrm.with.lasso.variables)
 ```{r, include=F}
 summary(lrm.with.lasso.variables)
 ```
-
 
 # Odds ratios of the `train` dataset
 
@@ -2072,6 +2076,7 @@ Trees can handle both factors and continuous variables and do not need to create
 Here we intentionally grow a large and complex tree then prune it to be smaller and more efficient later on.
 ```{r rpart EDA}
 #https://bradleyboehmke.github.io/HOML/DT.html
+#https://www.datacamp.com/community/tutorials/decision-trees-R 
 t.model <-
   rpart(as.factor(Match_Status) ~.,
         data = train,     
@@ -2813,53 +2818,18 @@ tm_print_save("XGBoost_Feature_Importance.tiff")
 
 # 7a)  Model: Neural Network
 ```{r}
-##################### NNET MODEL #################################
-library(nnet)
-model <- caret::train(Match_Status ~ . , train, method='nnet', #linout=TRUE, trace = FALSE,
-               #Grid of tuning parameters to try:
-               tuneGrid=NULL ) 
-summary(model)
-############### Without Cross Validation#######
+##https://www.datacamp.com/community/tutorials/neural-network-models-r
 
-pred <- predict(model, test)
-predNew = as.data.frame(pred)
-categorise=function(x){
-  return(ifelse(x>0.5,1,0))
-}
-predNew=apply(predNew,2,categorise)
-head(predNew,10)
-#confusionMatrix(as.factor(test$Match_Status),as.factor(predNew))  #Not working
+install.packages("neuralnet")
+# load library
+require(neuralnet)
 
-############### WITH CROSS VALIDATION###########
-train_control <- trainControl(method = "cv", number = 10)
-linearCrossMod <- caret::train(Match_Status ~ ., 
-                        data=train, 
-                        trControl = train_control,
-                        method = "nnet",
-                        family=binomial())
 
-summary(linearCrossMod)
 
-pred_cv <- predict(linearCrossMod, test)
-predNew_cv = as.data.frame(pred_cv)
-predNew_cv=apply(predNew_cv,2,categorise)
-head(predNew_cv,10)
-#confusionMatrix(as.factor(predNew_cv),as.factor(test$Match_Status))  #Not working
-
-############### Roc curve for NNET MODEL################
-
-#Not working ????
-# library(ROCR)
-# 
-# pred_roc <- prediction(as.numeric(as.character(pred_cv)), as.numeric(as.character(test$Match_Status)))
-# perf <- performance(pred_roc, "tpr", 'fpr')
-# plot(perf, main = "ROC curve for Neural Net", colorize = T)
-# abline(0,1, col='gray60')
-# 
-# auc_ROCR <- performance(pred_roc, measure = "auc")
-# auc_ROCR <- auc_ROCR@y.values[[1]]
-# 
-# auc_ROCR
+# fit neural network
+nn=neuralnet(Match_Status ~ white_non_white + Age + Gender + Couples_Match + US_or_Canadian_Applicant + Medical_Education_Interrupted + Alpha_Omega_Alpha + Military_Service_Obligation + USMLE_Step_1_Score + Visa_Sponsorship_Needed + Count_of_Poster_Presentation + Count_of_Oral_Presentation + Count_of_Articles_Abstracts + Count_of_Peer_Reviewed_Book_Chapter + Count_of_Other_than_Published + Count_of_Online_Publications + Visa_Sponsorship_Needed + Medical_Degree,
+             data=train1, hidden=3,act.fct = "logistic",
+                linear.output = FALSE)
 ```
 
 # 8) Model: Ensembles model
@@ -3060,7 +3030,162 @@ auto_ml@leaderboard %>%
 
 # 9) Model: Deep Learning model
 ```{r}
-# I have no idea how to do this.  
+head(all_data)
+
+all_data1 <- all_data %>% select(Age, USMLE_Step_1_Score, Count_of_Articles_Abstracts, Count_of_Poster_Presentation, Count_of_Online_Publications, Count_of_Oral_Presentation, Count_of_Other_than_Published, Count_of_Peer_Reviewed_Book_Chapter, Match_Status)
+head(all_data1)
+
+#all_data1 <- all_data %>% as.numeric(as.character())
+#  mutate_if(is.factor, is.numeric)
+#library(varhandle)
+#unfactor(all_data$white_non_white) %>% class()
+#as.numeric(levels(all_data$white_non_white)[all_data$white_non_white])
+
+#head(all_data1)
+# library(data.table)
+# library(mltools)
+# customers_1h <- one_hot(as.data.table(all_data))
+# all_data1 <- customers_1h
+#https://www.datacamp.com/community/tutorials/neural-network-models-r
+## Scale data for neural network
+#https://www.analyticsvidhya.com/blog/2017/09/creating-visualizing-neural-network-in-r/
+#https://uc-r.github.io/ann_regression
+
+# max = apply(all_data1, 2 , max)
+# min = apply(all_data1, 2 , min)
+# scaled = as.data.frame(scale(all_data1, center = min, scale = max - min))
+
+#all_data1 <- scaled
+
+data_split <- rsample::initial_split(data = all_data, 
+                                     strata = "Match_Status", 
+                                     prop = 0.8)
+
+train <- data_split %>% training() %>% glimpse()  # Extract the training dataframe
+# write_csv(x = train, 
+#           path = (here::here("results", "train_at_data_split_phase.csv")), 
+#           col_names = TRUE)
+# training_data_plot_hist_facet <- plot_hist_facet(data = train)
+# training_data_plot_hist_facet
+
+test <- data_split %>% testing() %>% glimpse() # Extra
+# write_csv(x = test, 
+#           path = (here::here("results", "test_at_data_split_phase.csv")), 
+#           col_names = TRUE)
+
+# install package
+#install.packages("neuralnet")
+library(neuralnet)
+# Here, you will combine multiple columns or features into a single set of data
+
+# load library
+require(neuralnet)
+
+scale01 <- function(x){
+  (x - min(x)) / (max(x) - min(x))
+}
+
+glimpse(all_data1)
+
+Hab_Data <- all_data1 %>% 
+  #mutate_if(is.factor, is.numeric) %>%
+  mutate(Age = scale01(Age), 
+         USMLE_Step_1_Score = scale01(USMLE_Step_1_Score), 
+         Count_of_Poster_Presentation = scale01(Count_of_Poster_Presentation), 
+         Count_of_Oral_Presentation = scale01(Count_of_Oral_Presentation),
+         Count_of_Articles_Abstracts = scale01(Count_of_Articles_Abstracts),
+         Count_of_Peer_Reviewed_Book_Chapter = scale01(Count_of_Peer_Reviewed_Book_Chapter),
+         Count_of_Other_than_Published = scale01(Count_of_Other_than_Published),
+         Count_of_Online_Publications = scale01(Count_of_Online_Publications),
+         Match_Status = as.numeric(Match_Status)-1)
+Hab_Data %>% glimpse()
+
+
+set.seed(123)
+Hab_NN1 <- neuralnet(Match_Status ~  Age +  USMLE_Step_1_Score + Count_of_Poster_Presentation + Count_of_Oral_Presentation + Count_of_Articles_Abstracts + Count_of_Peer_Reviewed_Book_Chapter + Count_of_Other_than_Published + Count_of_Online_Publications, 
+                     data = all_data1, 
+                     linear.output = TRUE, 
+                     err.fct = 'ce', 
+                     likelihood = TRUE)
+print(Hab_NN1)
+plot(Hab_NN1, rep = "best")
+# https://uc-r.github.io/ann_classification
+#The error displayed in this plot is the cross-entropy error, which is a measure of the differences between the predicted and observed output for each of the observations in the Hab_Data data set.
+
+Hab_NN1_Train_Error <- Hab_NN1$result.matrix[1,1]
+paste("CE Error: ", round(Hab_NN1_Train_Error, 3)) 
+
+Hab_NN1_AIC <- Hab_NN1$result.matrix[4,1]
+paste("AIC: ", round(Hab_NN1_AIC,3))
+
+Hab_NN2_BIC <- Hab_NN1$result.matrix[5,1]
+paste("BIC: ", round(Hab_NN2_BIC, 3))
+
+set.seed(123)
+# 2-Hidden Layers, Layer-1 2-neurons, Layer-2, 1-neuron
+Hab_NN2 <- neuralnet(Match_Status ~  Age +  USMLE_Step_1_Score + Count_of_Poster_Presentation + Count_of_Oral_Presentation + Count_of_Articles_Abstracts + Count_of_Peer_Reviewed_Book_Chapter + Count_of_Other_than_Published + Count_of_Online_Publications, , 
+                     data = all_data1, 
+                     linear.output = FALSE, 
+                     err.fct = 'ce', 
+                     likelihood = 
+                       TRUE, hidden = c(2,1))
+
+# 2-Hidden Layers, Layer-1 2-neurons, Layer-2, 2-neurons
+set.seed(123)
+Hab_NN3 <- Hab_NN2 <- neuralnet(Match_Status ~  Age +  USMLE_Step_1_Score + Count_of_Poster_Presentation + Count_of_Oral_Presentation + Count_of_Articles_Abstracts + Count_of_Peer_Reviewed_Book_Chapter + Count_of_Other_than_Published + Count_of_Online_Publications, 
+                                data = all_data1, 
+                                linear.output = FALSE, 
+                                err.fct = 'ce', 
+                                likelihood = TRUE, 
+                                hidden = c(2,2))
+
+# 2-Hidden Layers, Layer-1 1-neuron, Layer-2, 2-neuron
+set.seed(123)
+Hab_NN4 <- Hab_NN2 <- neuralnet(Match_Status ~  Age +  USMLE_Step_1_Score + Count_of_Poster_Presentation + Count_of_Oral_Presentation + Count_of_Articles_Abstracts + Count_of_Peer_Reviewed_Book_Chapter + Count_of_Other_than_Published + Count_of_Online_Publications, 
+                                data = all_data1, 
+                                linear.output = FALSE, 
+                                err.fct = 'ce', 
+                                likelihood = TRUE, 
+                                hidden = c(1,2))
+
+# Bar plot of results
+Class_NN_ICs <- tibble('Network' = rep(c("NN1", "NN2", "NN3", "NN4"), each = 3), 
+                       'Metric' = rep(c('AIC', 'BIC', 'ce Error * 100'), length.out = 12),
+                       'Value' = c(Hab_NN1$result.matrix[4,1], Hab_NN1$result.matrix[5,1], 
+                                   100*Hab_NN1$result.matrix[1,1], Hab_NN2$result.matrix[4,1], 
+                                   Hab_NN2$result.matrix[5,1], 100*Hab_NN2$result.matrix[1,1],
+                                   Hab_NN3$result.matrix[4,1], Hab_NN3$result.matrix[5,1], 
+                                   100*Hab_NN3$result.matrix[1,1], Hab_NN4$result.matrix[4,1], 
+                                   Hab_NN4$result.matrix[5,1], 100*Hab_NN4$result.matrix[1,1]))
+
+Class_NN_ICs %>%
+  ggplot(aes(Network, Value, fill = Metric)) +
+  geom_col(position = 'dodge')  +
+  ggtitle("AIC, BIC, and Cross-Entropy Error of the Classification ANNs", "Note: ce Error displayed is 100 times its true value")
+
+
+
+
+
+
+
+#https://rpubs.com/ezgi/classification
+# train model with neural networks
+TrainingParameters <- trainControl(method = "repeatedcv", number = 10, repeats=10)
+
+NNModel <- caret::train(train[,-18], train$Match_Status,
+                 method = "nnet",
+                 trControl= TrainingParameters,
+                 preProcess=c("scale","center"),
+                 na.action = na.omit
+)
+
+print(NNModel)
+plot(NNModel)
+
+NNPredictions <-predict(NNModel, test)
+# Create confusion matrix
+cmNN <-confusionMatrix(NNPredictions, test$Match_Status)
 ```
 \pagebreak
 
@@ -3427,6 +3552,24 @@ model_1 <- glmnet(X, y, alpha = 1, family = "binomial", lambda = cv$lambda.1se)
 imin=which(cv$lambda==cv$lambda.1se)
 error[1]<-cv$cvm[imin]
 
+###????
+# tm_glmnet_model <- function (variables, model_number, error_number) { 
+#   #print("glmnet being created via custom function to test variable combinations.")
+# 
+#   error <- vector(mode = "list", length = 0)
+#   y<-train$Match_Status
+#   X<-model.matrix(Match_Status~(paste0(variables)), train )[,-1]
+# cv <- cv.glmnet(X, y, alpha=1, nfolds = 10,family="binomial",type.measure = "class")
+# 
+# model_number <- glmnet(X, y, alpha = 1, family = "binomial", lambda = cv$lambda.1se)
+# imin=which(cv$lambda==cv$lambda.1se)
+# 
+#   error[error_number]<-cv$cvm[imin]
+# }
+# tm_glmnet_model(variables = "Age+Gender+Couples_Match+white_non_white", 
+#                 model_number = "model_number_1", 
+#                 error_number = 1L)
+
 # ---------model 2---------------------------------------------------------------
 X<-model.matrix(Match_Status~US_or_Canadian_Applicant + USMLE_Step_1_Score + Age+Gender+white_non_white, train )[,-18]
 cv <- cv.glmnet(X, y, alpha=1,nfolds = 10,family="binomial",type.measure = "class")
@@ -3495,3 +3638,95 @@ Take a look at *error*.
 ```{r}
 error                               
 ```                  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
