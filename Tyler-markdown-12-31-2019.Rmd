@@ -473,6 +473,7 @@ set.seed(123)  # for reproducibility
 index_1 <- base::sample(1:nrow(all_data), round(nrow(all_data) * 0.8))
 train_1 <- all_data[index_1, ]
 test_1  <- all_data[-index_1, ]
+rm(test_1)
 
 # Using caret package
 set.seed(123)  # for reproducibility
@@ -488,6 +489,13 @@ train_3  <- rsample::training(split_1)
 test_3   <- rsample::testing(split_1)
 
 # Using h2o package
+# brew tap caskroom/versions
+# brew cask install java8
+
+# brew cask install adoptopenjdk8
+# brew tap adoptopenjdk/openjdk
+# brew cask install homebrew/cask-versions/adoptopenjdk8
+
 h2o::h2o.init()
 all_data.h2o <- h2o::as.h2o(all_data)
 split_2 <- h2o::h2o.splitFrame(all_data.h2o, ratios = 0.8, 
@@ -608,8 +616,8 @@ tm_chi_square_test(train$Medical_Degree)#Medical Degree is significant
 ```{r}
 cnum <- train[,c("Age", "USMLE_Step_1_Score")]
 cormat <- cor(cnum) # Select only numeric variables that are significant on univariate testing.  
-pairs(cnum)
-tm_print_save("significant_numeric_variable_correlation.tiff")
+pairs <- pairs(cnum)
+#tm_print_save("significant_numeric_variable_correlation.tiff")
 
 scatterplotMatrix(~Age+USMLE_Step_1_Score, data=train, main="Correlations of Numeric Variables in the Matching Data")
 
@@ -741,14 +749,14 @@ Create a Confusion Matrix
 test$Match_Status <- as.factor(test$Match_Status)
 
 Predprob <- stats::predict.glm(object = kitchen.sink, type = "response")
-plot(Predprob, jitter(as.numeric(Match_Status)))
+#plot(Predprob, jitter(as.numeric(Match_Status)))
 
 # test model
 ###Not working!!!
-prediction_test <- rms::Predict(x = kitchen.sink)
-prediction_categories <- ifelse(prediction_test > 0.5, 1, 0)
-confusion <- table(prediction_categories, test$Match_Status)
-(confusion.limited.vif.model.kitchen.sink <- caret::confusionMatrix(confusion, positive = "1"))
+# prediction_test <- rms::Predict(x = kitchen.sink)
+# prediction_categories <- ifelse(prediction_test > 0.5, 1, 0)
+# confusion <- table(prediction_categories, test$Match_Status)
+# (confusion.limited.vif.model.kitchen.sink <- caret::confusionMatrix(confusion, positive = "1"))
 ```
 
 Calculates the Brier score for the `kitchen.sink` model.  
@@ -809,10 +817,11 @@ Our model formula is intercept of `r round(coefficients[[1, 2]], digit=1)`+`r ro
 The r squared for model `lmfit2` is: `r round(summary.lmfit2[[8]], digit=3)`.  
 
 ```{r}
-prediction_test <- rms::Predict(x = lm.fit2)
-prediction_categories <- ifelse(prediction_test > 0.5, 1, 0)
-confusion <- table(prediction_categories, test$Match_Status)
-confusion
+# Not working with R Markdown ????
+# prediction_test <- rms::Predict(x = lm.fit2)
+# prediction_categories <- ifelse(prediction_test > 0.5, 1, 0)
+# confusion <- table(prediction_categories, test$Match_Status)
+# confusion
 ```
 
 
@@ -910,7 +919,14 @@ full_model <- glm(formula = formula, data = train, family = "binomial")
 # Use a forward stepwise algorithm to build a parsimonious model
 step_model <- stats::step(null_model, scope = list(lower = null_model, upper = full_model), direction = "forward")
 
-step_model$formula[[c(3)]]
+#Quitting from lines 941-942 (Tyler-markdown-12-31-2019.Rmd) 
+# Error in vapply(x, format_sci_one, character(1L), ..., USE.NAMES = FALSE) : 
+#   values must be length 1,
+#  but FUN(X[[2]]) result is length 3
+# Calls: <Anonymous> ... paste -> hook -> .inline.hook -> format_sci -> vapply
+# In addition: There were 48 warnings (use warnings() to see them)
+# Execution halted
+#step_model$formula[[c(3)]]
 
 # The chosen features by forward stepwise:  
 # US_or_Canadian_Applicant + USMLE_Step_1_Score + Medical_Degree + 
@@ -919,19 +935,19 @@ step_model$formula[[c(3)]]
 #     Count_of_Other_than_Published
 
 # Estimate the stepwise matching probability
-step_prob <- predict(step_model, type = "response")
+#step_prob <- predict(step_model, type = "response")
 
 # Plot the ROC of the stepwise model
-forwards_ROC <- pROC::roc(train$Match_Status, step_prob,
-    levels=c("1", "0"), direction = "auto")
-plot(forwards_ROC, col = "red", main="Forwards Stepwise Regression \n for Factor Selection")
-pROC::auc(forwards_ROC) 
+#forwards_ROC <- pROC::roc(train$Match_Status, step_prob,
+   # levels=c("1", "0"), direction = "auto")
+#plot(forwards_ROC, col = "red", main="Forwards Stepwise Regression \n for Factor Selection")
+#pROC::auc(forwards_ROC) 
 
-tm_print_save("forward_ROC.tiff")
+#tm_print_save("forward_ROC.tiff")
 ```
-Fowards step-wise regression model step_model has an AUC of `r round(pROC::auc(forwards_ROC)[[1]], digits=2) ` using these predictors `r step_model$formula[[c(3)]]`
 
-Try BACKWARDS stepwise regression here:  
+
+Try BACKWARDS stepwise regression here:
 ```{r, echo=TRUE, include = FALSE}
 #BACKWARDS regression!!  #https://campus.datacamp.com/courses/supervised-learning-in-r-classification/chapter-3-logistic-regression?ex=15
 # Specify a null model with no predictors
@@ -2819,17 +2835,7 @@ tm_print_save("XGBoost_Feature_Importance.tiff")
 # 7a)  Model: Neural Network
 ```{r}
 ##https://www.datacamp.com/community/tutorials/neural-network-models-r
-
-install.packages("neuralnet")
-# load library
-require(neuralnet)
-
-
-
-# fit neural network
-nn=neuralnet(Match_Status ~ white_non_white + Age + Gender + Couples_Match + US_or_Canadian_Applicant + Medical_Education_Interrupted + Alpha_Omega_Alpha + Military_Service_Obligation + USMLE_Step_1_Score + Visa_Sponsorship_Needed + Count_of_Poster_Presentation + Count_of_Oral_Presentation + Count_of_Articles_Abstracts + Count_of_Peer_Reviewed_Book_Chapter + Count_of_Other_than_Published + Count_of_Online_Publications + Visa_Sponsorship_Needed + Medical_Degree,
-             data=train1, hidden=3,act.fct = "logistic",
-                linear.output = FALSE)
+#A neural network is not going to work because most of our variables are nominal instead of numeric.
 ```
 
 # 8) Model: Ensembles model
@@ -3026,167 +3032,6 @@ auto_ml@leaderboard %>%
   dplyr::select(model_id, auc) %>%
   dplyr::slice(1:10)
 ```
-
-
-# 9) Model: Deep Learning model
-```{r}
-head(all_data)
-
-all_data1 <- all_data %>% select(Age, USMLE_Step_1_Score, Count_of_Articles_Abstracts, Count_of_Poster_Presentation, Count_of_Online_Publications, Count_of_Oral_Presentation, Count_of_Other_than_Published, Count_of_Peer_Reviewed_Book_Chapter, Match_Status)
-head(all_data1)
-
-#all_data1 <- all_data %>% as.numeric(as.character())
-#  mutate_if(is.factor, is.numeric)
-#library(varhandle)
-#unfactor(all_data$white_non_white) %>% class()
-#as.numeric(levels(all_data$white_non_white)[all_data$white_non_white])
-
-#head(all_data1)
-# library(data.table)
-# library(mltools)
-# customers_1h <- one_hot(as.data.table(all_data))
-# all_data1 <- customers_1h
-#https://www.datacamp.com/community/tutorials/neural-network-models-r
-## Scale data for neural network
-#https://www.analyticsvidhya.com/blog/2017/09/creating-visualizing-neural-network-in-r/
-#https://uc-r.github.io/ann_regression
-
-# max = apply(all_data1, 2 , max)
-# min = apply(all_data1, 2 , min)
-# scaled = as.data.frame(scale(all_data1, center = min, scale = max - min))
-
-#all_data1 <- scaled
-
-data_split <- rsample::initial_split(data = all_data, 
-                                     strata = "Match_Status", 
-                                     prop = 0.8)
-
-train <- data_split %>% training() %>% glimpse()  # Extract the training dataframe
-# write_csv(x = train, 
-#           path = (here::here("results", "train_at_data_split_phase.csv")), 
-#           col_names = TRUE)
-# training_data_plot_hist_facet <- plot_hist_facet(data = train)
-# training_data_plot_hist_facet
-
-test <- data_split %>% testing() %>% glimpse() # Extra
-# write_csv(x = test, 
-#           path = (here::here("results", "test_at_data_split_phase.csv")), 
-#           col_names = TRUE)
-
-# install package
-#install.packages("neuralnet")
-library(neuralnet)
-# Here, you will combine multiple columns or features into a single set of data
-
-# load library
-require(neuralnet)
-
-scale01 <- function(x){
-  (x - min(x)) / (max(x) - min(x))
-}
-
-glimpse(all_data1)
-
-Hab_Data <- all_data1 %>% 
-  #mutate_if(is.factor, is.numeric) %>%
-  mutate(Age = scale01(Age), 
-         USMLE_Step_1_Score = scale01(USMLE_Step_1_Score), 
-         Count_of_Poster_Presentation = scale01(Count_of_Poster_Presentation), 
-         Count_of_Oral_Presentation = scale01(Count_of_Oral_Presentation),
-         Count_of_Articles_Abstracts = scale01(Count_of_Articles_Abstracts),
-         Count_of_Peer_Reviewed_Book_Chapter = scale01(Count_of_Peer_Reviewed_Book_Chapter),
-         Count_of_Other_than_Published = scale01(Count_of_Other_than_Published),
-         Count_of_Online_Publications = scale01(Count_of_Online_Publications),
-         Match_Status = as.numeric(Match_Status)-1)
-Hab_Data %>% glimpse()
-
-
-set.seed(123)
-Hab_NN1 <- neuralnet(Match_Status ~  Age +  USMLE_Step_1_Score + Count_of_Poster_Presentation + Count_of_Oral_Presentation + Count_of_Articles_Abstracts + Count_of_Peer_Reviewed_Book_Chapter + Count_of_Other_than_Published + Count_of_Online_Publications, 
-                     data = all_data1, 
-                     linear.output = TRUE, 
-                     err.fct = 'ce', 
-                     likelihood = TRUE)
-print(Hab_NN1)
-plot(Hab_NN1, rep = "best")
-# https://uc-r.github.io/ann_classification
-#The error displayed in this plot is the cross-entropy error, which is a measure of the differences between the predicted and observed output for each of the observations in the Hab_Data data set.
-
-Hab_NN1_Train_Error <- Hab_NN1$result.matrix[1,1]
-paste("CE Error: ", round(Hab_NN1_Train_Error, 3)) 
-
-Hab_NN1_AIC <- Hab_NN1$result.matrix[4,1]
-paste("AIC: ", round(Hab_NN1_AIC,3))
-
-Hab_NN2_BIC <- Hab_NN1$result.matrix[5,1]
-paste("BIC: ", round(Hab_NN2_BIC, 3))
-
-set.seed(123)
-# 2-Hidden Layers, Layer-1 2-neurons, Layer-2, 1-neuron
-Hab_NN2 <- neuralnet(Match_Status ~  Age +  USMLE_Step_1_Score + Count_of_Poster_Presentation + Count_of_Oral_Presentation + Count_of_Articles_Abstracts + Count_of_Peer_Reviewed_Book_Chapter + Count_of_Other_than_Published + Count_of_Online_Publications, , 
-                     data = all_data1, 
-                     linear.output = FALSE, 
-                     err.fct = 'ce', 
-                     likelihood = 
-                       TRUE, hidden = c(2,1))
-
-# 2-Hidden Layers, Layer-1 2-neurons, Layer-2, 2-neurons
-set.seed(123)
-Hab_NN3 <- Hab_NN2 <- neuralnet(Match_Status ~  Age +  USMLE_Step_1_Score + Count_of_Poster_Presentation + Count_of_Oral_Presentation + Count_of_Articles_Abstracts + Count_of_Peer_Reviewed_Book_Chapter + Count_of_Other_than_Published + Count_of_Online_Publications, 
-                                data = all_data1, 
-                                linear.output = FALSE, 
-                                err.fct = 'ce', 
-                                likelihood = TRUE, 
-                                hidden = c(2,2))
-
-# 2-Hidden Layers, Layer-1 1-neuron, Layer-2, 2-neuron
-set.seed(123)
-Hab_NN4 <- Hab_NN2 <- neuralnet(Match_Status ~  Age +  USMLE_Step_1_Score + Count_of_Poster_Presentation + Count_of_Oral_Presentation + Count_of_Articles_Abstracts + Count_of_Peer_Reviewed_Book_Chapter + Count_of_Other_than_Published + Count_of_Online_Publications, 
-                                data = all_data1, 
-                                linear.output = FALSE, 
-                                err.fct = 'ce', 
-                                likelihood = TRUE, 
-                                hidden = c(1,2))
-
-# Bar plot of results
-Class_NN_ICs <- tibble('Network' = rep(c("NN1", "NN2", "NN3", "NN4"), each = 3), 
-                       'Metric' = rep(c('AIC', 'BIC', 'ce Error * 100'), length.out = 12),
-                       'Value' = c(Hab_NN1$result.matrix[4,1], Hab_NN1$result.matrix[5,1], 
-                                   100*Hab_NN1$result.matrix[1,1], Hab_NN2$result.matrix[4,1], 
-                                   Hab_NN2$result.matrix[5,1], 100*Hab_NN2$result.matrix[1,1],
-                                   Hab_NN3$result.matrix[4,1], Hab_NN3$result.matrix[5,1], 
-                                   100*Hab_NN3$result.matrix[1,1], Hab_NN4$result.matrix[4,1], 
-                                   Hab_NN4$result.matrix[5,1], 100*Hab_NN4$result.matrix[1,1]))
-
-Class_NN_ICs %>%
-  ggplot(aes(Network, Value, fill = Metric)) +
-  geom_col(position = 'dodge')  +
-  ggtitle("AIC, BIC, and Cross-Entropy Error of the Classification ANNs", "Note: ce Error displayed is 100 times its true value")
-
-
-
-
-
-
-
-#https://rpubs.com/ezgi/classification
-# train model with neural networks
-TrainingParameters <- trainControl(method = "repeatedcv", number = 10, repeats=10)
-
-NNModel <- caret::train(train[,-18], train$Match_Status,
-                 method = "nnet",
-                 trControl= TrainingParameters,
-                 preProcess=c("scale","center"),
-                 na.action = na.omit
-)
-
-print(NNModel)
-plot(NNModel)
-
-NNPredictions <-predict(NNModel, test)
-# Create confusion matrix
-cmNN <-confusionMatrix(NNPredictions, test$Match_Status)
-```
 \pagebreak
 
 # Model Comparison
@@ -3236,7 +3081,6 @@ Given the fact that all three models have decent public scores, especially the c
 
 
 \pagebreak
-
 ```{r NOMOGRAM,  fig.width=7, fig.asp=1}
 ###NOMOGRAM
 d <- rms::datadist(test)
@@ -3409,30 +3253,7 @@ utils::sessionInfo()
 # rsconnect::deployApp('DynNomapp/')
 ```
 
-# Render Web Site
-```{r}
-#https://bookdown.org/yihui/rmarkdown/websites.html
-#Ideally I want to get the rmarkdown file to be uploaded to a web site like Michael did for his project.  Extra and optional.  
-
-# from CRAN
-install.packages("blogdown")
-library(blogdown)
-
-#blogdown::new_site()
-blogdown::serve_site()
-
-#Publish to a website
-rmarkdown::render_site()
-
-# list which files will be removed
-rmarkdown::clean_site(preview = TRUE)
-
-# actually remove the files
-rmarkdown::clean_site()
-```
-
-
-## Evaluate Algorithms to create a model
+# Evaluate Algorithms to create a model
 ```{r}
 #https://github.com/shriyarp/IndianLiverPatient/blob/master/indianLiverPatientsReport.Rmd
 control <- trainControl(method="cv", number=10)
@@ -3473,7 +3294,7 @@ dotplot(results)
 tm_print_save(filename = "dotplot_results.tiff")
 ```
 
-## Make Predictions
+# Make Predictions
 We can now proceed to make predictions based on the RandomForest
 ```{r}
 #predict 
@@ -3638,95 +3459,3 @@ Take a look at *error*.
 ```{r}
 error                               
 ```                  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
