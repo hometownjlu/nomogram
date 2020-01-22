@@ -120,7 +120,8 @@ create_profiling_num <-
 #Create a dataframe of independent and dependent variables. 
 ## Here are the data for download
 URL<- paste0("https://www.dropbox.com/s/qbykb8sl2c8z3me/", (data_file), "?raw=1") #This works
-download.file(url = URL, destfile = paste0(data_file), method = "curl") #this works
+download.file(url = URL, destfile = paste0(data_file), method = "wget") #this works
+#wget (http://www.gnu.org/software/wget/) is commonly installed on Unix-alikes (but not macOS).
 
 
 #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
