@@ -92,12 +92,13 @@ Packrat is in use to control package versions and a packrat.lock file is posted 
 cat("\014")  #Clear console
 # I want to use packrate to make the project more: isolated, portable and reproducible.  Please see packrat/packrat.lock for a list of the precise packages used and their versions.  Be sure to check in the .Rprofile, packrat.lock files, and everything under packrat/src/. 
 packrat::packrat_mode(on = TRUE)
-#packrat::status()
-#packrat::clean()
+packrat::status()
+packrat::clean()
 #packrat::restore()
-#packrat::snapshot(infer.dependencies = TRUE)  #Run each time a new library is installed.
+#packrat::snapshot(infer.dependencies = FALSE, snapshot.sources = FALSE, ignore.stale = TRUE)  #Run each time a new library is installed.
+
 #packrat::bundle(include.lib = TRUE, include.src = TRUE, omit.cran.src = TRUE)  #Use this for portability
-#Michael the packrat library bundle is saved at: https://www.dropbox.com/s/k32f438gdw3iq8v/nomogram-2020-01-08.tar.gz?dl=0.  
+#Bundle is stored in packrat/bundles/***.tar.gz
 
 options(tinytex.verbose = FALSE)
 library(knitr)
@@ -333,10 +334,12 @@ s
 ```
 
 # Cross plots of predictors by outcome
-```{r funModeling4, echo=TRUE, message=FALSE, warning=TRUE, include=TRUE, out.width="75%", cache = TRUE}
-DataExplorer::plot_boxplot(all_data, by = "Match_Status", nrow = 2L, ncol = 2L)
+```{r funModeling4, echo=TRUE, message=FALSE, warning=TRUE, include=TRUE, out.width="75%"}
+#Not working with markdown
+
+#DataExplorer::plot_boxplot(all_data, by = "Match_Status", nrow = 2L, ncol = 2L)
 #Shows the variable frequency charted by matching status
-create_plot_cross_plot(all_data)   
+#create_plot_cross_plot(all_data)   
 ```
 
 Here is the code that I used for the cubic splines and it pushed the VIF through the roof below.  I need help with this part.  
@@ -618,8 +621,6 @@ cnum <- train[,c("Age", "USMLE_Step_1_Score")]
 cormat <- cor(cnum) # Select only numeric variables that are significant on univariate testing.  
 pairs <- pairs(cnum)
 #tm_print_save("significant_numeric_variable_correlation.tiff")
-
-scatterplotMatrix(~Age+USMLE_Step_1_Score, data=train, main="Correlations of Numeric Variables in the Matching Data")
 
 corrplot::corrplot(cormat, method="circle")
 corrplot::corrplot(cormat, method="circle", addCoef.col="black") # With correlation 
@@ -976,9 +977,9 @@ backwards_ROC <- pROC::roc(train$Match_Status, back_step_prob,
     levels=c("1", "0"), direction = "auto")
 plot(backwards_ROC, col = "red", main="Backwards Stepwise Regression \n for Feature Selection")
 pROC::auc(backwards_ROC) 
-```
-BACKWARDS step-wise regression model `step_model` has an AUC of `r round(pROC::auc(backwards_ROC)[[1]], digits=2) ` using these predictors `r back_step_model$formula[[c(3)]]`
 
+# BACKWARDS step-wise regression model `step_model` has an AUC of `r round(pROC::auc(backwards_ROC)[[1]], digits=2) ` using these predictors `r back_step_model$formula[[c(3)]]`
+```
 
 Not working with HTML knitr
 
@@ -1027,7 +1028,7 @@ res.pca <- prcomp(numeric_data, scale = TRUE)
 library(factoextra)
 factoextra::fviz_eig(res.pca)  #Visualize eigenvalues (scree plot). Show the percentage of variances explained by each principal component.
 
-tm_print_save("scree_plot_PCA.tiff")
+#tm_print_save("scree_plot_PCA.tiff")
 
 #Graph of individuals. Individuals with a similar profile are grouped together.
 factoextra::fviz_pca_ind(res.pca,
@@ -1035,7 +1036,7 @@ factoextra::fviz_pca_ind(res.pca,
              gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
              repel = TRUE     # Avoid text overlapping
              )
-tm_print_save("individuals_plot_PCA.tiff")
+#tm_print_save("individuals_plot_PCA.tiff")
 
 # #Graph of variables. Positive correlated variables point to the same side of the plot. Negative correlated variables point to opposite sides of the graph.
 factoextra::fviz_pca_var(res.pca,
@@ -1043,14 +1044,14 @@ factoextra::fviz_pca_var(res.pca,
              gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
              repel = TRUE     # Avoid text overlapping
              )
-tm_print_save("graph_of_vars_plot_PCA.tiff")
+#tm_print_save("graph_of_vars_plot_PCA.tiff")
 
 #Biplot of individuals and variables
 factoextra::fviz_pca_biplot(res.pca, repel = TRUE,
                 col.var = "#2E9FDF", # Variables color
                 col.ind = "#696969"  # Individuals color
                 )
-tm_print_save("barpot_plot_PCA.tiff")
+#tm_print_save("barpot_plot_PCA.tiff")
 
 # Eigenvalues
 eig.val <- get_eigenvalue(res.pca)
@@ -1072,6 +1073,7 @@ res.ind$cos2           # Quality of representation
 #https://bradleyboehmke.github.io/HOML/pca.html
 
 # convert data to h2o object
+h2o::h2o.init()
 my_basket.h2o <- as.h2o(all_data)
 
 # run PCA
@@ -1334,7 +1336,6 @@ test$Match_Status <-
 #test$Match_Status
 
 #Levels of the target outcome variable for glmnet need to be words and not numbers.
-# They also need to be fucking words with no spaces.  Jesus Christ.  
 levels(train$Match_Status) <-
   c("No.Match", "Matched")
 
@@ -2358,7 +2359,7 @@ n_features <- length(setdiff(names(train), "Match_Status"))
 
 # By default, ranger sets the mtry parameter to floor (√number of features); however, for regression problems the preferred mtry to start with is floor  number of features divided by 3)
 
-train_rf1 <- ranger(
+train_rf1 <- ranger::ranger(
   Match_Status ~ ., 
   data = train,
   mtry = floor(n_features / 3),
@@ -3225,7 +3226,7 @@ DynNom.model.lrm  <-
            y= TRUE)
 
 #### Turn this on to start the shiny model.  
-#DynNom::DynNom(model = DynNom.model.lrm, data = test,  clevel = 0.95)
+DynNom::DynNom(model = DynNom.model.lrm, data = test,  clevel = 0.95)
 ```
 
 
