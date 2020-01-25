@@ -92,7 +92,7 @@ Packrat is in use to control package versions and a packrat.lock file is posted 
 cat("\014")  #Clear console
 # I want to use packrate to make the project more: isolated, portable and reproducible.  Please see packrat/packrat.lock for a list of the precise packages used and their versions.  Be sure to check in the .Rprofile, packrat.lock files, and everything under packrat/src/. 
 packrat::packrat_mode(on = TRUE)
-packrat::status()
+#packrat::status()
 packrat::clean()
 #packrat::restore()
 #packrat::snapshot(infer.dependencies = FALSE, snapshot.sources = FALSE, ignore.stale = TRUE)  #Run each time a new library is installed.
@@ -587,7 +587,6 @@ corr.m <- cor(numeric_data)
 highly.corr <- findCorrelation(corr.m, cutoff = thres)
 highly.corr
 data.clean <- numeric_data[,-highly.corr]
-
 ```
 None of the numeric data are correlated to each other.  So we can't remove any numeric features because they are not highly correlated.  
 
@@ -896,7 +895,7 @@ Evaluating the signficance of kitchen.sink variables
 tm_chart_strength_of_variables(limited.vif.model.kitchen.sink)
 ```
 
-# Factor Selection using Forward/Backwards Regression
+# Factor Selection using Forward/Backwards Regression via Variable Importantce
 https://livebook.datascienceheroes.com/selecting-best-variables.html
 
 A predictive model with a high number of variables will tend to do overfitting. While on the other hand, a model with a low number of variables will lead to doing underfitting.
@@ -959,15 +958,6 @@ full_model <- glm(formula = formula, data = train, family = "binomial")
 
 # Use a forward stepwise algorithm to build a parsimonious model
 back_step_model <- stats::step(full_model, scope = list(lower = null_model, upper = full_model), direction = "backward")
-
-# Selected factors:  
-# white_non_white + Age + Gender + Couples_Match + US_or_Canadian_Applicant + 
-#     Medical_Education_Interrupted + Alpha_Omega_Alpha + Military_Service_Obligation + 
-#     USMLE_Step_1_Score + Visa_Sponsorship_Needed + Count_of_Poster_Presentation + 
-#     Count_of_Oral_Presentation + Count_of_Articles_Abstracts + 
-#     Count_of_Peer_Reviewed_Book_Chapter + Count_of_Other_than_Published + 
-#     Count_of_Online_Publications + Visa_Sponsorship_Needed + 
-#     Medical_Degree
 
 # Estimate the stepwise matching probability
 back_step_prob <- predict(back_step_model, data = test, type = "response")  #train or test data here?
@@ -1306,7 +1296,7 @@ plot(BorutaImportance)
 tm_print_save("Boruta_Variable_Importance.tiff")
 ```
 
-# Factor Selection: GLMNet to do factor selection with the previously made LASSO model
+# Feature Selection: GLMNet to do factor selection with the previously made LASSO model
 Regularization methods provide a means to constrain or regularize the estimated coefficients, which can reduce the variance and decrease out of sample error.
 
 The glmnet package is extremely efficient and fast, even on very large data sets (mostly due to its use of Fortran to solve the lasso problem via coordinate descent); note, however, that it only accepts the non-formula XY interface so prior to modeling we need to separate our feature and target sets.
@@ -2848,6 +2838,7 @@ library(recipes)   # for minor feature engineering tasks
 
 # Modeling packages
 library(h2o)       # for fitting stacked models
+gc()
 ```
 
 ```{r Load and split the data}
@@ -2857,7 +2848,7 @@ split <- initial_split(all_data, strata = "Match_Status")
 train <- training(split)
 test <- testing(split)
 
-# Make sure we have consistent categorical levels
+# Ma ke sure we have consistent categorical levels
 blueprint <- recipe(Match_Status~., data = train) %>%
   step_other(all_nominal(), threshold = 0.005)
 
@@ -2878,16 +2869,15 @@ X <- setdiff(names(train), Y)  #Why are we using ames_train ???????
 
 ```{r Train & cross-validate mutliple models}
 # Train & cross-validate a GLM model
- # best_glm <- h2o.glm(
- #   x = X, y = Y, training_frame = train_h2o, alpha = 0.1,
- #   remove_collinear_columns = TRUE, nfolds = 5, fold_assignment = "Modulo",  #nfolds was 10 originally
- #   keep_cross_validation_predictions = TRUE, seed = 123
- # )
+ best_glm <- h2o.glm(
+   x = X, y = Y, training_frame = train_h2o, alpha = 0.1,
+   remove_collinear_columns = TRUE, nfolds = 10, fold_assignment = "Modulo",  #nfolds was 10 originally
+   keep_cross_validation_predictions = TRUE, seed = 123
+ )
 
 # Train & cross-validate a RF model
 best_rf <- h2o.randomForest(
-  x = X, y = Y, training_frame = train_h2o, ntrees = 100, mtries = 1,
-  #  x = X, y = Y, training_frame = train_h2o, ntrees = 1000, mtries = 10,  #original
+  x = X, y = Y, training_frame = train_h2o, ntrees = 1000, mtries = 10,  #original
   max_depth = 30, min_rows = 1, sample_rate = 0.8, nfolds = 3,
   fold_assignment = "Modulo", keep_cross_validation_predictions = TRUE,
   seed = 123, stopping_rounds = 50, stopping_metric = "AUC",
@@ -2898,10 +2888,8 @@ saveRDS(best_rf, (here::here("Saved_Models", "best_rf.rds")))
 
 # Train & cross-validate a GBM model
 best_gbm <- h2o.gbm(
-  x = X, y = Y, training_frame = train_h2o, ntrees = 100, learn_rate = 0.01,
-  #x = X, y = Y, training_frame = train_h2o, ntrees = 5000, learn_rate = 0.01, #original
-  max_depth = 7, min_rows = 5, sample_rate = 0.8, nfolds = 3,
-  #  max_depth = 7, min_rows = 5, sample_rate = 0.8, nfolds = 10, #original
+  x = X, y = Y, training_frame = train_h2o, ntrees = 5000, learn_rate = 0.01, #original
+  max_depth = 7, min_rows = 5, sample_rate = 0.8, nfolds = 10, #original
   fold_assignment = "Modulo", keep_cross_validation_predictions = TRUE,
   seed = 123, stopping_rounds = 50, stopping_metric = "AUC",
   stopping_tolerance = 0
@@ -2978,14 +2966,14 @@ search_criteria <- list(
 
 #Not working, Illegal argument: training_frame of function: grid: Cannot append new models to a grid with different training input
 
-# random_grid <- h2o.grid(
-#   algorithm = "rf", grid_id = "rf_grid", x = X, y = Y,
-#   training_frame = train_h2o, hyper_params = hyper_grid,
-#   search_criteria = search_criteria, ntrees = 5000, stopping_metric = "AUC",     
-#   stopping_rounds = 10, stopping_tolerance = 0, nfolds = 10, 
-#   fold_assignment = "Modulo", keep_cross_validation_predictions = TRUE,
-#   seed = 123
-# )
+random_grid <- h2o.grid(
+  algorithm = "gbm", grid_id = "gbm_grid", x = X, y = Y,
+  training_frame = train_h2o, hyper_params = hyper_grid,
+  search_criteria = search_criteria, ntrees = 5000, stopping_metric = "AUC",
+  stopping_rounds = 10, stopping_tolerance = 0, nfolds = 10,
+  fold_assignment = "Modulo", keep_cross_validation_predictions = TRUE,
+  seed = 123
+)
 ```
 
 ```{r Sort results by RMSE}
