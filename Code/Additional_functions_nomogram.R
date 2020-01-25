@@ -10,24 +10,25 @@
 #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
 # Directory Paths for Data and Results
 #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
+setwd("~/Dropbox/Nomogram/nomogram")
 
 #Builds the file directory structure necessary for the project
-# getwd()
-# library(fs)
-# make_project_dir <- function() {
-#     
-#     dir_names <- c("Code",
-#         "results",
-#         "tables",
-#         "Saved_Models")
-#     dir_create(dir_names)
-#     dir_ls()
-# }
-# make_project_dir()
-#system("ls ..")
+library(fs)
+make_project_dir <- function() {
 
-data_folder <- paste0(getwd(), "/Data/")
-results_folder <- paste0(getwd(), "/Results/")
+    dir_names <- c("Code",
+        "results",
+        "tables",
+        "Saved_Models")
+    dir_create(dir_names)
+    dir_ls()
+}
+if(!"Code" %in% list.files())
+make_project_dir()
+system("ls ..")
+
+data_folder <- paste0(getwd(), "/data/")
+results_folder <- paste0(getwd(), "/results/")
 
 #data_file <- "all_years_mutate_124.csv"
 data_file <- "all_years_filter_112.rds" 
@@ -38,14 +39,25 @@ data_file <- "all_years_filter_112.rds"
 # Set  libPaths.
 .libPaths("/Users/tylermuffly/.exploratory/R/3.6")
 
-pkg <- (c('R.methodsS3', 'caret', 'readxl', 'XML', 'reshape2', 'devtools', 'purrr', 'readr', 'ggplot2', 'dplyr', 'magick', 'janitor', 'lubridate', 'hms', 'tidyr', 'stringr', 'openxlsx', 'forcats', 'RcppRoll', 'tibble', 'bit64', 'munsell', 'scales', 'rgdal', 'tidyverse', "foreach", "PASWR", "rms", "pROC", "ROCR", "nnet", "packrat", "DynNom", "export", "caTools", "mlbench", "randomForest", "ipred", "xgboost", "Metrics", "RANN", "AppliedPredictiveModeling", "nomogramEx", "shiny", "earth", "fastAdaboost", "Boruta", "glmnet", "ggforce", "tidylog", "InformationValue", "pscl", "scoring", "DescTools", "gbm", "Hmisc", "arsenal", "pander", "moments", "leaps", "MatchIt", "car", "mice", "rpart", "beepr", "fansi", "utf8", "zoom", "lmtest", "ResourceSelection", "rmarkdown", "rattle", "rmda", "funModeling", "tinytex", "caretEnsemble", "Rmisc", "corrplot", "progress", "perturb", "vctrs", "highr", "labeling", "DataExplorer", "rsconnect", "inspectdf", "ggpubr", "tableone", "knitr", "drake", "visNetwork", "rpart.plot", "RColorBrewer", "kableExtra", "kernlab", "naivebayes", "e1071", "data.table", "skimr", "naniar", "english", "mosaic", "broom", "mltools", "tidymodels", "tidyquant", "rsample", "yardstick", "parsnip", "tensorflow", "keras", "sparklyr", "dials", "cowplot", "lime", "flexdashboard", "shinyjs", "shinyWidgets", "plotly", "BH", "vip", "ezknitr", "here", "usethis", "corrgram", "BiocManager", "factoextra", "parallel", "doParallel", "GA", "PCAtools", "odbc", "RSQLite", "discrim", "doMC",  "summarytools", "remotes", "fs", "PerformanceAnalytics", "correlationfunnel", "psych", "h2o", "ranger"))
+list.of.packages <- (c('R.methodsS3', 'caret', 'readxl', 'XML', 'reshape2', 'devtools', 'purrr', 'readr', 'ggplot2', 'dplyr', 'magick', 'janitor', 'lubridate', 'hms', 'tidyr', 'stringr', 'openxlsx', 'forcats', 'RcppRoll', 'tibble', 'bit64', 'munsell', 'scales', 'rgdal', 'tidyverse', "foreach", "PASWR", "rms", "pROC", "ROCR", "nnet", "packrat", "DynNom", "export", "caTools", "mlbench", "randomForest", "ipred", "xgboost", "Metrics", "RANN", "AppliedPredictiveModeling", "nomogramEx", "shiny", "earth", "fastAdaboost", "Boruta", "glmnet", "ggforce", "tidylog", "InformationValue", "pscl", "scoring", "DescTools", "gbm", "Hmisc", "arsenal", "pander", "moments", "leaps", "MatchIt", "car", "mice", "rpart", "beepr", "fansi", "utf8", "zoom", "lmtest", "ResourceSelection", "rmarkdown", "rattle", "rmda", "funModeling", "tinytex", "caretEnsemble", "Rmisc", "corrplot", "progress", "perturb", "vctrs", "highr", "labeling", "DataExplorer", "rsconnect", "inspectdf", "ggpubr", "tableone", "knitr", "drake", "visNetwork", "rpart.plot", "RColorBrewer", "kableExtra", "kernlab", "naivebayes", "e1071", "data.table", "skimr", "naniar", "english", "mosaic", "broom", "mltools", "tidymodels", "tidyquant", "rsample", "yardstick", "parsnip", "tensorflow", "keras", "sparklyr", "dials", "cowplot", "lime", "flexdashboard", "shinyjs", "shinyWidgets", "plotly", "BH", "vip", "ezknitr", "here", "usethis", "corrgram", "BiocManager", "factoextra", "parallel", "doParallel", "GA", "PCAtools", "odbc", "RSQLite", "discrim", "doMC",  "summarytools", "remotes", "fs", "PerformanceAnalytics", "correlationfunnel", "psych", "h2o", "ranger", "readr"))
+
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
 
 #install.packages(pkg,dependencies = c("Depends", "Suggests", "Imports", "LinkingTo"), repos = "https://cloud.r-project.org")  #run this first time
-lapply(pkg, require, character.only = TRUE)
+lapply(list.of.packages, require, character.only = TRUE)
 doMC::registerDoMC(cores = detectCores()-1) #Use multiple cores for processing
 
 #BiocManager::install('PCAtools')
 #http://yabas.net/blog/install-latex-on-mac-with-brew/
+
+#brew install cask
+#brew install wget
+#brew cask install basictex
+#brew install pandoc
+#brew install pkg-config
+
+
 
 #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
 # Package functions customization
@@ -120,8 +132,15 @@ create_profiling_num <-
 #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
 #Create a dataframe of independent and dependent variables. 
 ## Here are the data for download
-URL<- paste0("https://www.dropbox.com/s/qbykb8sl2c8z3me/", (data_file), "?raw=1") #This works
-download.file(url = URL, destfile = paste0(data_file), method = "wget") #this works
+
+data_file <- "all_years_filter_112.rds" 
+# Download list of payer types
+if(!file.exists(data_file)){
+  data_file <- readr::read_rds("https://www.dropbox.com/s/bip689v3btdjoxz/all_years_filter_112.rds?dl=1") 
+  readr::write_rds(data_file, path = data_folder)
+} else {
+  raw_data <- read_rds(data_file) 
+}
 #wget (http://www.gnu.org/software/wget/) is commonly installed on Unix-alikes (but not macOS).
 
 
