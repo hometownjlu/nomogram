@@ -1286,6 +1286,9 @@ Boruta::attStats(boruta_output)
 # Get significant variables including tentatives
 boruta_signif <-Boruta::getSelectedAttributes(boruta_output, withTentative = TRUE)
 print(boruta_signif)  
+boruta_signif1 <- as_tibble(boruta_signif)
+write_csv(boruta_signif1, (here::here("results", "boruta_signif.csv")))
+
 roughFixMod <- TentativeRoughFix(boruta_output)  # Do a tentative rough fix
 boruta_signif <- getSelectedAttributes(roughFixMod)
 
@@ -3432,3 +3435,32 @@ Take a look at *error*.
 error                               
 ```                  
 
+# Evaluate Algorithms to create a model
+```{r}
+#https://github.com/shriyarp/IndianLiverPatient/blob/master/indianLiverPatientsReport.Rmd
+control <- trainControl(method="cv", number=10)
+#Quadratic Discriminant Analysis
+set.seed(4)
+fit.qda <- caret::train(Match_Status~., data=test, method="qda", trControl=control)
+#AdaBoost Classification Trees
+set.seed(4)
+fit.ab <- caret::train(Match_Status~., data=test, method="adaboost", trControl=control)
+#Naive Bayes
+set.seed(4)
+fit.nb <- caret::train(Match_Status~., data=test, method="naive_bayes", trControl=control)
+# Linear Discriminant Analysis
+set.seed(4)
+fit.lda <- caret::train(Match_Status~., data=test, method="lda",  trControl=control)
+# CART
+set.seed(4)
+fit.cart <- caret::train(Match_Status~., data=test, method="rpart",  trControl=control)
+# K-nearest neighbours
+set.seed(4)
+fit.knn <- caret::train(Match_Status~., data=test, method="knn",  trControl=control)
+# Support Vector Machines with Radial Basis Function Kernel
+set.seed(4)
+fit.svm <- caret::train(Match_Status~., data=test, method="svmRadial",  trControl=control)
+# Random Forest
+set.seed(4)
+fit.rf <- caret::train(Match_Status~., data=test, method="rf",  trControl=control)
+```
