@@ -188,6 +188,7 @@ drivers <- c("white_non_white",
              "Count_of_Other_than_Published",
              "Count_of_Online_Publications",
              "Visa_Sponsorship_Needed",
+             "Medical_School_Type",
              "Medical_Degree")
 
 #Writing the name of dependent variable seperately
@@ -3178,42 +3179,6 @@ Needed
 References
 ===============================================================================
 
-# DynNom Model for Shiny Upload
-```{r DynNom logistic regression model}
-library(dplR)
-DynNom.model.lrm  <-
-  rms::lrm(Match_Status ~
-             rms::rcs(Age, 5) +
-             Gender +
-             US_or_Canadian_Applicant +
-             rms::rcs(USMLE_Step_1_Score, 4) +
-             white_non_white +
-             Alpha_Omega_Alpha +
-             Count_of_Oral_Presentation +
-             Count_of_Peer_Reviewed_Book_Chapter +
-             Couples_Match +
-             Medical_Degree +
-             Military_Service_Obligation +
-             Visa_Sponsorship_Needed,
-                   data = test,
-           x = TRUE,
-           y= TRUE)
-
-#### Turn this on to start the shiny model.  
-DynNom::DynNom(model = DynNom.model.lrm, data = test,  clevel = 0.95)
-```
-
-
-```{r generalized logistic regression, include=FALSE, echo=TRUE, cache=FALSE}
-DynNom.model.glm <- stats::glm(formula = formula,
-                        family = "binomial",  #Removed the relax cubic splines for age and USMLE step 1
-                        data = test, x = TRUE, y= TRUE)
-summary(DynNom.model.glm)
-
-#### Turn this on to start the shiny model.  
-# DynNom::DNbuilder(model = DynNom.model.glm, data = test, clevel = 0.95, DNtitle = "DRAFT: A Model to Predict Chances of Matching into Obstetrics and Gynecology Residency")
-```
-
 ```{r sessionInfo, include=FALSE, echo=TRUE, cache=FALSE}
 utils::sessionInfo()
 ```
@@ -3463,4 +3428,49 @@ fit.svm <- caret::train(Match_Status~., data=test, method="svmRadial",  trContro
 # Random Forest
 set.seed(4)
 fit.rf <- caret::train(Match_Status~., data=test, method="rf",  trControl=control)
+```
+
+
+# DynNom Model for Shiny Upload
+```{r DynNom logistic regression model}
+library(dplR)
+DynNom.model.lrm  <-
+  rms::lrm(Match_Status ~
+             rms::rcs(Age, 5) +
+             Gender +
+             US_or_Canadian_Applicant +
+             rms::rcs(USMLE_Step_1_Score, 4) +
+             white_non_white +
+             Alpha_Omega_Alpha +
+             Count_of_Oral_Presentation +
+             Count_of_Peer_Reviewed_Book_Chapter +
+             Couples_Match +
+             Medical_Degree +
+             Military_Service_Obligation +
+             Visa_Sponsorship_Needed,
+                   data = test,
+           x = TRUE,
+           y= TRUE)
+
+#### Turn this on to start the shiny model.  
+DynNom::DynNom(model = DynNom.model.lrm, data = test,  clevel = 0.95)
+```
+
+#All variables for the DynNom online tool.  
+```{r}
+DynNom.model.lrm.full  <-
+  rms::lrm(Match_Status~ Age + white_non_white + Gender + Medical_Degree + US_or_Canadian_Applicant + Medical_Education_Interrupted + Alpha_Omega_Alpha + Military_Service_Obligation + USMLE_Step_1_Score + Visa_Sponsorship_Needed + Count_of_Poster_Presentation + Count_of_Oral_Presentation + Count_of_Articles_Abstracts + Count_of_Peer_Reviewed_Book_Chapter + Count_of_Other_than_Published + Count_of_Online_Publications + Visa_Sponsorship_Needed + Couples_Match, data=test, x=TRUE, y=TRUE)
+
+DynNom::DynNom(model = DynNom.model.lrm.full, data = test,  clevel = 0.95)
+```
+
+
+```{r generalized logistic regression, include=FALSE, echo=TRUE, cache=FALSE}
+DynNom.model.glm <- stats::glm(formula = formula,
+                        family = "binomial",  #Removed the relax cubic splines for age and USMLE step 1
+                        data = test, x = TRUE, y= TRUE)
+summary(DynNom.model.glm)
+
+#### Turn this on to start the shiny model.  
+# DynNom::DNbuilder(model = DynNom.model.glm, data = test, clevel = 0.95, DNtitle = "DRAFT: A Model to Predict Chances of Matching into Obstetrics and Gynecology Residency")
 ```
