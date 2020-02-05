@@ -24,9 +24,9 @@ here::set_here()  #set_here() creates an empty file named .here, by default in t
 here::here()
 #May need to run this file line-by-line (CRTL+Enter) by hand. 
 
-# Steps to produce GOBA_list_of_people_who_all_matched_into_OBGYN
+# Steps to produce GOBA_list_of_people_who_all_matched_into_OBGYN ----
 GOBA_list_of_people_who_all_matched_into_OBGYN <- 
-  # We needed this data because it is a check about who is an OBGYN.  There is no public information about residents available on Physician Compare, NPPES or Doximity beyond the basics of address.  This ABOG data also groups people by userid putting consecutive userids/people next to each other who were enrolled in the same residency.  
+  # We needed this data because it is a check about who is an OBGYN.  There is no public information about residents available on Physician Compare, NPPES or Doximity beyond the basics of address.  
   exploratory::read_rds_file("/Users/tylermuffly/Dropbox/Nomogram/nomogram/data/list of people who all matched into OBGYN.rds") %>%
   readr::type_convert() %>%
   exploratory::clean_data_frame() %>%
@@ -34,7 +34,7 @@ GOBA_list_of_people_who_all_matched_into_OBGYN <-
   dplyr::select(userid, firstname, lastname, name) #, city_state, state)
 
 
-# Steps to produce 2018_archive
+# Steps to produce 2018_archive ----
 archive2018 <- exploratory::read_delim_file("/Users/tylermuffly/Dropbox/Nomogram/nomogram/data/Archives/2018_archive.csv" , ",", quote = "\"", skip = 0 , col_names = TRUE , na = c('','NA') , locale=readr::locale(encoding = "UTF-8", decimal_mark = ".", grouping_mark = "," ), trim_ws = TRUE , progress = FALSE) %>%
   readr::type_convert() %>%
   exploratory::clean_data_frame() %>%
@@ -83,7 +83,7 @@ archive2018 <- exploratory::read_delim_file("/Users/tylermuffly/Dropbox/Nomogram
   dplyr::mutate(Year = dplyr::recode(Year, `2017` = "2018"), Sigma_Sigma_Phi = dplyr::recode(Sigma_Sigma_Phi, No_Chapter = "No", Not_a_member = "No", Yes_Member = "Yes"), Medical_Licensure_Problem = dplyr::recode(Medical_Licensure_Problem, N = "No", Y = "Yes"), Positions_offered = factor(Positions_offered))
 
 
-# Steps to produce 2017_archive
+# Steps to produce 2017_archive ----
 archive2017 <- exploratory::read_delim_file("/Users/tylermuffly/Dropbox/Nomogram/nomogram/data/Archives/2017_archive.csv" , ",", quote = "\"", skip = 0 , col_names = TRUE , na = c('','NA') , locale=readr::locale(encoding = "UTF-8", decimal_mark = ".", grouping_mark = "," ), trim_ws = TRUE , progress = FALSE) %>%
   readr::type_convert() %>%
   exploratory::clean_data_frame() %>%
@@ -132,7 +132,7 @@ archive2017 <- exploratory::read_delim_file("/Users/tylermuffly/Dropbox/Nomogram
   dplyr::mutate(Year = dplyr::recode(Year, `2017` = "2018"), Sigma_Sigma_Phi = dplyr::recode(Sigma_Sigma_Phi, No_Chapter = "No", Not_a_member = "No", Yes_Member = "Yes"), Medical_Licensure_Problem = dplyr::recode(Medical_Licensure_Problem, N = "No", Y = "Yes"), Positions_offered = factor(Positions_offered))
 
 
-# Steps to produce 2016_archive
+# Steps to produce 2016_archive ----
 archive2016 <- exploratory::read_delim_file("/Users/tylermuffly/Dropbox/Nomogram/nomogram/data/Archives/2016_archive.csv" , ",", quote = "\"", skip = 0 , col_names = TRUE , na = c('','NA') , locale=readr::locale(encoding = "UTF-8", decimal_mark = "."), trim_ws = TRUE , progress = FALSE) %>%
   readr::type_convert() %>%
   exploratory::clean_data_frame() %>%
@@ -210,7 +210,7 @@ archive2016 <- exploratory::read_delim_file("/Users/tylermuffly/Dropbox/Nomogram
   rename(Medical_School_of_Graduation = MEDICAL_6)
 
 
-# Steps to produce the 2015 archive
+# Steps to produce the 2015 archive  ----
 archive2015 <- exploratory::read_delim_file("/Users/tylermuffly/Dropbox/Nomogram/nomogram/data/Archives/2015_archive.csv" , ",", quote = "\"", skip = 0 , col_names = TRUE , na = c('','NA') , locale=readr::locale(encoding = "UTF-8", decimal_mark = "."), trim_ws = TRUE , progress = FALSE) %>%
   readr::type_convert() %>%
   exploratory::clean_data_frame() %>%
@@ -291,7 +291,7 @@ archive2015 <- exploratory::read_delim_file("/Users/tylermuffly/Dropbox/Nomogram
   
 
 
-#Bring all years together
+#Bring all years together ----
 all_years <- 
   bind_rows(archive2015, id_column_name = "ID", current_df_name = "all_years", force_data_type = TRUE) %>%
   bind_rows(archive2016, id_column_name = "ID", current_df_name = "all_years", force_data_type = TRUE) %>%
@@ -361,7 +361,7 @@ all_years <-
   base::droplevels(all_years$Match_Status) %>%
   select(- Malpractice_Cases_Pending)
 
-###Exploration of the Data
+###  Mini-Exploration of the Data ----
 all_years
 dim(all_years)
 View(all_years)
