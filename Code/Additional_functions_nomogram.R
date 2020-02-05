@@ -4,45 +4,16 @@
 # Author: Tyler Muffly
 # Date: 10/19/2019
 
-#Instillation packages
-#dev.off()
-
-#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
-# Directory Paths for Data and Results
-#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
-setwd("~/Dropbox/Nomogram/nomogram")
-
-#Builds the file directory structure necessary for the project
-library(fs)
-make_project_dir <- function() {
-
-    dir_names <- c("Code",
-        "results",
-        "tables",
-        "Saved_Models")
-    dir_create(dir_names)
-    dir_ls()
-}
-if(!"Code" %in% list.files())
-make_project_dir()
-system("ls ..")
-
-data_folder <- paste0(getwd(), "/data/")
-results_folder <- paste0(getwd(), "/results/")
-
-#data_file <- "all_years_mutate_124.csv"
-data_file <- "all_years_filter_112.rds" 
-
 #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
 #Install and Load needed R packages.
 #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### ####
 # Set  libPaths.
 .libPaths("/Users/tylermuffly/.exploratory/R/3.6")
 
-pkgs <- (c('R.methodsS3', 'caret', 'readxl', 'XML', 'reshape2', 'devtools', 'purrr', 'readr', 'ggplot2', 'dplyr', 'magick', 'janitor', 'lubridate', 'hms', 'tidyr', 'stringr', 'openxlsx', 'forcats', 'RcppRoll', 'tibble', 'bit64', 'munsell', 'scales', 'rgdal', 'tidyverse', "foreach", "PASWR", "rms", "pROC", "ROCR", "nnet", "packrat", "DynNom", "export", "caTools", "mlbench", "randomForest", "ipred", "xgboost", "Metrics", "RANN", "AppliedPredictiveModeling", "nomogramEx", "shiny", "earth", "fastAdaboost", "Boruta", "glmnet", "ggforce", "tidylog", "InformationValue", "pscl", "scoring", "DescTools", "gbm", "Hmisc", "arsenal", "pander", "moments", "leaps", "MatchIt", "car", "mice", "rpart", "beepr", "fansi", "utf8", "zoom", "lmtest", "ResourceSelection", "rmarkdown", "rattle", "rmda", "funModeling", "tinytex", "caretEnsemble", "Rmisc", "corrplot", "progress", "perturb", "vctrs", "highr", "labeling", "DataExplorer", "rsconnect", "inspectdf", "ggpubr", "tableone", "knitr", "drake", "visNetwork", "rpart.plot", "RColorBrewer", "kableExtra", "kernlab", "naivebayes", "e1071", "data.table", "skimr", "naniar", "english", "mosaic", "broom", "mltools", "tidymodels", "tidyquant", "rsample", "yardstick", "parsnip", "tensorflow", "keras", "sparklyr", "dials", "cowplot", "lime", "flexdashboard", "shinyjs", "shinyWidgets", "plotly", "BH", "vip", "ezknitr", "here", "usethis", "corrgram", "BiocManager", "factoextra", "parallel", "doParallel", "GA", "PCAtools", "odbc", "RSQLite", "discrim", "doMC",  "summarytools", "remotes", "fs", "PerformanceAnalytics", "correlationfunnel", "psych", "h2o", "ranger", "readr"))
+pkgs <- (c('caret', 'readxl', 'XML', 'reshape2', 'devtools', 'purrr', 'readr', 'ggplot2', 'dplyr', 'magick', 'janitor', 'lubridate', 'hms', 'tidyr', 'stringr', 'openxlsx', 'forcats', 'RcppRoll', 'tibble', 'bit64', 'munsell', 'scales', 'rgdal', 'tidyverse', "foreach", "PASWR", "rms", "pROC", "ROCR", "nnet", "packrat", "DynNom", "export", "caTools", "mlbench", "randomForest", "ipred", "xgboost", "Metrics", "RANN", "AppliedPredictiveModeling", "nomogramEx", "shiny", "earth", "fastAdaboost", "Boruta", "glmnet", "ggforce", "tidylog", "InformationValue", "pscl", "scoring", "DescTools", "gbm", "Hmisc", "arsenal", "pander", "moments", "leaps", "MatchIt", "car", "mice", "rpart", "beepr", "fansi", "utf8", "zoom", "lmtest", "ResourceSelection", "rmarkdown", "rattle", "rmda", "funModeling", "tinytex", "caretEnsemble", "Rmisc", "corrplot", "progress", "perturb", "vctrs", "highr", "labeling", "DataExplorer", "rsconnect", "inspectdf", "ggpubr", "tableone", "knitr", "drake", "visNetwork", "rpart.plot", "RColorBrewer", "kableExtra", "kernlab", "naivebayes", "e1071", "data.table", "skimr", "naniar", "english", "mosaic", "broom", "mltools", "tidymodels", "tidyquant", "rsample", "yardstick", "parsnip", "tensorflow", "keras", "sparklyr", "dials", "cowplot", "lime", "flexdashboard", "shinyjs", "shinyWidgets", "plotly", "BH", "vip", "ezknitr", "here", "usethis", "corrgram", "BiocManager", "factoextra", "parallel", "doParallel", "GA", "PCAtools", "odbc", "RSQLite", "discrim", "doMC",  "summarytools", "remotes", "fs", "PerformanceAnalytics", "correlationfunnel", "psych", "h2o", "ranger", 'R.methodsS3'))
 
-install.packages(pkgs,dependencies = c("Depends", "Suggests", "Imports", "LinkingTo"), repos = "https://cloud.r-project.org")  #run this first time
-lapply(list.of.packages, require, character.only = TRUE)
+#install.packages(pkgs,dependencies = c("Depends", "Suggests", "Imports", "LinkingTo"), repos = "https://cloud.r-project.org")  #run this first time
+lapply(pkgs, require, character.only = TRUE)
 doMC::registerDoMC(cores = detectCores()-1) #Use multiple cores for processing
 
 #BiocManager::install('PCAtools')
@@ -55,48 +26,151 @@ doMC::registerDoMC(cores = detectCores()-1) #Use multiple cores for processing
 #brew install pkg-config
 
 
+#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
+# Directory Paths for Data and Results
+#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
+setwd("~/Dropbox/Nomogram/nomogram")
+
+#Builds the file directory structure necessary for the project
+library(fs)
+make_project_dir <- function() {
+  
+  dir_names <- c("Code",
+                 "results",
+                 "tables",
+                 "Saved_Models")
+  dir_create(dir_names)
+  dir_ls()
+}
+if(!"Code" %in% list.files())
+  make_project_dir()
+system("ls ..")
 
 #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
-# Package functions customization
-#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### ####
+#####  Load in the data
+#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
+#Create a dataframe of independent and dependent variables. 
+## Here are the data for download
 
-packrat::set_opts(auto.snapshot = TRUE, use.cache = TRUE)
+data_folder <- paste0(getwd(), "/data/")
+results_folder <- paste0(getwd(), "/results/")
 
-#### https://stirlingcodingclub.github.io/Manuscripts_in_Rmarkdown/Rmarkdown_notes.html
-knitr::opts_chunk$set(fig.width=7, 
-                      fig.height=5,
-                      fig.align="center",
-                      include=TRUE,
-                      echo=TRUE, # does not show R code
-                      warning=FALSE,  # does not show warnings during generation
-                      message=FALSE, # shows no messages
-                      tidy = TRUE, 
-                      comment="",
-                      align = 'left',
-                      cache = FALSE,  #keep as false so I don't get random error messages later on
-                      dev = "png",   #Will need to change for manuscript
-                      dpi = 200)   #Will need to change for manuscript
+#data_file <- "all_years_mutate_124.csv"
+#data_file <- "all_years_filter_112.rds" 
+data_file <- "~/Dropbox/Nomogram/nomogram/data/All_ERAS_data_merged_output_2_1_2020.csv"
+
+# data_file <- "all_years_filter_112.rds" 
+# # Download list of payer types
+# if(!file.exists(data_file)){
+#   data_file <- readr::read_rds("https://www.dropbox.com/s/bip689v3btdjoxz/all_years_filter_112.rds?dl=1") 
+#   readr::write_rds(data_file, path = data_folder)
+# } else {
+#   raw_data <- read_rds(data_file) 
+# }
+#wget (http://www.gnu.org/software/wget/) is commonly installed on Unix-alikes (but not macOS).
 
 
-### Skimr set up
-skim_with(numeric = list(hist = NULL), integer = list(hist = NULL))
+#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
+#####  Read in the data
+#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
+all_data <- 
+  #read_rds(paste0(data_folder, "/", data_file)) %>%
+  read_csv(paste0(data_file)) %>%
+  # select(-"Gold_Humanism_Honor_Society", 
+  #        -"Sigma_Sigma_Phi", 
+  #        -"Misdemeanor_Conviction", 
+  #        -"Malpractice_Cases_Pending", 
+  #        -"Citizenship", 
+  #        -"BLS", 
+  #        -"Positions_offered") 
 
-## TinyTex
-options(tinytex.verbose = FALSE)
-#tinytex::tlmgr_update()  # update LaTeX packages
+colnames(all_data)
 
-custom_theme <- function(...){   ##My ggplot theme
-  theme(legend.position = "bottom", 
-        legend.text = element_text(size = 8),
-        panel.background = element_rect(fill = "white"),
-        strip.background = element_rect(fill = "white"),
-        axis.line.x = element_line(color="black"),
-        axis.line.y = element_line(color="black"))
-}
+#' all_data <- 
+#'   all_data[c(
+#'     'white_non_white', 
+#'     'Age',  
+#'     #'Year', 
+#'     'Gender', 
+#'     'Couples_Match', 
+#'     'US_or_Canadian_Applicant', 
+#'     "Medical_Education_or_Training_Interrupted", 
+#'     "Alpha_Omega_Alpha",  
+#'     "Military_Service_Obligation", 
+#'     "USMLE_Step_1_Score", 
+#'     "Count_of_Poster_Presentation",  
+#'     "Count_of_Oral_Presentation", 
+#'     "Count_of_Peer_Reviewed_Journal_Articles_Abstracts", 
+#'     "Count_of_Peer_Reviewed_Book_Chapter", 
+#'     "Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published", 
+#'     "Count_of_Peer_Reviewed_Online_Publication", 
+#'     "Visa_Sponsorship_Needed", 
+#'     "Medical_Degree", 
+#'        # 'Rank',
+#'     'Match_Status')]
 
-pander::panderOptions("table.split.table", Inf)
-options(width = 100) # ensures skimr results fit on one line
-set.seed(123456)
+#Rename columns with more human readable names
+# colnames(all_data)[colnames(all_data)=="Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published"] <- "Count_of_Other_than_Published"
+# 
+# colnames(all_data)[colnames(all_data)=="Count_of_Peer_Reviewed_Journal_Articles_Abstracts"] <- "Count_of_Articles_Abstracts"
+# 
+# colnames(all_data)[colnames(all_data)=="Medical_Education_or_Training_Interrupted"] <- 
+#   "Medical_Education_Interrupted"
+# 
+# colnames(all_data)[colnames(all_data)=="Count_of_Peer_Reviewed_Online_Publication"] <- 
+#   "Count_of_Online_Publications"
+# 
+# colnames(all_data)[colnames(all_data)=="Match_Status_Dichot"] <- 
+#   "Match_Status"
+
+#factor_columns <- all_data %>%  select_if(is.factor) %>% colnames()
+#factor_columns
+
+#all_data$Count_of_Online_Publications <- as.numeric(all_data$Count_of_Online_Publications)
+all_data$white_non_white <- forcats::fct_explicit_na(all_data$white_non_white, na_level="(Missing)")
+#all_data$Year <- forcats::fct_explicit_na(all_data$Year, na_level="(Missing)")
+all_data$Gender <- forcats::fct_explicit_na(all_data$Gender, na_level="(Missing)")
+all_data$Couples_Match <- forcats::fct_explicit_na(all_data$Couples_Match, na_level="(Missing)")
+all_data$US_or_Canadian_Applicant <- forcats::fct_explicit_na(all_data$US_or_Canadian_Applicant, na_level="(Missing)")
+#all_data$Medical_Education_Interrupted <- forcats::fct_explicit_na(all_data$Medical_Education_Interrupted, na_level="(Missing)")
+all_data$Alpha_Omega_Alpha <- forcats::fct_explicit_na(all_data$Alpha_Omega_Alpha, na_level="(Missing)")
+all_data$Military_Service_Obligation <- forcats::fct_explicit_na(all_data$Military_Service_Obligation, na_level="(Missing)")
+all_data$Visa_Sponsorship_Needed <- forcats::fct_explicit_na(all_data$Visa_Sponsorship_Needed, na_level="(Missing)")
+all_data$Medical_Degree <- forcats::fct_explicit_na(all_data$Medical_Degree, na_level="(Missing)")
+all_data$Match_Status <- forcats::fct_explicit_na(all_data$Match_Status, na_level="(Missing)")
+
+#all_data$Count_of_Articles_Abstracts <- as.numeric(all_data$Count_of_Articles_Abstracts)
+all_data$Age <- as.numeric(all_data$Age)
+all_data$Count_of_Poster_Presentation <- as.numeric(all_data$Count_of_Poster_Presentation)
+all_data$USMLE_Step_1_Score <- as.numeric(all_data$USMLE_Step_1_Score)
+all_data$Count_of_Oral_Presentation <- as.numeric(all_data$Count_of_Oral_Presentation)
+all_data$Count_of_Other_than_Published <- as.numeric(all_data$Count_of_Other_than_Published)
+all_data$Count_of_Peer_Reviewed_Book_Chapter <- as.numeric(all_data$Count_of_Peer_Reviewed_Book_Chapter)
+#all_data$Count_of_Online_Publications <- as.numeric(all_data$Count_of_Online_Publications)
+all_data <- na.omit(all_data)
+
+
+#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
+#####  Set reference category for each variable
+#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
+contrasts(all_data$US_or_Canadian_Applicant)
+all_data$US_or_Canadian_Applicant <- relevel(all_data$US_or_Canadian_Applicant, ref = "US senior")
+contrasts(all_data$white_non_white)
+all_data$white_non_white <- relevel(all_data$white_non_white, ref = "White")
+all_data$Gender <- relevel(all_data$Gender, ref = "Female")
+all_data$Couples_Match <- relevel(all_data$Couples_Match, ref = "No")
+#all_data$Medical_Education_Interrupted <- relevel(all_data$Medical_Education_Interrupted, ref = "No")
+all_data$Alpha_Omega_Alpha <- relevel(all_data$Alpha_Omega_Alpha, ref = "No")
+all_data$Military_Service_Obligation <- relevel(all_data$Military_Service_Obligation, ref = "No")
+all_data$Medical_Degree <- relevel (all_data$Medical_Degree, ref = "MD")
+all_data$Visa_Sponsorship_Needed <- relevel(all_data$Visa_Sponsorship_Needed, ref = "No")
+all_data$Match_Status <- relevel(all_data$Match_Status, ref = "Matched")
+
+
+###tableby labels
+mylabels <- list(white_non_white = "Race", Age = "Age, years", Gender = "Sex", Couples_Match = "Participating in the Couples Match", US_or_Canadian_Applicant = "US or Canadian Applicant", Medical_Education_Interrupted = "Medical Education Process was Interrupted", Alpha_Omega_Alpha = "Alpha Omega Alpha", Military_Service_Obligation = "Military Service Obligation", USMLE_Step_1_Score = "USMLE Step 1 Score", Military_Service_Obligation = "Military Service Obligations", Count_of_Poster_Presentation = "Count of Poster Presentations", Count_of_Oral_Presentation = "Count of Oral Presentations", Count_of_Articles_Abstracts = "Count of Published Abstracts", Count_of_Peer_Reviewed_Book_Chapter = "Count of Peer Reviewed Book Chapters", Count_of_Other_than_Published = "Count of Other Published Products", Count_of_Online_Publications = "Count of Online Publications", Visa_Sponsorship_Needed = "Visa Sponsorship is Needed", Medical_Degree = "Medical Degree Training")
+
+##Custom Functions that I made to eliminate repetition from my code
 
 #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
 #####  Functions for nomogram
@@ -124,124 +198,6 @@ create_profiling_num <-
     funModeling::profiling_num(data)
   }
 
-#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
-#####  Load in the data
-#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
-#Create a dataframe of independent and dependent variables. 
-## Here are the data for download
-
-data_file <- "all_years_filter_112.rds" 
-# Download list of payer types
-if(!file.exists(data_file)){
-  data_file <- readr::read_rds("https://www.dropbox.com/s/bip689v3btdjoxz/all_years_filter_112.rds?dl=1") 
-  readr::write_rds(data_file, path = data_folder)
-} else {
-  raw_data <- read_rds(data_file) 
-}
-#wget (http://www.gnu.org/software/wget/) is commonly installed on Unix-alikes (but not macOS).
-
-
-#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
-#####  Read in the data
-#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
-all_data <- 
-  read_rds(paste0(data_folder, "/", data_file)) %>%
-  #read_csv(paste0(data_folder, "/", data_file)) %>%
-  select(-"Gold_Humanism_Honor_Society", 
-         -"Sigma_Sigma_Phi", 
-         -"Misdemeanor_Conviction", 
-         -"Malpractice_Cases_Pending", 
-         -"Citizenship", 
-         -"BLS", 
-         -"Positions_offered") 
-
-colnames(all_data)
-
-all_data <- 
-  all_data[c(
-    'white_non_white', 
-    'Age',  
-    #'Year', 
-    'Gender', 
-    'Couples_Match', 
-    'US_or_Canadian_Applicant', 
-    "Medical_Education_or_Training_Interrupted", 
-    "Alpha_Omega_Alpha",  
-    "Military_Service_Obligation", 
-    "USMLE_Step_1_Score", 
-    "Count_of_Poster_Presentation",  
-    "Count_of_Oral_Presentation", 
-    "Count_of_Peer_Reviewed_Journal_Articles_Abstracts", 
-    "Count_of_Peer_Reviewed_Book_Chapter", 
-    "Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published", 
-    "Count_of_Peer_Reviewed_Online_Publication", 
-    "Visa_Sponsorship_Needed", 
-    "Medical_Degree", 
-       # 'Rank',
-    'Match_Status')]
-
-#Rename columns with more human readable names
-colnames(all_data)[colnames(all_data)=="Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published"] <- "Count_of_Other_than_Published"
-
-colnames(all_data)[colnames(all_data)=="Count_of_Peer_Reviewed_Journal_Articles_Abstracts"] <- "Count_of_Articles_Abstracts"
-
-colnames(all_data)[colnames(all_data)=="Medical_Education_or_Training_Interrupted"] <- 
-  "Medical_Education_Interrupted"
-
-colnames(all_data)[colnames(all_data)=="Count_of_Peer_Reviewed_Online_Publication"] <- 
-  "Count_of_Online_Publications"
-
-colnames(all_data)[colnames(all_data)=="Match_Status_Dichot"] <- 
-  "Match_Status"
-
-#factor_columns <- all_data %>%  select_if(is.factor) %>% colnames()
-#factor_columns
-
-all_data$Count_of_Online_Publications <- as.numeric(all_data$Count_of_Online_Publications)
-all_data$white_non_white <- forcats::fct_explicit_na(all_data$white_non_white, na_level="(Missing)")
-#all_data$Year <- forcats::fct_explicit_na(all_data$Year, na_level="(Missing)")
-all_data$Gender <- forcats::fct_explicit_na(all_data$Gender, na_level="(Missing)")
-all_data$Couples_Match <- forcats::fct_explicit_na(all_data$Couples_Match, na_level="(Missing)")
-all_data$US_or_Canadian_Applicant <- forcats::fct_explicit_na(all_data$US_or_Canadian_Applicant, na_level="(Missing)")
-all_data$Medical_Education_Interrupted <- forcats::fct_explicit_na(all_data$Medical_Education_Interrupted, na_level="(Missing)")
-all_data$Alpha_Omega_Alpha <- forcats::fct_explicit_na(all_data$Alpha_Omega_Alpha, na_level="(Missing)")
-all_data$Military_Service_Obligation <- forcats::fct_explicit_na(all_data$Military_Service_Obligation, na_level="(Missing)")
-all_data$Visa_Sponsorship_Needed <- forcats::fct_explicit_na(all_data$Visa_Sponsorship_Needed, na_level="(Missing)")
-all_data$Medical_Degree <- forcats::fct_explicit_na(all_data$Medical_Degree, na_level="(Missing)")
-all_data$Match_Status <- forcats::fct_explicit_na(all_data$Match_Status, na_level="(Missing)")
-
-all_data$Count_of_Articles_Abstracts <- as.numeric(all_data$Count_of_Articles_Abstracts)
-all_data$Age <- as.numeric(all_data$Age)
-all_data$Count_of_Poster_Presentation <- as.numeric(all_data$Count_of_Poster_Presentation)
-all_data$USMLE_Step_1_Score <- as.numeric(all_data$USMLE_Step_1_Score)
-all_data$Count_of_Oral_Presentation <- as.numeric(all_data$Count_of_Oral_Presentation)
-all_data$Count_of_Other_than_Published <- as.numeric(all_data$Count_of_Other_than_Published)
-all_data$Count_of_Peer_Reviewed_Book_Chapter <- as.numeric(all_data$Count_of_Peer_Reviewed_Book_Chapter)
-all_data$Count_of_Online_Publications <- as.numeric(all_data$Count_of_Online_Publications)
-all_data <- na.omit(all_data)
-
-
-#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
-#####  Set reference category for each variable
-#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
-contrasts(all_data$US_or_Canadian_Applicant)
-all_data$US_or_Canadian_Applicant <- relevel(all_data$US_or_Canadian_Applicant, ref = "US senior")
-contrasts(all_data$white_non_white)
-all_data$white_non_white <- relevel(all_data$white_non_white, ref = "White")
-all_data$Gender <- relevel(all_data$Gender, ref = "Female")
-all_data$Couples_Match <- relevel(all_data$Couples_Match, ref = "No")
-all_data$Medical_Education_Interrupted <- relevel(all_data$Medical_Education_Interrupted, ref = "No")
-all_data$Alpha_Omega_Alpha <- relevel(all_data$Alpha_Omega_Alpha, ref = "No")
-all_data$Military_Service_Obligation <- relevel(all_data$Military_Service_Obligation, ref = "No")
-all_data$Medical_Degree <- relevel (all_data$Medical_Degree, ref = "MD")
-all_data$Visa_Sponsorship_Needed <- relevel(all_data$Visa_Sponsorship_Needed, ref = "No")
-
-
-
-###tableby labels
-mylabels <- list(white_non_white = "Race", Age = "Age, years", Gender = "Sex", Couples_Match = "Participating in the Couples Match", US_or_Canadian_Applicant = "US or Canadian Applicant", Medical_Education_Interrupted = "Medical Education Process was Interrupted", Alpha_Omega_Alpha = "Alpha Omega Alpha", Military_Service_Obligation = "Military Service Obligation", USMLE_Step_1_Score = "USMLE Step 1 Score", Military_Service_Obligation = "Military Service Obligations", Count_of_Poster_Presentation = "Count of Poster Presentations", Count_of_Oral_Presentation = "Count of Oral Presentations", Count_of_Articles_Abstracts = "Count of Published Abstracts", Count_of_Peer_Reviewed_Book_Chapter = "Count of Peer Reviewed Book Chapters", Count_of_Other_than_Published = "Count of Other Published Products", Count_of_Online_Publications = "Count of Online Publications", Visa_Sponsorship_Needed = "Visa Sponsorship is Needed", Medical_Degree = "Medical Degree Training")
-
-##Custom Functions that I made to eliminate repetition from my code
 #https://www.kaggle.com/pjmcintyre/titanic-first-kernel#final-checks
 tm_nomogram_prep <- function(df){  #signature of the function
   set.seed(1978)                  #body of the function
@@ -1071,4 +1027,44 @@ tm_chi_square_test <- function (variable) {
   return(chisq)
 }
 
+### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
+# Package functions customization
+#### #### #### #### #### #### #### #### #### #### #### #### #### #### #### ####
 
+packrat::set_opts(auto.snapshot = TRUE, use.cache = TRUE)
+
+#### https://stirlingcodingclub.github.io/Manuscripts_in_Rmarkdown/Rmarkdown_notes.html
+knitr::opts_chunk$set(fig.width=7, 
+                      fig.height=5,
+                      fig.align="center",
+                      include=TRUE,
+                      echo=TRUE, # does not show R code
+                      warning=FALSE,  # does not show warnings during generation
+                      message=FALSE, # shows no messages
+                      tidy = TRUE, 
+                      comment="",
+                      align = 'left',
+                      cache = FALSE,  #keep as false so I don't get random error messages later on
+                      dev = "png",   #Will need to change for manuscript
+                      dpi = 200)   #Will need to change for manuscript
+
+
+### Skimr set up
+skim_with(numeric = list(hist = NULL), integer = list(hist = NULL))
+
+## TinyTex
+options(tinytex.verbose = FALSE)
+#tinytex::tlmgr_update()  # update LaTeX packages
+
+custom_theme <- function(...){   ##My ggplot theme
+  theme(legend.position = "bottom", 
+        legend.text = element_text(size = 8),
+        panel.background = element_rect(fill = "white"),
+        strip.background = element_rect(fill = "white"),
+        axis.line.x = element_line(color="black"),
+        axis.line.y = element_line(color="black"))
+}
+
+pander::panderOptions("table.split.table", Inf)
+options(width = 100) # ensures skimr results fit on one line
+set.seed(123456)
