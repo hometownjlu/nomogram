@@ -8,7 +8,7 @@
 #Install and Load needed R packages.
 #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### ####
 # Set  libPaths.
-.libPaths("/Users/tylermuffly/.exploratory/R/3.6")
+#.libPaths("/Users/tylermuffly/.exploratory/R/3.6")
 
 pkgs <- (c('caret', 'readxl', 'XML', 'reshape2', 'devtools', 'purrr', 'readr', 'ggplot2', 'dplyr', 'magick', 'janitor', 'lubridate', 'hms', 'tidyr', 'stringr', 'openxlsx', 'forcats', 'RcppRoll', 'tibble', 'bit64', 'munsell', 'scales', 'rgdal', 'tidyverse', "foreach", "PASWR", "rms", "pROC", "ROCR", "nnet", "packrat", "DynNom", "export", "caTools", "mlbench", "randomForest", "ipred", "xgboost", "Metrics", "RANN", "AppliedPredictiveModeling", "nomogramEx", "shiny", "earth", "fastAdaboost", "Boruta", "glmnet", "ggforce", "tidylog", "InformationValue", "pscl", "scoring", "DescTools", "gbm", "Hmisc", "arsenal", "pander", "moments", "leaps", "MatchIt", "car", "mice", "rpart", "beepr", "fansi", "utf8", "zoom", "lmtest", "ResourceSelection", "rmarkdown", "rattle", "rmda", "funModeling", "tinytex", "caretEnsemble", "Rmisc", "corrplot", "progress", "perturb", "vctrs", "highr", "labeling", "DataExplorer", "rsconnect", "inspectdf", "ggpubr", "tableone", "knitr", "drake", "visNetwork", "rpart.plot", "RColorBrewer", "kableExtra", "kernlab", "naivebayes", "e1071", "data.table", "skimr", "naniar", "english", "mosaic", "broom", "mltools", "tidymodels", "tidyquant", "rsample", "yardstick", "parsnip", "tensorflow", "keras", "sparklyr", "dials", "cowplot", "lime", "flexdashboard", "shinyjs", "shinyWidgets", "plotly", "BH", "vip", "ezknitr", "here", "usethis", "corrgram", "BiocManager", "factoextra", "parallel", "doParallel", "GA", "PCAtools", "odbc", "RSQLite", "discrim", "doMC",  "summarytools", "remotes", "fs", "PerformanceAnalytics", "correlationfunnel", "psych", "h2o", "ranger", 'R.methodsS3'))
 
@@ -75,7 +75,7 @@ data_file <- "~/Dropbox/Nomogram/nomogram/data/All_ERAS_data_merged_output_2_1_2
 #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
 all_data <- 
   #read_rds(paste0(data_folder, "/", data_file)) %>%
-  read_csv(paste0(data_file)) %>%
+  read_csv(paste0(data_file)) #%>%
   # select(-"Gold_Humanism_Honor_Society", 
   #        -"Sigma_Sigma_Phi", 
   #        -"Misdemeanor_Conviction", 
@@ -164,7 +164,7 @@ all_data$Alpha_Omega_Alpha <- relevel(all_data$Alpha_Omega_Alpha, ref = "No")
 all_data$Military_Service_Obligation <- relevel(all_data$Military_Service_Obligation, ref = "No")
 all_data$Medical_Degree <- relevel (all_data$Medical_Degree, ref = "MD")
 all_data$Visa_Sponsorship_Needed <- relevel(all_data$Visa_Sponsorship_Needed, ref = "No")
-all_data$Match_Status <- relevel(all_data$Match_Status, ref = "Matched")
+all_data$Match_Status <- relevel(all_data$Match_Status, ref = "Match")
 
 
 ###tableby labels
@@ -1068,3 +1068,4 @@ custom_theme <- function(...){   ##My ggplot theme
 pander::panderOptions("table.split.table", Inf)
 options(width = 100) # ensures skimr results fit on one line
 set.seed(123456)
+
