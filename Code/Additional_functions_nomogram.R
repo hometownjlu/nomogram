@@ -75,7 +75,7 @@ data_file <- "~/Dropbox/Nomogram/nomogram/data/All_ERAS_data_merged_output_2_1_2
 #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
 all_data <- 
   #read_rds(paste0(data_folder, "/", data_file)) %>%
-  read_csv(paste0(data_file)) %>%
+  read_csv(paste0(data_file)) #%>%
   # select(-"Gold_Humanism_Honor_Society", 
   #        -"Sigma_Sigma_Phi", 
   #        -"Misdemeanor_Conviction", 
@@ -164,7 +164,7 @@ all_data$Alpha_Omega_Alpha <- relevel(all_data$Alpha_Omega_Alpha, ref = "No")
 all_data$Military_Service_Obligation <- relevel(all_data$Military_Service_Obligation, ref = "No")
 all_data$Medical_Degree <- relevel (all_data$Medical_Degree, ref = "MD")
 all_data$Visa_Sponsorship_Needed <- relevel(all_data$Visa_Sponsorship_Needed, ref = "No")
-all_data$Match_Status <- relevel(all_data$Match_Status, ref = "Matched")
+all_data$Match_Status <- relevel(all_data$Match_Status, ref = "Match")
 
 
 ###tableby labels
