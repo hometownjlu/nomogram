@@ -19,6 +19,8 @@ library(dplyr)
 library(tibble)
 library(bit64)
 library(exploratory)
+library(summarytools)
+library(VennDiagram)
 
 here::set_here()  #set_here() creates an empty file named .here, by default in the current directory.Sets root.  
 here::here()
@@ -40,13 +42,13 @@ archive2018 <- exploratory::read_delim_file("/Users/tylermuffly/Dropbox/Nomogram
   readr::type_convert() %>%
   exploratory::clean_data_frame() %>%
   dplyr::select(`AAMC ID`, `Applicant Name`, `Medical Education or Training Interrupted`, ACLS, BLS, `Malpractice Cases Pending`, `Medical Licensure Problem`, PALS, `Felony Conviction`, `Alpha Omega Alpha`, Citizenship, `Date of Birth`, Gender, `Gold Humanism Honor Society`, `Military Service Obligation`, `Participating as a Couple in NRMP`, `Self Identify`, `Sigma Sigma Phi`, `US or Canadian Applicant`, `Visa Sponsorship Needed`, #`Higher Education Degree`, 
-         `Medical Degree`, `Medical School of Graduation`, `USMLE Step 1 Score`, `Tracks Applied by Applicant`, `Count of Non Peer Reviewed Online Publication`, `Count of Oral Presentation`, `Count of Other Articles`, `Count of Peer Reviewed Book Chapter`, `Count of Peer Reviewed Journal Articles/Abstracts`, `Count of Peer Reviewed Journal Articles/Abstracts(Other than Published)`, `Count of Peer Reviewed Online Publication`, `Count of Poster Presentation`, `Count of Scientific Monograph`, `OBGYN Grade--10`,
+         `Medical Degree`, `Medical School of Graduation`, `USMLE Step 1 Score`, `Tracks Applied by Applicant`, `Count of Non Peer Reviewed Online Publication`, `Count of Oral Presentation`, `Count of Other Articles`, `Count of Peer Reviewed Book Chapter`, `Count of Peer Reviewed Journal Articles/Abstracts`, `Count of Peer Reviewed Journal Articles/Abstracts(Other than Published)`, `Count of Peer Reviewed Online Publication`, `Count of Poster Presentation`, `Count of Scientific Monograph`, `OBGYN Grade--10`, `Applicant Name`, `Misdemeanor Conviction`,
       
          #New variables to include for feature engineering.  Must be included for each year of data.   
          `Medical School Type`, `USMLE Step 2 CK Score`, #`Language Fluency`, 
          #`Higher Education Degree_1`, `Higher Education Degree_2`
          ) %>%
-  dplyr::rename(PERSONAL_31 = `Applicant Name`) %>%
+  #dplyr::rename(`Applicant Name` = PERSONAL_31) %>%
   dplyr::rename(`Step_2_CK` = `USMLE Step 2 CK Score`) %>%
   dplyr::mutate(`US or Canadian Applicant` = factor(`US or Canadian Applicant`)) %>%
   dplyr::mutate(Gender = dplyr::recode(Gender, Female = "Female"), Gender = dplyr::recode(Gender, Female = "Female", Male = "Male", `No Response` = "Female")) %>%
@@ -78,10 +80,12 @@ archive2018 <- exploratory::read_delim_file("/Users/tylermuffly/Dropbox/Nomogram
   dplyr::mutate(`Current date` = mdy("01/01/2017")) %>%
   dplyr::mutate(Age = `Current date`- DOB, Age = as.numeric(Age)/365) %>%
   filter(!is.na(Age) & Age >= 24) %>%
-  dplyr::select(-`Current date`) %>%
+  dplyr::select(-`Current date`, - DOB, - Positions_offered) %>%
   dplyr::mutate(Match_Status = factor(Match_Status)) %>%
   clean_names(case = "parsed") %>%
-  dplyr::mutate(Year = dplyr::recode(Year, `2017` = "2018"), Sigma_Sigma_Phi = dplyr::recode(Sigma_Sigma_Phi, No_Chapter = "No", Not_a_member = "No", Yes_Member = "Yes"), Medical_Licensure_Problem = dplyr::recode(Medical_Licensure_Problem, N = "No", Y = "Yes"), Positions_offered = factor(Positions_offered))
+  dplyr::mutate(Year = dplyr::recode(Year, `2017` = "2018"), Sigma_Sigma_Phi = dplyr::recode(Sigma_Sigma_Phi, No_Chapter = "No", Not_a_member = "No", Yes_Member = "Yes"), Medical_Licensure_Problem = dplyr::recode(Medical_Licensure_Problem, N = "No", Y = "Yes")) %>%
+  dplyr::rename(`Medical Licensure Problem` = Medical_Licensure_Problem) %>%
+  dplyr::rename(Type_of_medical_school = `Medical_School_Type`)
 
 # 2017 data -----
 #archive2017$Medical_school_name
@@ -89,8 +93,8 @@ archive2017 <- exploratory::read_delim_file("/Users/tylermuffly/Dropbox/Nomogram
   readr::type_convert() %>%
   exploratory::clean_data_frame() %>%
   filter(ACLS != "06/30/2018") %>%
-  dplyr::select(`AAMC ID`, `Applicant Name`, `Medical Education or Training Interrupted`, ACLS, BLS, `Malpractice Cases Pending`, `Medical Licensure Problem`, PALS, `Felony Conviction`, `Limiting Factors`, `Alpha Omega Alpha`, Citizenship, `Date of Birth`, Gender, `Gold Humanism Honor Society`, `Military Service Obligation`, `Participating as a Couple in NRMP`, `Self Identify`, `Sigma Sigma Phi`, `US or Canadian Applicant`, `Visa Sponsorship Needed`, `Higher Education Degree`, `Medical Degree`, `Medical School of Graduation`, `Medical School Type`, `USMLE Step 1 Score`, `USMLE Step 2 CK Score`, `Tracks Applied by Applicant`, `Count of Non Peer Reviewed Online Publication`, `Count of Oral Presentation`, `Count of Other Articles`, `Count of Peer Reviewed Book Chapter`, `Count of Peer Reviewed Journal Articles/Abstracts`, `Count of Peer Reviewed Journal Articles/Abstracts(Other than Published)`, `Count of Peer Reviewed Online Publication`, `Count of Poster Presentation`, `Count of Scientific Monograph`, `OBGYN Grade--10`) %>%
-  dplyr::rename(Step_CK = `USMLE Step 2 CK Score`, Type_of_medical_school = `Medical School Type`) %>%
+  dplyr::select(`AAMC ID`, `Applicant Name`, `Medical Education or Training Interrupted`, ACLS, BLS, `Malpractice Cases Pending`, `Medical Licensure Problem`, PALS, `Felony Conviction`, `Limiting Factors`, `Alpha Omega Alpha`, Citizenship, `Date of Birth`, Gender, `Gold Humanism Honor Society`, `Military Service Obligation`, `Participating as a Couple in NRMP`, `Self Identify`, `Sigma Sigma Phi`, `US or Canadian Applicant`, `Visa Sponsorship Needed`, `Higher Education Degree`, `Medical Degree`, `Medical School of Graduation`, `Medical School Type`, `USMLE Step 1 Score`, `USMLE Step 2 CK Score`, `Tracks Applied by Applicant`, `Count of Non Peer Reviewed Online Publication`, `Count of Oral Presentation`, `Count of Other Articles`, `Count of Peer Reviewed Book Chapter`, `Count of Peer Reviewed Journal Articles/Abstracts`, `Count of Peer Reviewed Journal Articles/Abstracts(Other than Published)`, `Count of Peer Reviewed Online Publication`, `Count of Poster Presentation`, `Count of Scientific Monograph`, `OBGYN Grade--10`, `Misdemeanor Conviction`) %>%
+  dplyr::rename(Step_2_CK = 'USMLE Step 2 CK Score', Type_of_medical_school = `Medical School Type`) %>%
   dplyr::rename(Medical_School_of_Graduation = `Medical School of Graduation`) %>%
   dplyr::filter(`Medical Education or Training Interrupted` != "U.S. Citizen") %>%
   dplyr::mutate(`US or Canadian Applicant` = factor(`US or Canadian Applicant`)) %>%
@@ -128,7 +132,9 @@ archive2017 <- exploratory::read_delim_file("/Users/tylermuffly/Dropbox/Nomogram
   dplyr::mutate(Year = dplyr::recode(Year, `2017` = "2017"), Sigma_Sigma_Phi = dplyr::recode(Sigma_Sigma_Phi, No_Chapter = "No", Not_a_member = "No", Yes_Member = "Yes"), Medical_Licensure_Problem = dplyr::recode(Medical_Licensure_Problem, N = "No", Y = "Yes")) %>%
   dplyr::filter(Match_Status != "Atkins, Samantha; Burroughs, Sarah; Cacioppo, Joseph" & Match_Status != "Larson, Kaitlin; Ghadiri, Ali") %>%
   #rename(Medical_school_name = Medical_School_of_Graduation) %>%
-  dplyr::filter(Match_Status %in% c("Did_Not_Match", "Matched") & Count_of_Scientific_Monograph != "Ranked" & Age < 100)
+  dplyr::filter(Match_Status %in% c("Did_Not_Match", "Matched") & Count_of_Scientific_Monograph != "Ranked" & Age < 100) %>%
+  dplyr::select(-DOB) %>%
+  dplyr::rename(`Medical Licensure Problem` = Medical_Licensure_Problem)
 
 
 # Steps to produce 2016_archive ----
@@ -137,7 +143,7 @@ archive2016 <- exploratory::read_delim_file("/Users/tylermuffly/Dropbox/Nomogram
   readr::type_convert() %>%
   exploratory::clean_data_frame() %>%
   dplyr::mutate(`Current date` = mdy("01/01/2019")) %>%
-  dplyr::select(PERSONAL, PERSONAL_4, PERSONAL_6, PERSONAL_8, PERSONAL_19, PERSONAL_26, PERSONAL_28, PERSONAL_34, PERSONAL_45, PERSONAL_51, PERSONAL_52, PERSONAL_59, PERSONAL_65, PERSONAL_79, PERSONAL_80, PERSONAL_82, PERSONAL_84, 
+  dplyr::select(PERSONAL, PERSONAL_4, PERSONAL_6, PERSONAL_8, PERSONAL_19, PERSONAL_26, PERSONAL_28, PERSONAL_31, PERSONAL_34, PERSONAL_45, PERSONAL_51, PERSONAL_52, PERSONAL_59, PERSONAL_65, PERSONAL_79, PERSONAL_80, PERSONAL_82, PERSONAL_84, 
         SCORE_S1, # Step 1 score
         SCORE_CK, #Step 2 CK score
         MEDICAL, MEDICAL_6, MEDICAL_8, EXPERIENCE_12, TRACKSAPPLICANT, TRACKSAPPLICANT_1, PUB_COUNT, PUB_COUNT_1, PUB_COUNT_2, PUB_COUNT_3, PUB_COUNT_4, PUB_COUNT_5, PUB_COUNT_6, PUB_COUNT_7, PUB_COUNT_8, PERSONAL_14, PERSONAL_16, PERSONAL_31,
@@ -148,7 +154,7 @@ archive2016 <- exploratory::read_delim_file("/Users/tylermuffly/Dropbox/Nomogram
   dplyr::rename(`Malpractice Cases Pending` = PERSONAL_14) %>%
   dplyr::rename(`Step_2_CK` = SCORE_CK) %>%
   dplyr::mutate(`Malpractice Cases Pending` = dplyr::recode(`Malpractice Cases Pending`, `Malpractice Cases Pending` = "No", N = "No", .missing = "No")) %>%
-  filter(!is.na(MEDICAL_8)) %>%
+  dplyr::filter(!is.na(MEDICAL_8)) %>%
   dplyr::rename(`Visa Sponsorship Needed` = PERSONAL_84) %>%
   dplyr::select(-EXPERIENCE_12) %>%
   dplyr::rename(BLS = PERSONAL_8, PALS = PERSONAL_19) %>%
@@ -157,6 +163,7 @@ archive2016 <- exploratory::read_delim_file("/Users/tylermuffly/Dropbox/Nomogram
   filter(ACLS %in% c("Yes", "No")) %>%
   dplyr::mutate(BLS = dplyr::recode(BLS, Yes = "Yes", .missing = "No")) %>%
   dplyr::rename(`Alpha Omega Alpha` = PERSONAL_28) %>%
+  dplyr::rename(`Applicant Name` = PERSONAL_31) %>%
   dplyr::mutate(`Alpha Omega Alpha` = dplyr::recode(`Alpha Omega Alpha`, `Alpha Omega Alpha (Member of AOA)` = "Yes", `AOA elections held during Senior year` = "Elections_Senior_Year", `No AOA Chapter At My School` = "No", .missing = "No")) %>%
   dplyr::rename(`Gold Humanism Honor Society` = PERSONAL_52) %>%
   dplyr::mutate(`Gold Humanism Honor Society` = dplyr::recode(`Gold Humanism Honor Society`, `GHHS (Member of GHHS)` = "Yes", `No GHHS chapter at my school` = "No", .missing = "Not_a_Member")) %>%
@@ -203,11 +210,12 @@ archive2016 <- exploratory::read_delim_file("/Users/tylermuffly/Dropbox/Nomogram
   clean_names(case = "parsed") %>%
   dplyr::mutate(Year = 2016, Year = factor(Year)) %>%
   dplyr::select(-Year2016) %>%
-  dplyr::rename(`Medical School Type` = MEDICAL_8) %>%
-  dplyr::mutate(Sigma_Sigma_Phi = dplyr::recode(Sigma_Sigma_Phi, Not_a_member = "No", Yes_Member = "Yes", .default = "No"), `Medical School Type` = factor(`Medical School Type`)) %>%
+  dplyr::rename(Type_of_medical_school = MEDICAL_8) %>%
+  dplyr::mutate(Sigma_Sigma_Phi = dplyr::recode(Sigma_Sigma_Phi, Not_a_member = "No", Yes_Member = "Yes", .default = "No"), Type_of_medical_school = factor(Type_of_medical_school)) %>%
   dplyr::rename(`Medical Licensure Problem` = PERSONAL_16) %>%
   dplyr::mutate(`Medical Licensure Problem` = dplyr::recode(`Medical Licensure Problem`, N = "No"), `Medical Licensure Problem` = factor(`Medical Licensure Problem`)) %>%
-  dplyr::rename(Medical_School_of_Graduation = MEDICAL_6)
+  dplyr::rename(Medical_School_of_Graduation = MEDICAL_6) %>%
+  dplyr::select(-Positions_offered)
 
 
 # Steps to produce the 2015 archive  ----
@@ -225,7 +233,7 @@ archive2015 <- exploratory::read_delim_file("/Users/tylermuffly/Dropbox/Nomogram
          
          ) %>%
   dplyr::rename(Medical_School_of_Graduation = MEDICAL_6) %>%
-  #dplyr::rename(Medical_School_Type = MEDICAL_8) %>%
+  dplyr::rename(Applicant_Name = PERSONAL_31) %>%
   dplyr::rename(Step_2_CK = SCORE_CK) %>%
   dplyr::rename(`Medical Licensure Problem` = PERSONAL_14) %>%
   dplyr::mutate(`Medical Licensure Problem` = dplyr::recode(`Medical Licensure Problem`, `Medical Licensure Problem` = "No", N = "No", Y = "Yes", .missing = "No")) %>%
@@ -285,11 +293,24 @@ archive2015 <- exploratory::read_delim_file("/Users/tylermuffly/Dropbox/Nomogram
   clean_names(case = "parsed") %>%
   dplyr::rename(Year = Year2015) %>%
   dplyr::mutate(Year = dplyr::recode(Year, `2016` = "2015")) %>%
-  dplyr::rename(`Medical School Type` = MEDICAL_8) %>%
-  dplyr::mutate(`Medical School Type` = factor(`Medical School Type`), Medical_Licensure_Problem = factor(Medical_Licensure_Problem)) %>%
+  dplyr::rename(Type_of_medical_school = MEDICAL_8) %>%
+  dplyr::mutate(Type_of_medical_school = factor(Type_of_medical_school), Medical_Licensure_Problem = factor(Medical_Licensure_Problem)) %>%
   clean_names(case = "parsed") %>%
-  dplyr::mutate(Year = dplyr::recode(Year, `2016` = "2015"))
+  dplyr::select(-Positions_offered) %>%
+  dplyr::mutate(Year = dplyr::recode(Year, `2016` = "2015")) %>%
+  dplyr::rename(`Medical Licensure Problem` = Medical_Licensure_Problem)
   
+#Checking that all column names are the same ----
+colnamesarchive2015 <- names(archive2015) #"Type_of_medical_school"  
+colnamesarchive2016 <- names(archive2016) #"Medical School Type"  
+colnamesarchive2017 <- names(archive2017)
+colnamesarchive2018 <- names(archive2018) #"Type_of_medical_school"
+
+setdiff(colnamesarchive2015, colnamesarchive2016) #all columns equal
+
+setdiff(colnamesarchive2016, colnamesarchive2017)
+
+setdiff(colnamesarchive2017, colnamesarchive2018)
 
 
 #Bring all years together ----
@@ -298,28 +319,35 @@ all_years <-
   bind_rows(archive2016, id_column_name = "ID", current_df_name = "all_years", force_data_type = TRUE) %>%
   bind_rows(archive2017, id_column_name = "ID", current_df_name = "all_years", force_data_type = TRUE) %>%
   bind_rows(archive2018, id_column_name = "ID", current_df_name = "all_years", force_data_type = TRUE) %>%
+#all_years is 3524 rows at this point
+
   clean_names(case = "parsed") %>%
   
 #New variable of medical school type
-  tidyr::unite("Medical_School_Type", Medical_School_Type, Medical_School_Type_2, sep = "_", remove = FALSE) %>%
-  mutate(Medical_School_Type = str_remove(Medical_School_Type, "_NA$"), #Removes NA from end of string
-         Medical_School_Type = str_remove(Medical_School_Type, "^NA_")) %>%  #Removes NA from start of string
-  mutate(Medical_School_Type = dplyr::recode(Medical_School_Type, `International School,International School` = "International School", `International School,International School,International School` = "International School", `International School,International School,U.S. Public School,International School` = "International School", `International School,U.S. Private School` = "International School", `International School,U.S. Private School,U.S. Private School,U.S. Private School` = "International School", `U.S. Private School,International School` = "U.S. Private School", `U.S. Private School,International School,U.S. Private School,U.S. Private School` = "U.S. Private School", `U.S. Private School,International School,U.S. Public School` = "U.S. Private School", `U.S. Private School,U.S. Private School,International School,U.S. Public School,U.S. Private School` = "U.S. Private School", `U.S. Private School,U.S. Public School` = "U.S. Private School", `U.S. Public School,International School` = "U.S. Public School", `U.S. Public School,International School,International School,International School` = "U.S. Public School", `U.S. Public School,Osteopathic School` = "U.S. Public School", `U.S. Public School,U.S. Private School` = "U.S. Public School", `U.S. Public School,U.S. Public School` = "U.S. Public School")) %>%
+  mutate(Type_of_medical_school = dplyr::recode(Type_of_medical_school, `International School,International School` = "International School", `International School,International School,International School` = "International School", `International School,International School,U.S. Public School,International School` = "International School", `International School,U.S. Private School` = "International School", `International School,U.S. Private School,U.S. Private School,U.S. Private School` = "International School", `U.S. Private School,International School` = "U.S. Private School", `U.S. Private School,International School,U.S. Private School,U.S. Private School` = "U.S. Private School", `U.S. Private School,International School,U.S. Public School` = "U.S. Private School", `U.S. Private School,U.S. Private School,International School,U.S. Public School,U.S. Private School` = "U.S. Private School", `U.S. Private School,U.S. Public School` = "U.S. Private School", `U.S. Public School,International School` = "U.S. Public School", `U.S. Public School,International School,International School,International School` = "U.S. Public School", `U.S. Public School,Osteopathic School` = "U.S. Public School", `U.S. Public School,U.S. Private School` = "U.S. Public School", `U.S. Public School,U.S. Public School` = "U.S. Public School")) %>%
   
   #Bring in Step 2 Clinical Skills score here
   
   dplyr::mutate(Malpractice_Cases_Pending = dplyr::recode(Malpractice_Cases_Pending, N = "No", No = "No", Y = "Yes"), Malpractice_Cases_Pending = factor(Malpractice_Cases_Pending), Misdemeanor_Conviction = dplyr::recode(Misdemeanor_Conviction, No = "No", Yes = "Yes", .missing = "No"), Misdemeanor_Conviction = factor(Misdemeanor_Conviction)) %>%
-  dplyr::select(-DOB, -Medical_Licensure_Problem, -Medical_Licensure_Problem_2, -AAMC_ID) %>%
-  filter(!is.na(USMLE_Step_1_Score)) %>%
+  dplyr::select(-AAMC_ID) %>%
+  
+  filter(!is.na(USMLE_Step_1_Score)) %>%  
+  #filtered out 96 people with no Step 1 score, total of 3428 people now in analysis
+  
   dplyr::rename(white_non_white = Self_Identify, Couples_Match = Participating_as_a_Couple_in_NRMP) %>%
   dplyr::mutate(Match_Status_Dichot = dplyr::recode(Match_Status, Did_Not_Match = "0", Matched = "1"), Match_Status = dplyr::recode(Match_Status, Did_Not_Match = "No", Matched = "Yes")) %>%
-  reorder_cols(Match_Status, Match_Status_Dichot, ACLS, Age, Alpha_Omega_Alpha, BLS, Citizenship, Count_of_Non_Peer_Reviewed_Online_Publication, Count_of_Oral_Presentation, Count_of_Other_Articles, Count_of_Peer_Reviewed_Book_Chapter, Count_of_Peer_Reviewed_Journal_Articles_Abstracts, Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published, Count_of_Peer_Reviewed_Online_Publication, Count_of_Poster_Presentation, Count_of_Scientific_Monograph, Couples_Match, Gender, Gold_Humanism_Honor_Society, Medical_Education_or_Training_Interrupted, Malpractice_Cases_Pending, Medical_Degree, Military_Service_Obligation, Misdemeanor_Conviction, PALS, Positions_offered, Sigma_Sigma_Phi, US_or_Canadian_Applicant, 
-               USMLE_Step_1_Score, Visa_Sponsorship_Needed, white_non_white, Year) %>%
+  reorder_cols(Match_Status, Match_Status_Dichot, ACLS, Age, Alpha_Omega_Alpha, BLS, Citizenship, Count_of_Non_Peer_Reviewed_Online_Publication, Count_of_Oral_Presentation, Count_of_Other_Articles, Count_of_Peer_Reviewed_Book_Chapter, Count_of_Peer_Reviewed_Journal_Articles_Abstracts, Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published, Count_of_Peer_Reviewed_Online_Publication, Count_of_Poster_Presentation, Count_of_Scientific_Monograph, Couples_Match, Gender, Gold_Humanism_Honor_Society, Medical_Education_or_Training_Interrupted, Malpractice_Cases_Pending, Medical_Degree, Military_Service_Obligation, Misdemeanor_Conviction, PALS, Sigma_Sigma_Phi, US_or_Canadian_Applicant, USMLE_Step_1_Score, Visa_Sponsorship_Needed, white_non_white, Year) %>%
   dplyr::mutate(US_or_Canadian_Applicant = dplyr::recode(US_or_Canadian_Applicant, No = "international", Yes = "US senior")) %>%
   dplyr::mutate(Match_Status_Dichot_1 = dplyr::recode(Match_Status_Dichot, `0` = "Did not Match", `1` = "Matched Successfully")) %>%
-  dplyr::rename(Applicant_name = PERSONAL_31) %>%
-  dplyr::mutate(Applicant_name = str_to_title(Applicant_name), formatted_names = humaniformat::format_reverse(Applicant_name), firstname = humaniformat::first_name(formatted_names), lastname = humaniformat::last_name(formatted_names)) %>%
-  distinct(Applicant_name, .keep_all = TRUE) %>%
+  #all_years has 2438 people.  
+
+  dplyr::mutate(Applicant_Name = str_to_title(Applicant_Name), formatted_names = humaniformat::format_reverse(Applicant_Name), firstname = humaniformat::first_name(formatted_names), lastname = humaniformat::last_name(formatted_names)) %>%
+  #write_csv(all_years, "~/Dropbox/Nomogram/nomogram/all_years_before_distinct.csv")
+  
+  #dplyr::distinct(Applicant_Name, .keep_all = TRUE) %>%
+  #This is where all_years drops from 3428 to 2545 by 883 people because of distinct Applicant_name.  
+  
+  
   arrange(lastname) %>%
   # I need to look at matches from both sides.  ERAS shows who applied to OBGYN.  The GOBA_list_of_people_who_all_matched_into_OBGYN data shows who actually got into OBGYN.  
   left_join(GOBA_list_of_people_who_all_matched_into_OBGYN, by = c("lastname" = "lastname", "firstname" = "firstname"), ignorecase=TRUE) %>%
@@ -334,33 +362,33 @@ all_years <-
   # Ideas here are that the students who may or may not have matched ended up matching.  Giving people the beneift of the doubt.  For example Elizabeth Clain was called by GOBA as a match but not by ERAS for some reason.  
   dplyr::mutate(`Final call if they matched` = factor(`Final call if they matched`), `Final Final Final` = dplyr::recode(`Final call if they matched`, `Did not match_Did not match` = "Did not match", `Did not match_Larson, Kaitlin; Ghadiri, Ali` = "Did not match", `Did not match_Matched` = "Matched", `Did not match_NA` = "Did not match")) %>%
   filter(Match_Status != "Larson, Kaitlin; Ghadiri, Ali") %>%
-  dplyr::select(-Match_Status, -Match_Status_Dichot, -ID_new_new, -ID_new, -ID, -Match_Status_Dichot_1, -formatted_names, -firstname, -lastname, -name, -`Unite match data from ABOG and from ERAS`, -`Matched because present in ABOG database`, -`Match stats as defined by ERAS data`, -`Final call if they matched`) %>%
+  dplyr::select(-Match_Status, -Match_Status_Dichot, -ID_new_new, -ID_new, -ID, -Match_Status_Dichot_1, -formatted_names, -firstname, -lastname, -name, -`Unite match data from ABOG and from ERAS`, -`Matched because present in ABOG database`, -`Match stats as defined by ERAS data`, -`Final call if they matched`, Gold_Humanism_Honor_Society) %>%
   
   # Outcome variable has to be the last column.  
-  reorder_cols(Applicant_name, ACLS, Age, Alpha_Omega_Alpha, BLS, Citizenship, Count_of_Non_Peer_Reviewed_Online_Publication, Count_of_Oral_Presentation, Count_of_Other_Articles, Count_of_Peer_Reviewed_Book_Chapter, Count_of_Peer_Reviewed_Journal_Articles_Abstracts, Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published, Count_of_Peer_Reviewed_Online_Publication, Count_of_Poster_Presentation, Count_of_Scientific_Monograph, Couples_Match, Gender, Gold_Humanism_Honor_Society, Medical_Education_or_Training_Interrupted, Malpractice_Cases_Pending, Medical_Degree, Military_Service_Obligation, Misdemeanor_Conviction, PALS, Positions_offered, Sigma_Sigma_Phi, US_or_Canadian_Applicant, USMLE_Step_1_Score, Visa_Sponsorship_Needed, white_non_white, Year, `Final Final Final`) %>%
+  reorder_cols(Applicant_Name, ACLS, Age, Alpha_Omega_Alpha, BLS, Citizenship, Count_of_Non_Peer_Reviewed_Online_Publication, Count_of_Oral_Presentation, Count_of_Other_Articles, Count_of_Peer_Reviewed_Book_Chapter, Count_of_Peer_Reviewed_Journal_Articles_Abstracts, Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published, Count_of_Peer_Reviewed_Online_Publication, Count_of_Poster_Presentation, Count_of_Scientific_Monograph, Couples_Match, Gender, Gold_Humanism_Honor_Society, Medical_Education_or_Training_Interrupted, Malpractice_Cases_Pending, Medical_Degree, Military_Service_Obligation, Misdemeanor_Conviction, PALS, Sigma_Sigma_Phi, US_or_Canadian_Applicant, USMLE_Step_1_Score, Visa_Sponsorship_Needed, white_non_white, Year, `Final Final Final`) %>%
   dplyr::rename(Match_Status = `Final Final Final`) %>%
   dplyr::mutate(Match_Status = dplyr::recode_factor(Match_Status, `Did not match` = "Did Not Match", Matched = "Matched", `Matched_Did not match` = "Unsure", Matched_Matched = "Matched")) %>%
   filter(Match_Status %in% c("Did Not Match", "Matched")) %>%
   dplyr::mutate(Count_of_Peer_Reviewed_Book_Chapter = parse_number(Count_of_Peer_Reviewed_Book_Chapter)) %>%
-  dplyr::mutate_at(vars(ACLS, Alpha_Omega_Alpha, BLS, Citizenship, Couples_Match, Gender, Gold_Humanism_Honor_Society, Medical_Education_or_Training_Interrupted, Malpractice_Cases_Pending, Medical_Degree, Military_Service_Obligation, Misdemeanor_Conviction, PALS, Sigma_Sigma_Phi, US_or_Canadian_Applicant, Visa_Sponsorship_Needed, white_non_white, Year, Medical_School_Type), funs(factor)) %>%
+  dplyr::mutate_at(vars(ACLS, Alpha_Omega_Alpha, BLS, Citizenship, Couples_Match, Gender, Gold_Humanism_Honor_Society, Medical_Education_or_Training_Interrupted, Malpractice_Cases_Pending, Medical_Degree, Military_Service_Obligation, Misdemeanor_Conviction, PALS, Sigma_Sigma_Phi, US_or_Canadian_Applicant, Visa_Sponsorship_Needed, white_non_white, Year, Type_of_medical_school), funs(factor)) %>%
   filter(Count_of_Peer_Reviewed_Online_Publication != "Obstetrics-Gynecology|1076220C0 (Categorical)") %>%
   dplyr::mutate(Match_Status = dplyr::recode(Match_Status, `Did not match` = "0", Matched = "1")) %>%
   filter(!is_empty(Match_Status)) %>%
-  dplyr::select(-Applicant_name, -Year) %>%
+  dplyr::select(-Year) %>%
   filter(Match_Status %nin% c("") & Match_Status != "Matched_NA") %>%
   dplyr::mutate(Match_Status = dplyr::recode(Match_Status, `0` = "No.Match", `1` = "Match")) %>%
-  fill(ACLS, Age, Alpha_Omega_Alpha, BLS, Citizenship, Count_of_Non_Peer_Reviewed_Online_Publication, Count_of_Oral_Presentation, Count_of_Other_Articles, Count_of_Peer_Reviewed_Book_Chapter, Count_of_Peer_Reviewed_Journal_Articles_Abstracts, Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published, Count_of_Peer_Reviewed_Online_Publication, Count_of_Poster_Presentation, Count_of_Scientific_Monograph, Couples_Match, Gender, Gold_Humanism_Honor_Society, Medical_Education_or_Training_Interrupted, Malpractice_Cases_Pending, Medical_Degree, Military_Service_Obligation, Misdemeanor_Conviction, PALS, Positions_offered, Sigma_Sigma_Phi, US_or_Canadian_Applicant, USMLE_Step_1_Score, Visa_Sponsorship_Needed, white_non_white, Match_Status, .direction = "down") %>%
+  fill(ACLS, Age, Alpha_Omega_Alpha, BLS, Citizenship, Count_of_Non_Peer_Reviewed_Online_Publication, Count_of_Oral_Presentation, Count_of_Other_Articles, Count_of_Peer_Reviewed_Book_Chapter, Count_of_Peer_Reviewed_Journal_Articles_Abstracts, Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published, Count_of_Peer_Reviewed_Online_Publication, Count_of_Poster_Presentation, Count_of_Scientific_Monograph, Couples_Match, Gender, Gold_Humanism_Honor_Society, Medical_Education_or_Training_Interrupted, Malpractice_Cases_Pending, Medical_Degree, Military_Service_Obligation, Misdemeanor_Conviction, PALS, Sigma_Sigma_Phi, US_or_Canadian_Applicant, USMLE_Step_1_Score, Visa_Sponsorship_Needed, white_non_white, Match_Status, .direction = "down") %>%
   dplyr::mutate(Count_of_Non_Peer_Reviewed_Online_Publication = parse_number(Count_of_Non_Peer_Reviewed_Online_Publication), Match_Status_1 = Match_Status) %>%
   unite(`USMLE_Step_2_CK_Score`, `Step_2_CK`, sep = "_", remove = FALSE) %>%
-  dplyr::select(-`Step_2_CK`, - Medical_School_Type_2) %>%
-  dplyr::select(-ID_new_new_new, - Positions_offered, -userid, - Match_Status_1) %>%
+  dplyr::select(-`Step_2_CK`) %>%
+  dplyr::select(-ID_new_new_new, -userid, - Match_Status_1) %>%
   #as.numeric(USMLE_Step_2_CK_Score) %>%
   dplyr::filter(Age < 100) %>%
   dplyr::mutate(Gold_Humanism_Honor_Society = dplyr::recode(Gold_Humanism_Honor_Society, Not_a_Member = "No"), Medical_Degree = dplyr::recode(Medical_Degree, `B.A.O.,M.D.` = "MD", `DO/MS` = "DO", `DO/PhD` = "DO", `M.B.,B.S.,M.B.,B.S.` = "MD", `M.B.,B.S.,M.D.` = "MD", `M.D.,M.B.,B.S.` = "MD", `M.D.,M.D.` = "MD", `M.D./Ph.D.,M.D.` = "MD", `M.Surg.,M.B.,B.S.` = "MD", MD = "MD")) %>%
   dplyr::filter(Match_Status %in% c("Match", "Did Not Match")) %>%
   #base::droplevels(all_years$Match_Status) %>%
   dplyr::select(- Malpractice_Cases_Pending) %>% #zero variance feature
-  dplyr::select(-Type_of_medical_school, -Step_CK, -Applicant_Name)
+  dplyr::select(-Gold_Humanism_Honor_Society)
 
 colnames(all_years)
 dim(all_years)
@@ -376,19 +404,20 @@ print(nrow(all_years))
 print("The number of OBGYNs who are confirmed to be in practice was:")
 print(nrow(GOBA_list_of_people_who_all_matched_into_OBGYN))
 
+# Venn diagram ----
 #https://statisticsglobe.com/venn-diagram-in-r
-install.packages("VennDiagram")                       # Install VennDiagram package
-library("VennDiagram")                                # Load VennDiagram package
+#install.packages("VennDiagram")                       # Install VennDiagram package
+#library("VennDiagram")                                # Load VennDiagram package
 
-grid.newpage()                                        # Move to new plotting page
-draw.pairwise.venn(area1 = 3524,                        # Create pairwise venn diagram
-                   area2 = 52346,
-                   cross.area = 2359,
-                   col = "red",
-                   fill = c("pink", "green"),
-                   alpha = 0.5,
-                   lty = "blank",
-                   category = c("Names\nof Residency\napplicants", "Names\nof US\nOBGYNs"))
+# grid.newpage()                                        # Move to new plotting page
+# draw.pairwise.venn(area1 = 3524,                        # Create pairwise venn diagram
+#                    area2 = 52346,
+#                    cross.area = 3231,
+#                    col = "red",
+#                    fill = c("pink", "green"),
+#                    alpha = 0.5,
+#                    lty = "blank",
+#                    category = c("Names\nof Residency\napplicants", "Names\nof US\nOBGYNs"))
 
 # NIH dollars by OBGYN Department 2018 ----
 # I could not export working R code from exploratory so I exported the file directly from exploratory as a CSV.  
@@ -415,10 +444,10 @@ colnames(all_years)
 view(summarytools::dfSummary(x = all_years, justify = "l", style = "multiline", varnumbers = FALSE, valid.col = FALSE, tmp.img.dir = "./img", max.distinct.values = 5))
 
 write_csv(x = all_years, path = "~/Dropbox/Nomogram/nomogram/data/All_ERAS_data_merged_output_2_1_2020.csv")
-
-rm(archive2015)
-rm(archive2016)
-rm(archive2017)
-rm(archive2018)
-rm(GOBA_list_of_people_who_all_matched_into_OBGYN)
-rm(total_number_of_applicants)
+# 
+# rm(archive2015)
+# rm(archive2016)
+# rm(archive2017)
+# rm(archive2018)
+# rm(GOBA_list_of_people_who_all_matched_into_OBGYN)
+# rm(total_number_of_applicants)

@@ -94,14 +94,14 @@ cat("\014")  #Clear console
 # I want to use packrate to make the project more: isolated, portable and reproducible.  Please see packrat/packrat.lock for a list of the precise packages used and their versions.  Be sure to check in the .Rprofile, packrat.lock files, and everything under packrat/src/. 
 packrat::packrat_mode(on = TRUE)
 #packrat::status()
-#packrat::clean()
+packrat::clean()
 #packrat::restore()
 #packrat::snapshot(infer.dependencies = FALSE, snapshot.sources = FALSE, ignore.stale = TRUE)  #Run each time a new library is installed.
 
 #packrat::bundle(include.lib = TRUE, include.src = TRUE, omit.cran.src = TRUE)  #Use this for portability
 #Bundle is stored in packrat/bundles/***.tar.gz
 
-#options(tinytex.verbose = FALSE)
+options(tinytex.verbose = FALSE)
 library(knitr)
 ```
 
@@ -138,7 +138,6 @@ all_data <- na.omit(all_data)
 dim(all_data)
 data.table::data.table(all_data)
 funModeling::freq(data=all_data, plot = FALSE, na.rm = FALSE)
-glimpse(all_data)
 
 view(summarytools::dfSummary(x = all_data, justify = "l", style = "multiline", varnumbers = FALSE, valid.col = FALSE, tmp.img.dir = "./img", max.distinct.values = 5))
 
@@ -156,16 +155,14 @@ We can see that these data have `r nrow(all_data)` observations of `r ncol(all_d
 
 ```{r structure of data, include=TRUE, echo=TRUE, out.width="75%"}
 # examine the structure of the initial data frame
-all_data$Count_of_Peer_Reviewed_Journal_Articles_Abstracts <- as.numeric(all_data$Count_of_Peer_Reviewed_Journal_Articles_Abstracts)
+all_data$Count_of_Articles_Abstracts <- as.numeric(all_data$Count_of_Articles_Abstracts)
 all_data$Age <- as.numeric(all_data$Age)
 all_data$Count_of_Poster_Presentation <- as.numeric(all_data$Count_of_Poster_Presentation)
 all_data$USMLE_Step_1_Score <- as.numeric(all_data$USMLE_Step_1_Score)
 all_data$Count_of_Oral_Presentation <- as.numeric(all_data$Count_of_Oral_Presentation)
-all_data$Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published <- as.numeric(all_data$Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published)
+all_data$Count_of_Other_than_Published <- as.numeric(all_data$Count_of_Other_than_Published)
 all_data$Count_of_Peer_Reviewed_Book_Chapter <- as.numeric(all_data$Count_of_Peer_Reviewed_Book_Chapter)
-all_data$Count_of_Non_Peer_Reviewed_Online_Publication <- as.numeric(all_data$Count_of_Non_Peer_Reviewed_Online_Publication)
-all_data$USMLE_Step_2_CK_Score <- as.numeric(all_data$USMLE_Step_2_CK_Score)
-all_data$Medical_School_Type <- as.factor(all_data$Medical_School_Type)
+all_data$Count_of_Online_Publications <- as.numeric(all_data$Count_of_Online_Publications)
 
 inspectdf::inspect_types(all_data) %>% show_plot()
 ```
@@ -174,42 +171,25 @@ inspectdf::inspect_types(all_data) %>% show_plot()
 #https://github.com/manojmukkamala/DiabeticPatientsReadmission/blob/master/Project_V4.R
 
 #Just writing the names of all the variables under one term to avoid re-writing when we apply model multiple times
-
-#"Malpractice_Cases_Pending", Removed because this is due to the fact that all people had 0 cases
-
 drivers <- c("white_non_white",
-             "Alpha_Omega_Alpha",
-             "ACLS", 
-             "BLS", 
-             "PALS", 
-             "Citizenship", 
-             "Gold_Humanism_Honor_Society", 
-             "Misdemeanor_Conviction",
-             "Sigma_Sigma_Phi",
              "Age", 
-             "Medical_Education_or_Training_Interrupted",
              "Gender",
              "Couples_Match",
              "US_or_Canadian_Applicant",
+             "Medical_Education_Interrupted",
              "Alpha_Omega_Alpha",
              "Military_Service_Obligation",
              "USMLE_Step_1_Score", 
              "Visa_Sponsorship_Needed",
              "Count_of_Poster_Presentation", 
              "Count_of_Oral_Presentation", 
+             "Count_of_Articles_Abstracts",
              "Count_of_Peer_Reviewed_Book_Chapter",
-             "Count_of_Peer_Reviewed_Journal_Articles_Abstracts",
-             "Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published",
              "Count_of_Other_than_Published",
-             "Count_of_Peer_Reviewed_Online_Publication",
-             "Count_of_Non_Peer_Reviewed_Online_Publication",
-             "Count_of_Scientific_Monograph",
-             "Count_of_Other_Articles",
+             "Count_of_Online_Publications",
              "Visa_Sponsorship_Needed",
              "Medical_School_Type",
-             "Medical_Degree", 
-             "NIH_dollars",
-             "USMLE_Step_2_CK_Score")
+             "Medical_Degree")
 
 #Writing the name of dependent variable seperately
 dependentVar <- "Match_Status"
@@ -248,7 +228,6 @@ naniar::gg_miss_var(all_data)
 tm_print_save(filename = "na_pattern.tiff")
 
 na_pattern <- Hmisc::na.pattern(all_data)
-na_pattern
 ```
 
 # Exploratory data analysis
@@ -291,7 +270,7 @@ tm_ggsave(inspect_num_plot, "inspect_num_plot.tiff")
 ```{r, include=TRUE, echo=TRUE, include=TRUE, align = 'left', cache=FALSE, out.width="75%"}
 #EDA,  https://ryjohnson09.netlify.com/post/caret-and-tidymodels/
 # Create vector of predictors and subtract the last column with the target variable
-expl <- names(all_data)[-28]  #[-19]
+expl <- names(all_data)[-19]
 
 # Loop vector with map
 expl_plots_box <- purrr::map(expl, ~box_fun_plot(data = all_data, x = "Match_Status", y = .x) )
@@ -480,13 +459,55 @@ I will call the training sample `train` and the test sample `test`.  *Creative!*
 Shows four different ways to split the data  
 ```{r, train vs test, warning=FALSE, echo=TRUE, message=FALSE, include=TRUE}
 #http://rpubs.com/josevilardy/crossvalidation
-# WE USED THIS ONE
+# train <- filter(all_data, Year %in% c("2015", "2016"))  #Train on years 2015, 2016
+# nrow(train)
+# test <- filter(all_data, Year %in%  c("2017", "2018")) #Test on 2017, 2018 data
+# nrow(test)
+# test <- test %>% select(-"Year")
+# train <- train %>% select(-"Year")
+
 set.seed(seed = 1978) 
 all_data$Age <- as.numeric(all_data$Age)
 all_data <- all_data 
 data_split <- rsample::initial_split(data = all_data, 
                                      strata = "Match_Status", 
                                      prop = 0.8)
+
+# Using base R
+set.seed(123)  # for reproducibility
+index_1 <- base::sample(1:nrow(all_data), round(nrow(all_data) * 0.8))
+train_1 <- all_data[index_1, ]
+test_1  <- all_data[-index_1, ]
+rm(test_1)
+
+# Using caret package
+set.seed(123)  # for reproducibility
+index_2 <- caret::createDataPartition(all_data$Match_Status, p = 0.8, 
+                               list = FALSE)
+train_2 <- all_data[index_2, ]
+test_2  <- all_data[-index_2, ]
+
+# Using rsample package
+set.seed(123)  # for reproducibility
+split_1  <- rsample::initial_split(all_data, prop = 0.8)
+train_3  <- rsample::training(split_1)
+test_3   <- rsample::testing(split_1)
+
+# Using h2o package
+# brew tap caskroom/versions
+# brew cask install java8
+
+# brew cask install adoptopenjdk8
+# brew tap adoptopenjdk/openjdk
+# brew cask install homebrew/cask-versions/adoptopenjdk8
+
+h2o::h2o.init()
+all_data.h2o <- h2o::as.h2o(all_data)
+split_2 <- h2o::h2o.splitFrame(all_data.h2o, ratios = 0.8, 
+                          seed = 123)
+train_4 <- split_2[[1]]
+test_4  <- split_2[[2]]
+data_split
 
 train <- data_split %>% training() %>% glimpse()  # Extract the training dataframe
 write_csv(x = train, 
@@ -501,55 +522,6 @@ write_csv(x = test,
           col_names = TRUE)
 
 plot_hist_facet(data=test)
-```
-
-
-```{r, train vs test, warning=FALSE, echo=TRUE, message=FALSE, include=TRUE}
-#More ways to split the data.  
-
-# Using base R
-set.seed(123)  # for reproducibility
-index_1 <- base::sample(1:nrow(all_data), round(nrow(all_data) * 0.8))
-train_1 <- all_data[index_1, ]
-test_1  <- all_data[-index_1, ]
-rm(test_1)
-rm(train_1)
-
-# Using caret package
-set.seed(123)  # for reproducibility
-index_2 <- caret::createDataPartition(all_data$Match_Status, p = 0.8, 
-                               list = FALSE)
-train_2 <- all_data[index_2, ]
-test_2  <- all_data[-index_2, ]
-rm(train_2)
-rm(test_2)
-
-# Using rsample package
-set.seed(123)  # for reproducibility
-split_1  <- rsample::initial_split(all_data, prop = 0.8)
-train_3  <- rsample::training(split_1)
-test_3   <- rsample::testing(split_1)
-rm(split_1)
-rm(train_3)
-rm(test_3)
-
-# Using h2o package
-# brew tap caskroom/versions
-# brew cask install adoptopenjdk8
-# brew tap adoptopenjdk/openjdk
-# brew cask install homebrew/cask-versions/adoptopenjdk8
-
-h2o::h2o.init()
-all_data.h2o <- h2o::as.h2o(all_data)
-split_2 <- h2o::h2o.splitFrame(all_data.h2o, ratios = 0.8, 
-                          seed = 123)
-train_4 <- split_2[[1]]
-test_4  <- split_2[[2]]
-data_split
-
-rm(train_4)
-rm(test_4)
-rm(data_split)
 ```
 
 Compare the datasets of `train` and `test`using arsenal package:  
@@ -709,18 +681,17 @@ all_data_binarized_tbl <- all_data %>%
 all_data_binarized_tbl %>% tibble::glimpse()
 
 all_data_correlated_tbl <- all_data_binarized_tbl %>%
-  correlationfunnel::correlate(target = Match_Status__Match)
+  correlationfunnel::correlate(target = Match_Status__Matched)
 
 all_data_correlated_tbl
+
+all_data_correlated_tbl %>%
+  correlationfunnel::plot_correlation_funnel(interactive = TRUE, limits = c(-1, 1))
 
 static_correlation_funnel <- all_data_correlated_tbl %>%
   correlationfunnel::plot_correlation_funnel(interactive = FALSE, limits = c(-1, 1))
 
 tm_ggsave(static_correlation_funnel, "static_correlation_funnel.tiff")
-
-#REALLY COOL AND INSTRUCTIVE
-all_data_correlated_tbl %>%
-  correlationfunnel::plot_correlation_funnel(interactive = TRUE, limits = c(-1, 1))
 ```
 
 Another way to look at correlation is with pairs of variables plotted.   
@@ -1820,7 +1791,18 @@ Build both a glm (train.glm.with.lasso.variables) and a lrm model (train.lrm.wit
 ```{r, echo=TRUE, warning=FALSE}
 #It would be nice to create a character variable that we drop features from.  
 train.glm.with.lasso.variables  <- 
-  stats::glm(Match_Status ~ white_non_white + Alpha_Omega_Alpha + ACLS + BLS + PALS + Citizenship + Gold_Humanism_Honor_Society + Misdemeanor_Conviction + Sigma_Sigma_Phi + Age + Medical_Education_or_Training_Interrupted + Gender + Couples_Match + US_or_Canadian_Applicant + Alpha_Omega_Alpha + Military_Service_Obligation + USMLE_Step_1_Score + Visa_Sponsorship_Needed + Count_of_Poster_Presentation + Count_of_Oral_Presentation + Count_of_Peer_Reviewed_Book_Chapter + Count_of_Peer_Reviewed_Journal_Articles_Abstracts + Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published + Count_of_Peer_Reviewed_Online_Publication + Count_of_Non_Peer_Reviewed_Online_Publication + Count_of_Scientific_Monograph + Count_of_Other_Articles + Visa_Sponsorship_Needed + Medical_School_Type + Medical_Degree + USMLE_Step_2_CK_Score,
+  stats::glm(Match_Status ~
+                                    white_non_white + 
+                                    Age +
+                                    Gender +
+                                    Couples_Match +
+                                    US_or_Canadian_Applicant +
+                                    Medical_Education_Interrupted + 
+                                    Alpha_Omega_Alpha + 
+                                    USMLE_Step_1_Score + 
+                                    Count_of_Oral_Presentation + 
+                                    Visa_Sponsorship_Needed, 
+                                    #Medical_Degree, #Removed due to VIF issues of collinearity, 
       data = train, 
       family = "binomial"(link=logit))  
 
@@ -3213,9 +3195,6 @@ utils::sessionInfo()
 
 # Evaluate Algorithms to create a model
 ```{r}
-train <- na.omit(train)
-sum(is.na(train))
-
 #https://github.com/shriyarp/IndianLiverPatient/blob/master/indianLiverPatientsReport.Rmd
 control <- trainControl(method="cv", number=10)
 #Quadratic Discriminant Analysis
@@ -3423,39 +3402,32 @@ error
 
 # Evaluate Algorithms to create a model
 ```{r}
-test <- na.omit(test)
-
 #https://github.com/shriyarp/IndianLiverPatient/blob/master/indianLiverPatientsReport.Rmd
-control <- trainControl(method="cv", number=10, )
+control <- trainControl(method="cv", number=10)
 #Quadratic Discriminant Analysis
 set.seed(4)
-fit.qda.test <- caret::train(Match_Status~., data=test, method="qda", trControl=control)
+fit.qda <- caret::train(Match_Status~., data=test, method="qda", trControl=control)
 #AdaBoost Classification Trees
 set.seed(4)
-fit.ab.test <- caret::train(Match_Status~., data=test, method="adaboost", trControl=control)
+fit.ab <- caret::train(Match_Status~., data=test, method="adaboost", trControl=control)
 #Naive Bayes
 set.seed(4)
-fit.nb.test <- caret::train(Match_Status~., data=test, method="naive_bayes", trControl=control)
+fit.nb <- caret::train(Match_Status~., data=test, method="naive_bayes", trControl=control)
 # Linear Discriminant Analysis
 set.seed(4)
-fit.lda.test <- caret::train(Match_Status~., data=test, method="lda",  trControl=control)
+fit.lda <- caret::train(Match_Status~., data=test, method="lda",  trControl=control)
 # CART
 set.seed(4)
-fit.cart.test <- caret::train(Match_Status~., data=test, method="rpart",  trControl=control)
-  # cp          Accuracy   Kappa    
-  # 0.02068966  0.8545526  0.4925973
-  # 0.02758621  0.8558680  0.4885685
-  # 0.16206897  0.8116327  0.1361600  #Winner!  
-
+fit.cart <- caret::train(Match_Status~., data=test, method="rpart",  trControl=control)
 # K-nearest neighbours
 set.seed(4)
-fit.knn.test <- caret::train(Match_Status~., data=test, method="knn",  trControl=control)
+fit.knn <- caret::train(Match_Status~., data=test, method="knn",  trControl=control)
 # Support Vector Machines with Radial Basis Function Kernel
 set.seed(4)
-fit.svm.test <- caret::train(Match_Status~., data=test, method="svmRadial",  trControl=control)
+fit.svm <- caret::train(Match_Status~., data=test, method="svmRadial",  trControl=control)
 # Random Forest
 set.seed(4)
-fit.rf.test <- caret::train(Match_Status~., data=test, method="rf",  trControl=control)
+fit.rf <- caret::train(Match_Status~., data=test, method="rf",  trControl=control)
 ```
 
 
@@ -3481,15 +3453,13 @@ DynNom.model.lrm  <-
            y= TRUE)
 
 #### Turn this on to start the shiny model.  
-#DynNom::DynNom(model = DynNom.model.lrm, data = test,  clevel = 0.95)
+DynNom::DynNom(model = DynNom.model.lrm, data = test,  clevel = 0.95)
 ```
 
 #All variables for the DynNom online tool.  
 ```{r}
 DynNom.model.lrm.full  <-
   rms::lrm(Match_Status~ Age + white_non_white + Gender + Medical_Degree + US_or_Canadian_Applicant + Medical_Education_Interrupted + Alpha_Omega_Alpha + Military_Service_Obligation + USMLE_Step_1_Score + Visa_Sponsorship_Needed + Count_of_Poster_Presentation + Count_of_Oral_Presentation + Count_of_Articles_Abstracts + Count_of_Peer_Reviewed_Book_Chapter + Count_of_Other_than_Published + Count_of_Online_Publications + Visa_Sponsorship_Needed + Couples_Match, data=test, x=TRUE, y=TRUE)
-
-summary(DynNom.model.lrm.full)
 
 DynNom::DynNom(model = DynNom.model.lrm.full, data = test,  clevel = 0.95)
 ```
@@ -3499,157 +3469,8 @@ DynNom::DynNom(model = DynNom.model.lrm.full, data = test,  clevel = 0.95)
 DynNom.model.glm <- stats::glm(formula = formula,
                         family = "binomial",  #Removed the relax cubic splines for age and USMLE step 1
                         data = test, x = TRUE, y= TRUE)
-
+summary(DynNom.model.glm)
 
 #### Turn this on to start the shiny model.  
 # DynNom::DNbuilder(model = DynNom.model.glm, data = test, clevel = 0.95, DNtitle = "DRAFT: A Model to Predict Chances of Matching into Obstetrics and Gynecology Residency")
 ```
-
-# Caret Approach
-```{r}
-#https://rpubs.com/esuess/LogisticRegression
-
-library(caret)
-all_data
-# Using caret package
-set.seed(123)  # for reproducibility
-Train <- caret::createDataPartition(all_data$Match_Status, p = 0.8, 
-                               list = FALSE)
-#Train <- createDataPartition(GermanCredit$Class, p=0.6, list=FALSE)
-training <- all_data[ Train, ]
-testing <- all_data[ -Train, ]
-
-mod_fit <- caret::train(Match_Status ~ white_non_white + Age + Gender + Couples_Match + US_or_Canadian_Applicant + Medical_Education_Interrupted + Alpha_Omega_Alpha + Military_Service_Obligation + USMLE_Step_1_Score + Visa_Sponsorship_Needed + Count_of_Poster_Presentation + Count_of_Oral_Presentation + Count_of_Articles_Abstracts + Count_of_Peer_Reviewed_Book_Chapter + Count_of_Other_than_Published + Count_of_Online_Publications + Visa_Sponsorship_Needed  + Medical_Degree,  
-                        data=training, method="glm", family="binomial")
-
-exp(coef(mod_fit$finalModel))
-
-stats::predict(mod_fit, newdata=testing)
-stats::predict(mod_fit, newdata=testing, type="prob")
-
-mod_fit_one <- glm(Match_Status ~ white_non_white + Age + Gender + Couples_Match + US_or_Canadian_Applicant + Medical_Education_Interrupted + Alpha_Omega_Alpha + Military_Service_Obligation + USMLE_Step_1_Score + Visa_Sponsorship_Needed + Count_of_Poster_Presentation + Count_of_Oral_Presentation + Count_of_Articles_Abstracts + Count_of_Peer_Reviewed_Book_Chapter + Count_of_Other_than_Published + Count_of_Online_Publications + Visa_Sponsorship_Needed  + Medical_Degree, 
-                   data=training, family="binomial")
-
-mod_fit_two <- glm(Match_Status ~ white_non_white + Age + Gender + Couples_Match + US_or_Canadian_Applicant + Medical_Education_Interrupted + Alpha_Omega_Alpha + Military_Service_Obligation + USMLE_Step_1_Score + Visa_Sponsorship_Needed + Count_of_Poster_Presentation + Medical_Degree, 
-                   data=training, family="binomial")
-
-anova(mod_fit_one, mod_fit_two, test ="Chisq")
-
-library(lmtest)
-lrtest(mod_fit_one, mod_fit_two)
-
-library(pscl)
-pR2(mod_fit_one)  # look for 'McFadden'
-
-# install.packages("remotes")
-# remotes::install_github("stamats/MKmisc")
-# library(MKmisc)
-# HLgof.test(fit = fitted(mod_fit_one), obs = training$Match_Status)
-
-library(ResourceSelection)
-hoslem.test(training$Match_Status, fitted(mod_fit_one), g=10)
-
-library(survey)
-regTermTest(mod_fit_one, "Medical_Degree")
-regTermTest(mod_fit_one, "USMLE_Step_1_Score")
-
-varImp(mod_fit)
-
-# testing$Match_Status <- as.factor(testing$Match_Status)
-# pred = stats::predict(mod_fit, newdata=testing)
-# dim(pred)
-# class(pred)
-# accuracy <- table(pred, testing[,"Match_Status"])
-# dim(accuracy)
-# class(accuracy)
-# sum(base::diag(accuracy))/sum(accuracy)
-
-pred = predict(mod_fit, newdata=testing)
-caret::confusionMatrix(data=pred, testing$Match_Status)
-
-library(pROC)
-# Compute AUC for predicting Class with the variable CreditHistory.Critical
-f1 = roc(Match_Status ~ USMLE_Step_1_Score, data=training) 
-plot(f1, col="red")
-## 
-## Call:
-## roc.formula(formula = Class ~ CreditHistory.Critical, data = training)
-## 
-## Data: CreditHistory.Critical in 180 controls (Class Bad) < 420 cases (Class Good).
-## Area under the curve: 0.5944
-library(ROCR)
-# Compute AUC for predicting Class with the model
-prob <- stats::predict(mod_fit_one, newdata=testing, type="response")
-pred <- ROCR::prediction(prob, testing$Match_Status)
-perf <- performance(pred, measure = "tpr", x.measure = "fpr")
-plot(perf)
-auc <- performance(pred, measure = "auc")
-auc <- auc@y.values[[1]]
-auc
-
-ctrl <- trainControl(method = "repeatedcv", number = 10, savePredictions = TRUE)
-
-mod_fit <- caret::train(Match_Status ~  white_non_white + Age + Gender + Couples_Match + US_or_Canadian_Applicant + Medical_Education_Interrupted + Alpha_Omega_Alpha + Military_Service_Obligation + USMLE_Step_1_Score + Visa_Sponsorship_Needed + Count_of_Poster_Presentation + Count_of_Oral_Presentation + Count_of_Articles_Abstracts + Count_of_Peer_Reviewed_Book_Chapter + Count_of_Other_than_Published + Count_of_Online_Publications + Visa_Sponsorship_Needed + Medical_Degree,
-                 data=all_data, method="glm", family="binomial",
-                 trControl = ctrl, tuneLength = 5)
-
-pred = stats::predict(mod_fit, newdata=testing)
-caret::confusionMatrix(data=pred, testing$Match_Status)
-
-```
-
-
-```{r}
-# http://appliedpredictivemodeling.com/blog/2014/2/1/lw6har9oewknvus176q4o41alqw2ow
-
-library(caret)
- 
-set.seed(442)
-training <- twoClassSim(n = 1000, intercept = -16)
-testing <- twoClassSim(n = 1000, intercept = -16)
-
-table(training$Class)
-
-set.seed(949)
-mod0 <- caret::train(Class ~ ., data = training,
-               method = "rf",
-               metric = "ROC",
-               tuneGrid = data.frame(mtry = 3),
-              trControl = trainControl(method = "cv",
-                                        classProbs = TRUE,
-                                        summaryFunction = twoClassSummary))
-getTrainPerf(mod0)
-
-fourStats <- function (data, lev = levels(data$obs), model = NULL) {
-  ## This code will get use the area under the ROC curve and the
-  ## sensitivity and specificity values using the current candidate
-  ## value of the probability threshold.
-  out <- c(twoClassSummary(data, lev = levels(data$obs), model = NULL))
- 
-  ## The best possible model has sensitivity of 1 and specifity of 1. 
-  ## How far are we from that value?
-  coords <- matrix(c(1, 1, out["Spec"], out["Sens"]), 
-                   ncol = 2, 
-                   byrow = TRUE)
-  colnames(coords) <- c("Spec", "Sens")
-  rownames(coords) <- c("Best", "Current")
-  c(out, Dist = dist(coords)[1])
-}
-
-set.seed(949)
-mod1 <- caret::train(Class ~ ., data = training,
-              ## 'modelInfo' is a list object found in the linked
-              ## source code
-              method = modelInfo,  #commented this out because link to modelInfo is not working
-              ## Minimize the distance to the perfect model
-              metric = "Dist",
-              maximize = FALSE,
-              tuneLength = 20,
-              trControl = trainControl(method = "cv",
-                                       classProbs = TRUE,
-                                       summaryFunction = fourStats))
-
-ggplot(mod1)
-
-```
-
