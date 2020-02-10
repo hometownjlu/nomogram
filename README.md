@@ -32,3 +32,6 @@ This data was cleaned in a separate R script with the help of exploratory.io.
 Packrat is in use to control package versions and a packrat.lock file is posted to my github repository.  This will allow for easier reproducibility.  Packrat records the exact package versions you depend on, and ensures those exact versions are the ones that get installed wherever you go.  We can also control the environment by deploying the project inside a Docker container as needed.  The project was created in R version 3.6.1 and run inside RStudio 1.2.5019.  
 
 Please contact me with any questions or concerns: tyler (dot) muffly (at) dhha (dot) org.  
+
+A list of medical schools are available at:
+https://members.aamc.org/eweb/DynamicPage.aspx?site=AAMC&webcode=AAMCOrgSearchResult&orgtype=Medical%20School
