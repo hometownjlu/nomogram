@@ -71,7 +71,7 @@ A codebook is a technical description of the data that was collected for a parti
 4. `all_data$Gender` - Male or Female, 2 level categorical
 5. `all_data$Couples_Match` - PArticipating in the couples match? 2 level categorical.  We are unsure if there are any couples who are both matching into OBGYN.  
 6. `all_data$US_or_Canadian_Applicant` - Are they a US/Canadian Senior "Yes" or an International medical graduate "No"?  , 2 level categorical 
-7. `all_data$Medical_Education_Interrupted` - Taking breaks, 2 level categorical
+7. `all_data$Medical_Education_or_Training_Interrupted` - Taking breaks, 2 level categorical
 8. `all_data$Alpha_Omega_Alpha` - Membership in AOA, 3 level categorical.  Yes means elected in their junior year or elections are early.  Could combine with Sigma Sigma Phi?  Passing minimum score is 194 and theoretical maximum score is 300.  
 9. `all_data$Military_Service_Obligation`
 10. `all_data$USMLE_Step_1_Score` - I did not use Step 2 score because most students will not have those numbers at the time they apply, numerical variable
@@ -120,9 +120,33 @@ here::set_here()  #set_here() creates an empty file named .here, by default in t
 here::here()
 #May need to run this file line-by-line (CRTL+Enter) by hand.  
 
-source(file=(here::here("Code", "Additional_functions_nomogram.R")), echo=TRUE, verbose=TRUE)
+#source(file=(here::here("Code", "Additional_functions_nomogram.R")), echo=TRUE, verbose=TRUE)
+all_data <- read_csv("~/Dropbox/Nomogram/nomogram/data/All_ERAS_data_merged_output_2_1_2020.csv")
 conflicts()
 ```
+
+Drake shit
+```{r}
+file.exists("list of people who all matched into OBGYN.rds")
+
+plan <- drake::drake_plan(
+  raw_data = exploratory::read_rds_file("/Users/tylermuffly/Dropbox/Nomogram/nomogram/data/list of people who all matched into OBGYN.rds") %>%
+    readr::type_convert() %>%
+    exploratory::clean_data_frame(),
+  
+  data = raw_data %>%
+    mutate(Species = forcats::fct_inorder(Species)),
+  hist = create_plot(data),
+  fit = lm(Sepal.Width ~ Petal.Width + Species, data),
+  report = rmarkdown::render(
+    knitr_in("report.Rmd"),
+    output_file = file_out("report.html"),
+    quiet = TRUE
+  )
+)
+
+```
+
 
 The first few rows of the data loaded are given below:
 ```{r}
@@ -145,6 +169,7 @@ view(summarytools::dfSummary(x = all_data, justify = "l", style = "multiline", v
 tmp <- table(all_data$Match_Status)
 match_rate <- (tmp[[2]]/(tmp[[2]] + tmp[[1]]))*100
 match_rate
+rm(tmp)
 ```
 We can see that these data have `r nrow(all_data)` observations of `r ncol(all_data)` features, and thatabout `r round(match_rate, digits = 1)` percent of medical students applying to OB/GYN residency matched.   Let’s create a few plots to get a sense of the data. Remember, the goal here will be to predict whether a given medical student will match into OB/GYN residency, based on the variables listed in the codebook.
 
@@ -166,13 +191,12 @@ all_data$Count_of_Non_Peer_Reviewed_Online_Publication <- as.numeric(all_data$Co
 all_data$USMLE_Step_2_CK_Score <- as.numeric(all_data$USMLE_Step_2_CK_Score)
 
 inspectdf::inspect_types(all_data) %>% show_plot()
+
+all_data <- all_data %>% select(-Medical_School_of_Graduation)
 ```
 
 ```{r}
 #https://github.com/manojmukkamala/DiabeticPatientsReadmission/blob/master/Project_V4.R
-drivers1 <- as.data.frame(colnames(all_data)) %>% arrange(colnames(all_data))
-drivers1
-write_csv(drivers1, path = "~/Dropbox/Nomogram/nomogram/drivers1.csv")
 #Just writing the names of all the variables under one term to avoid re-writing when we apply model multiple times
 
 #"Malpractice_Cases_Pending", Removed because this is due to the fact that all people had 0 cases
@@ -180,7 +204,7 @@ write_csv(drivers1, path = "~/Dropbox/Nomogram/nomogram/drivers1.csv")
 drivers <- c("ACLS",
                                                                      "Age",
                                                        "Alpha_Omega_Alpha",
-                                                          "Applicant_Name",
+                                                         # "Applicant_Name",
                                                                      "BLS",
                                                              "Citizenship",
                            "Count_of_Non_Peer_Reviewed_Online_Publication",
@@ -216,6 +240,7 @@ dependentVar <- "Match_Status"
 #Bringing all the column names under one term
 formula <- paste(dependentVar, "~", paste(drivers, collapse = " + "))
 formula
+rm(drivers)
 ```
 
 
@@ -239,7 +264,8 @@ The new data set in `all_data`, includes `r nrow(all_data)` rows and `r ncol(all
 Shows four different ways to check for missingness in the data 
 ```{r, four ways to look for missingness, include=FALSE, out.width="50%"}
 #Cool but a little overkill with three ways for checking if we have missing data.  
-
+sum(is.na(all_data))
+all_data <- na.omit(all_data)
 colSums(is.na(all_data))
 purrr::map_df(all_data, ~ sum(is.na(.)))
 
@@ -248,6 +274,8 @@ tm_print_save(filename = "na_pattern.tiff")
 
 na_pattern <- Hmisc::na.pattern(all_data)
 na_pattern
+
+sum(is.na(all_data))
 ```
 
 # Exploratory data analysis
@@ -290,7 +318,7 @@ tm_ggsave(inspect_num_plot, "inspect_num_plot.tiff")
 ```{r, include=TRUE, echo=TRUE, include=TRUE, align = 'left', cache=FALSE, out.width="75%"}
 #EDA,  https://ryjohnson09.netlify.com/post/caret-and-tidymodels/
 # Create vector of predictors and subtract the last column with the target variable
-expl <- names(all_data)[-28]  #[-19]
+expl <- names(all_data)[-32]  #[-19]
 
 # Loop vector with map
 expl_plots_box <- purrr::map(expl, ~box_fun_plot(data = all_data, x = "Match_Status", y = .x) )
@@ -327,32 +355,6 @@ write_csv(df_status_output, (here::here("results", "df_status_output.csv")))
 create_profiling_num_output <- create_profiling_num(all_data)   
 all_data %>% mosaic::inspect()  #another good option
 write_csv(create_profiling_num_output, (here::here("results", "create_profiling_num_output.csv")))
-```
-
-```{r View the data using Hmisc, echo=TRUE, include=FALSE, warning=FALSE}
-dd <- rms::datadist(all_data)
-
-options(datadist='dd')
-
-s <- 
-  summary(Match_Status ~ cut2(Age, 30:30) + 
-            Gender + 
-            Alpha_Omega_Alpha + 
-            cut2(USMLE_Step_1_Score, 245:245) + 
-            Couples_Match + 
-            Medical_Education_Interrupted + 
-            US_or_Canadian_Applicant + 
-            Military_Service_Obligation + 
-            Count_of_Oral_Presentation + 
-            cut2(Count_of_Peer_Reviewed_Book_Chapter, 0:3) + 
-            cut2(Count_of_Poster_Presentation, 0:3) + 
-            white_non_white + 
-            Visa_Sponsorship_Needed +
-            cut2(Count_of_Articles_Abstracts, 0:3) + 
-            cut2(Count_of_Other_than_Published, 0:3),  
-            #Rank,
-          data = all_data)
-s
 ```
 
 # Cross plots of predictors by outcome
@@ -482,7 +484,6 @@ Shows four different ways to split the data
 # WE USED THIS ONE
 set.seed(seed = 1978) 
 all_data$Age <- as.numeric(all_data$Age)
-all_data <- all_data 
 data_split <- rsample::initial_split(data = all_data, 
                                      strata = "Match_Status", 
                                      prop = 0.8)
@@ -550,6 +551,17 @@ rm(train_4)
 rm(test_4)
 rm(data_split)
 ```
+
+```{r}
+#Remove applicant names from train and test.  
+
+train <- train %>%
+  dplyr::select(-Applicant_Name, -Medical_School_of_Graduation)
+
+test <- test %>%
+  dplyr::select(-Applicant_Name, -Medical_School_of_Graduation)
+```
+
 
 Compare the datasets of `train` and `test`using arsenal package:  
 ```{r, results="asis", include=FALSE, echo=FALSE}
@@ -636,7 +648,7 @@ tm_chi_square_test(train$Gender) #Gender is significant
 tm_chi_square_test(train$Couples_Match)#Couples match status is significant
 tm_chi_square_test(train$US_or_Canadian_Applicant)#US Applicant is significant
 
-tm_chi_square_test(train$Medical_Education_Interrupted)#Interrupting medical education is significant
+tm_chi_square_test(train$Medical_Education_or_Training_Interrupted)#Interrupting medical education is significant
 tm_chi_square_test(train$Alpha_Omega_Alpha)#AOA is significant
 tm_chi_square_test(train$Military_Service_Obligation)#Military Service obligation is NOT significant
 tm_chi_square_test(train$Visa_Sponsorship_Needed)#Visa sponsorship is significant
@@ -653,6 +665,9 @@ pairs <- pairs(cnum)
 corrplot::corrplot(cormat, method="circle")
 corrplot::corrplot(cormat, method="circle", addCoef.col="black") # With correlation 
 tm_print_save("corrplot.tiff")
+rm(cnum)
+rm(cormat)
+
 ```
 
 Correlation plot 
@@ -665,7 +680,7 @@ dplyr::mutate(white_non_white = as.integer(train$white_non_white),
          Gender = as.integer(train$Gender),
          Couples_Match = as.integer(train$Couples_Match),
          US_or_Canadian_Applicant = as.integer(train$US_or_Canadian_Applicant),
-         Medical_Education_Interrupted = as.integer(train$Medical_Education_Interrupted),
+         Medical_Education_or_Training_Interrupted = as.integer(train$Medical_Education_or_Training_Interrupted),
          Alpha_Omega_Alpha = as.integer(train$Alpha_Omega_Alpha),
          Military_Service_Obligation = as.integer(train$Military_Service_Obligation),
          Visa_Sponsorship_Needed = as.integer(train$Visa_Sponsorship_Needed),
@@ -684,7 +699,7 @@ tm_print_save("train_correlation.tiff")
 ```
 In this correlation plot we want to look for the bright, large circles which immediately show the strong correlations (size and shading depends on the absolute values of the coefficients; color depends on direction).  This shows whether two features are connected so that one changes with a predictable trend if you change the other. The closer this coefficient is to zero the weaker is the correlation. Anything that you would have to squint to see is usually not worth seeing! 
 
-Observations:  Match_Status is most correlated to US_or_Canadian_Applicant and then to Age.  Visa_Sponsorship_Needed, Medical_Education_Interrupted, and white_non_white are all variables that might play a secondary role.  The other features are pretty weak.  
+Observations:  Match_Status is most correlated to US_or_Canadian_Applicant and then to Age.  Visa_Sponsorship_Needed, Medical_Education_or_Training_Interrupted, and white_non_white are all variables that might play a secondary role.  The other features are pretty weak.  
 
 ```{r, echo=TRUE, include = TRUE}
 inspect_cor_plot <- inspectdf::inspect_cor(train, method = "pearson", alpha = 0.05) %>% show_plot()  
@@ -709,11 +724,11 @@ all_data_binarized_tbl %>% tibble::glimpse()
 
 all_data_correlated_tbl <- all_data_binarized_tbl %>%
   correlationfunnel::correlate(target = Match_Status__Match)
-
 all_data_correlated_tbl
 
 static_correlation_funnel <- all_data_correlated_tbl %>%
   correlationfunnel::plot_correlation_funnel(interactive = FALSE, limits = c(-1, 1))
+static_correlation_funnel
 
 tm_ggsave(static_correlation_funnel, "static_correlation_funnel.tiff")
 
@@ -736,6 +751,7 @@ Billizionth way to review correlation.
 ```{r}
 #Correlation plot
 M <- corrgram::corrgram(all_data)
+M
 ```
 
 # Fitting and Summarizing the Kitchen Sink Model: (aka throw everything at it)
@@ -747,14 +763,20 @@ train$Match_Status <- as.factor(train$Match_Status)
 class(train$Match_Status)  
 #train <- train %>% select(-Match_Status1)
 require(rms)
+
+train1 <- train %>% select(-Type_of_medical_school, -USMLE_Step_2_CK_Score, -USMLE_Step_1_Score, -US_or_Canadian_Applicant, -Medical_Degree)
+
 d <- 
-  rms::datadist(train)
+  rms::datadist(train1)
 
 options(datadist = "d")
 
+#singular information matrix in lrm.fit (rank= 30 ).  Offending variable(s):
+# USMLE_Step_2_CK_Score Type_of_medical_school=U.S. Public School USMLE_Step_1_Score US_or_Canadian_Applicant=US senior Medical_Degree=MD 
+
 kitchen.sink <- 
   rms::lrm(formula = Match_Status~., 
-      data = train, 
+      data = train1, 
       method = "lrm.fit",
       x = T, 
       y = T)
@@ -960,7 +982,7 @@ step_model <- stats::step(null_model, scope = list(lower = null_model, upper = f
 
 # The chosen features by forward stepwise:  
 # US_or_Canadian_Applicant + USMLE_Step_1_Score + Medical_Degree + 
-#     Age + white_non_white + Medical_Education_Interrupted + Gender + 
+#     Age + white_non_white + Medical_Education_or_Training_Interrupted + Gender + 
 #     Visa_Sponsorship_Needed + Alpha_Omega_Alpha + Couples_Match + 
 #     Count_of_Other_than_Published
 
@@ -1039,8 +1061,7 @@ tm_print_save("Principal_Components_for_numeric_data.tiff")
 final_data <- as.data.frame(pcaObj$scores)
 ```
 According to PCA,the columns that are of utmost importance are as follows:
-Age, AND
-USMLE_Step_1_Score
+***
 
 ```{r}
 #http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/118-principal-component-analysis-in-r-prcomp-vs-princomp/
@@ -1148,7 +1169,7 @@ data.frame(
 
 #Needs to be saved.  
 ```
-So how many principal components should we use in the my_basket example? The frank answer is that there is no one best method for determining how many components to use. In this case, differing criteria suggest to retain 5 (scree plot criterion), and 3 (eigenvalue criterion).  
+So how many principal components should we use in the my_basket example? The frank answer is that there is no one best method for determining how many components to use. In this case, differing criteria suggest to retain *** (scree plot criterion), and *** (eigenvalue criterion).  
 
 # Feature Selection: MARS model (Multivariate Adaptive Regression Splines)
 MARS allows for non-linear models.  The MARS method and algorithm can be extended to handle classification problems and GLMs in general.
@@ -1215,7 +1236,7 @@ hyper_grid <- expand.grid(
 head(hyper_grid)
 ```
 
-Cross-validated RMSE for the 30 different hyperparameter combinations in our grid search. The optimal model retains 17 terms and includes up to 3rd degree interactions.
+Cross-validated RMSE for the 30 different hyperparameter combinations in our grid search. The optimal model retains *** terms and includes up to ***3rd degree interactions.
 
 The  grid search helps to focus where we can further refine our model tuning. As a next step, we could perform a grid search that focuses in on a refined grid space for nprune (e.g., comparing 5–20 terms retained).
 ```{r}
@@ -1282,9 +1303,10 @@ varimp_mars <- varImp(model_mars)
 plot(varimp_mars, main="Variable Importance with MARS") #Visual of the most important factors
 tm_print_save("varimp_mars.tiff")
 ```
-The MARS model shows that 6-10 terms were likely to improve accuracy (`model_mars`).  Variable importance shows that US_or_Canadian_applicants, USMLE_Step_1_Score, Age, Medial_Degree, and Visa_Sponsorship_Needed all show significant importance (`varimp_mars`).  
+The MARS model shows that *** terms were likely to improve accuracy (`model_mars`).  Variable importance shows that *** US_or_Canadian_applicants, USMLE_Step_1_Score, Age, Medial_Degree, and Visa_Sponsorship_Needed all show significant importance (`varimp_mars`).  
 
-#Feature Selection: Recursive Feature Elimination
+#Feature Selection: Recursive Feature Elimination 
+So at first the model is fit on the data. Then we have coefficients of each feature or feature importance. We drop the feature with least coefficient or importance. Then the model is fit on the remaining features. The process is repeated until we have a necessary number of features (or some other criteria is fulfilled).  
 ```{r}
 #Method 2: Recursive Feature Elimination
 options(warn=-1)
@@ -1293,6 +1315,13 @@ ctrl <- rfeControl(functions = rfFuncs,
                    method = "repeatedcv",
                    repeats = 2,
                    verbose = FALSE)
+
+# nrow(drivers)
+# lmProfile <- rfe(x=train[, 1:17], y=train$Match_Status,
+#                  sizes = subsets,
+#                  rfeControl = ctrl)
+# lmProfile 
+
 
 lmProfile <- rfe(x=train[, 1:17], y=train$Match_Status,
                  sizes = subsets,
@@ -1762,7 +1791,7 @@ lrm.with.lasso.variables <-
                                     Gender +
                                     Couples_Match +
                                     US_or_Canadian_Applicant +
-                                    Medical_Education_Interrupted + 
+                                    Medical_Education_or_Training_Interrupted + 
                                     Alpha_Omega_Alpha + 
                                     USMLE_Step_1_Score + 
                                     Count_of_Oral_Presentation + 
@@ -1842,7 +1871,7 @@ train.lrm.with.lasso.variables <-
                                     Gender +
                                     Couples_Match +
                                     US_or_Canadian_Applicant +
-                                    Medical_Education_Interrupted + 
+                                    Medical_Education_or_Training_Interrupted + 
                                     Alpha_Omega_Alpha + 
                                     USMLE_Step_1_Score + 
                                     Count_of_Oral_Presentation + 
@@ -2453,7 +2482,7 @@ train$Match_Status <- as.factor(train$Match_Status)
 levels(train$Match_Status)
 
 #Using caret
-caret_matrix <- caret::train(x=train[,c('white_non_white', 'Age', 'Gender', 'Couples_Match', 'US_or_Canadian_Applicant', 'Medical_Education_Interrupted', 'Alpha_Omega_Alpha', 'Military_Service_Obligation', 'USMLE_Step_1_Score', 'Count_of_Poster_Presentation', 'Count_of_Oral_Presentation', 'Count_of_Articles_Abstracts', 'Count_of_Peer_Reviewed_Book_Chapter', 'Count_of_Other_than_Published', 'Count_of_Online_Publications', 'Visa_Sponsorship_Needed', 'Medical_Degree')],
+caret_matrix <- caret::train(x=train[,c('white_non_white', 'Age', 'Gender', 'Couples_Match', 'US_or_Canadian_Applicant', 'Medical_Education_or_Training_Interrupted', 'Alpha_Omega_Alpha', 'Military_Service_Obligation', 'USMLE_Step_1_Score', 'Count_of_Poster_Presentation', 'Count_of_Oral_Presentation', 'Count_of_Articles_Abstracts', 'Count_of_Peer_Reviewed_Book_Chapter', 'Count_of_Other_than_Published', 'Count_of_Online_Publications', 'Visa_Sponsorship_Needed', 'Medical_Degree')],
 y=train$Match_Status, 
 method='rf', 
 trControl=trainControl(method="repeatedcv", 
@@ -3130,7 +3159,7 @@ table1_all_data <- arsenal::tableby(Match_Status ~
                                        #Expected_Visa_Status_Dichotomized +
                                        US_or_Canadian_Applicant +
                                        #Medical_School_Type +
-                                       Medical_Education_Interrupted +
+                                       Medical_Education_or_Training_Interrupted +
                                        #Misdemeanor_Conviction +
                                        Alpha_Omega_Alpha +
                                        #Gold_Humanism_Honor_Society +
@@ -3486,7 +3515,7 @@ DynNom.model.lrm  <-
 #All variables for the DynNom online tool.  
 ```{r}
 DynNom.model.lrm.full  <-
-  rms::lrm(Match_Status~ Age + white_non_white + Gender + Medical_Degree + US_or_Canadian_Applicant + Medical_Education_Interrupted + Alpha_Omega_Alpha + Military_Service_Obligation + USMLE_Step_1_Score + Visa_Sponsorship_Needed + Count_of_Poster_Presentation + Count_of_Oral_Presentation + Count_of_Articles_Abstracts + Count_of_Peer_Reviewed_Book_Chapter + Count_of_Other_than_Published + Count_of_Online_Publications + Visa_Sponsorship_Needed + Couples_Match, data=test, x=TRUE, y=TRUE)
+  rms::lrm(Match_Status~ Age + white_non_white + Gender + Medical_Degree + US_or_Canadian_Applicant + Medical_Education_or_Training_Interrupted + Alpha_Omega_Alpha + Military_Service_Obligation + USMLE_Step_1_Score + Visa_Sponsorship_Needed + Count_of_Poster_Presentation + Count_of_Oral_Presentation + Count_of_Articles_Abstracts + Count_of_Peer_Reviewed_Book_Chapter + Count_of_Other_than_Published + Count_of_Online_Publications + Visa_Sponsorship_Needed + Couples_Match, data=test, x=TRUE, y=TRUE)
 
 summary(DynNom.model.lrm.full)
 
@@ -3518,7 +3547,7 @@ Train <- caret::createDataPartition(all_data$Match_Status, p = 0.8,
 training <- all_data[ Train, ]
 testing <- all_data[ -Train, ]
 
-mod_fit <- caret::train(Match_Status ~ white_non_white + Age + Gender + Couples_Match + US_or_Canadian_Applicant + Medical_Education_Interrupted + Alpha_Omega_Alpha + Military_Service_Obligation + USMLE_Step_1_Score + Visa_Sponsorship_Needed + Count_of_Poster_Presentation + Count_of_Oral_Presentation + Count_of_Articles_Abstracts + Count_of_Peer_Reviewed_Book_Chapter + Count_of_Other_than_Published + Count_of_Online_Publications + Visa_Sponsorship_Needed  + Medical_Degree,  
+mod_fit <- caret::train(Match_Status ~ white_non_white + Age + Gender + Couples_Match + US_or_Canadian_Applicant + Medical_Education_or_Training_Interrupted + Alpha_Omega_Alpha + Military_Service_Obligation + USMLE_Step_1_Score + Visa_Sponsorship_Needed + Count_of_Poster_Presentation + Count_of_Oral_Presentation + Count_of_Articles_Abstracts + Count_of_Peer_Reviewed_Book_Chapter + Count_of_Other_than_Published + Count_of_Online_Publications + Visa_Sponsorship_Needed  + Medical_Degree,  
                         data=training, method="glm", family="binomial")
 
 exp(coef(mod_fit$finalModel))
@@ -3526,10 +3555,10 @@ exp(coef(mod_fit$finalModel))
 stats::predict(mod_fit, newdata=testing)
 stats::predict(mod_fit, newdata=testing, type="prob")
 
-mod_fit_one <- glm(Match_Status ~ white_non_white + Age + Gender + Couples_Match + US_or_Canadian_Applicant + Medical_Education_Interrupted + Alpha_Omega_Alpha + Military_Service_Obligation + USMLE_Step_1_Score + Visa_Sponsorship_Needed + Count_of_Poster_Presentation + Count_of_Oral_Presentation + Count_of_Articles_Abstracts + Count_of_Peer_Reviewed_Book_Chapter + Count_of_Other_than_Published + Count_of_Online_Publications + Visa_Sponsorship_Needed  + Medical_Degree, 
+mod_fit_one <- glm(Match_Status ~ white_non_white + Age + Gender + Couples_Match + US_or_Canadian_Applicant + Medical_Education_or_Training_Interrupted + Alpha_Omega_Alpha + Military_Service_Obligation + USMLE_Step_1_Score + Visa_Sponsorship_Needed + Count_of_Poster_Presentation + Count_of_Oral_Presentation + Count_of_Articles_Abstracts + Count_of_Peer_Reviewed_Book_Chapter + Count_of_Other_than_Published + Count_of_Online_Publications + Visa_Sponsorship_Needed  + Medical_Degree, 
                    data=training, family="binomial")
 
-mod_fit_two <- glm(Match_Status ~ white_non_white + Age + Gender + Couples_Match + US_or_Canadian_Applicant + Medical_Education_Interrupted + Alpha_Omega_Alpha + Military_Service_Obligation + USMLE_Step_1_Score + Visa_Sponsorship_Needed + Count_of_Poster_Presentation + Medical_Degree, 
+mod_fit_two <- glm(Match_Status ~ white_non_white + Age + Gender + Couples_Match + US_or_Canadian_Applicant + Medical_Education_or_Training_Interrupted + Alpha_Omega_Alpha + Military_Service_Obligation + USMLE_Step_1_Score + Visa_Sponsorship_Needed + Count_of_Poster_Presentation + Medical_Degree, 
                    data=training, family="binomial")
 
 anova(mod_fit_one, mod_fit_two, test ="Chisq")
@@ -3588,7 +3617,7 @@ auc
 
 ctrl <- trainControl(method = "repeatedcv", number = 10, savePredictions = TRUE)
 
-mod_fit <- caret::train(Match_Status ~  white_non_white + Age + Gender + Couples_Match + US_or_Canadian_Applicant + Medical_Education_Interrupted + Alpha_Omega_Alpha + Military_Service_Obligation + USMLE_Step_1_Score + Visa_Sponsorship_Needed + Count_of_Poster_Presentation + Count_of_Oral_Presentation + Count_of_Articles_Abstracts + Count_of_Peer_Reviewed_Book_Chapter + Count_of_Other_than_Published + Count_of_Online_Publications + Visa_Sponsorship_Needed + Medical_Degree,
+mod_fit <- caret::train(Match_Status ~  white_non_white + Age + Gender + Couples_Match + US_or_Canadian_Applicant + Medical_Education_or_Training_Interrupted + Alpha_Omega_Alpha + Military_Service_Obligation + USMLE_Step_1_Score + Visa_Sponsorship_Needed + Count_of_Poster_Presentation + Count_of_Oral_Presentation + Count_of_Articles_Abstracts + Count_of_Peer_Reviewed_Book_Chapter + Count_of_Other_than_Published + Count_of_Online_Publications + Visa_Sponsorship_Needed + Medical_Degree,
                  data=all_data, method="glm", family="binomial",
                  trControl = ctrl, tuneLength = 5)
 
