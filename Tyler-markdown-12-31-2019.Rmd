@@ -92,7 +92,7 @@ Packrat is in use to control package versions and a packrat.lock file is posted 
 
 cat("\014")  #Clear console
 # I want to use packrate to make the project more: isolated, portable and reproducible.  Please see packrat/packrat.lock for a list of the precise packages used and their versions.  Be sure to check in the .Rprofile, packrat.lock files, and everything under packrat/src/. 
-packrat::packrat_mode(on = TRUE)
+#packrat::packrat_mode(on = TRUE)
 #packrat::status()
 #packrat::clean()
 #packrat::restore()
@@ -121,35 +121,64 @@ here::here()
 #May need to run this file line-by-line (CRTL+Enter) by hand.  
 
 #source(file=(here::here("Code", "Additional_functions_nomogram.R")), echo=TRUE, verbose=TRUE)
-all_data <- read_csv("~/Dropbox/Nomogram/nomogram/data/All_ERAS_data_merged_output_2_1_2020.csv")
+all_data <- readr::read_csv("~/Dropbox/Nomogram/nomogram/data/All_ERAS_data_merged_output_2_1_2020.csv")
 conflicts()
 ```
 
 Drake shit
 ```{r}
 file.exists("list of people who all matched into OBGYN.rds")
+file.exists("~/Dropbox/Nomogram/nomogram/data/All_ERAS_data_merged_output_2_1_2020.csv")
 
 plan <- drake::drake_plan(
   raw_data = exploratory::read_rds_file("/Users/tylermuffly/Dropbox/Nomogram/nomogram/data/list of people who all matched into OBGYN.rds") %>%
     readr::type_convert() %>%
     exploratory::clean_data_frame(),
+  all_data <- read_csv("~/Dropbox/Nomogram/nomogram/data/All_ERAS_data_merged_output_2_1_2020.csv"),
+  #data = 
+  hist = create_plot_num(all_data), 
+  create_plot_cross_plot(all_data), 
+  create_profiling_num(all_data),
+  tm_nomogram_prep(all_data),
+  tm_rpart_plot(all_data),
+  tm_arsenal_table(all_data),
+  tm_chart_strength_of_variables(all_data),
+  tm_variable_importance(all_data),
+  density_fun_plot(all_data),
+  tm_confusion_matrix_graph(all_data),
+  plot_grid_plot_density(all_data),
+  plot_hist_facet(all_data),
+  get_cor(all_data),
+  plot_cor(all_data),
+  logisticPseudoR2s(all_data),
+  tm_vip(all_data),
+  tm_ggsave(all_data),
+  tm_print_save(all_data),
+  tm_write2pdf(all_data),
+  tm_write2word(all_data),
+  create_plot_num_plot(all_data),
+  tm_t_test(all_data),
+  tm_chi_square_test(all_data),
   
-  data = raw_data %>%
-    mutate(Species = forcats::fct_inorder(Species)),
-  hist = create_plot(data),
-  fit = lm(Sepal.Width ~ Petal.Width + Species, data),
-  report = rmarkdown::render(
-    knitr_in("report.Rmd"),
-    output_file = file_out("report.html"),
-    quiet = TRUE
+  
+  #fit = lm(Sepal.Width ~ Petal.Width + Species, data),
+  #report = rmarkdown::render(
+  #  knitr_in("report.Rmd"),
+  #  output_file = file_out("report.html"),
+  #  quiet = TRUE
   )
-)
+
+drake::vis_drake_graph(plan)
+
+drake::make(plan)
+
 
 ```
 
 
 The first few rows of the data loaded are given below:
 ```{r}
+library(magrittr)
 head(all_data) %>% knitr::kable(format = "pandoc", caption = "Example observations (rows) and the features (columns)")
 ```
 
@@ -161,13 +190,13 @@ dim(all_data)
 dim(all_data)
 data.table::data.table(all_data)
 funModeling::freq(data=all_data, plot = FALSE, na.rm = FALSE)
-glimpse(all_data)
+dplyr::glimpse(all_data)
 
-view(summarytools::dfSummary(x = all_data, justify = "l", style = "multiline", varnumbers = FALSE, valid.col = FALSE, tmp.img.dir = "./img", max.distinct.values = 5))
+summarytools::view(summarytools::dfSummary(x = all_data, justify = "l", style = "multiline", varnumbers = FALSE, valid.col = FALSE, tmp.img.dir = "./img", max.distinct.values = 5))
 
 # orginal response distribution
 tmp <- table(all_data$Match_Status)
-match_rate <- (tmp[[2]]/(tmp[[2]] + tmp[[1]]))*100
+match_rate <- (tmp[[1]]/(tmp[[2]] + tmp[[1]]))*100
 match_rate
 rm(tmp)
 ```
@@ -190,9 +219,9 @@ all_data$Count_of_Peer_Reviewed_Book_Chapter <- as.numeric(all_data$Count_of_Pee
 all_data$Count_of_Non_Peer_Reviewed_Online_Publication <- as.numeric(all_data$Count_of_Non_Peer_Reviewed_Online_Publication)
 all_data$USMLE_Step_2_CK_Score <- as.numeric(all_data$USMLE_Step_2_CK_Score)
 
-inspectdf::inspect_types(all_data) %>% show_plot()
+inspectdf::inspect_types(all_data) %>% inspectdf::show_plot()
 
-all_data <- all_data %>% select(-Medical_School_of_Graduation)
+all_data <- all_data %>% dplyr::select(-Medical_School_of_Graduation)
 ```
 
 ```{r}
@@ -218,7 +247,6 @@ drivers <- c("ACLS",
                                           "Count_of_Scientific_Monograph",
                                                           "Couples_Match",
                                                                  "Gender",
-                                                           "Match_Status",
                                                          "Medical_Degree",
                               "Medical_Education_or_Training_Interrupted",
                                               "Medical_Licensure_Problem",
@@ -240,7 +268,6 @@ dependentVar <- "Match_Status"
 #Bringing all the column names under one term
 formula <- paste(dependentVar, "~", paste(drivers, collapse = " + "))
 formula
-rm(drivers)
 ```
 
 
@@ -263,6 +290,13 @@ The new data set in `all_data`, includes `r nrow(all_data)` rows and `r ncol(all
 
 Shows four different ways to check for missingness in the data 
 ```{r, four ways to look for missingness, include=FALSE, out.width="50%"}
+#Added function for RMarkdown.  
+tm_print_save <- function (filename) {
+  print("Function Sanity Check: Saving TIFF of what is in the viewer")
+  dev.print(tiff, (here::here("results", filename)), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
+  dev.off()
+}
+
 #Cool but a little overkill with three ways for checking if we have missing data.  
 sum(is.na(all_data))
 all_data <- na.omit(all_data)
@@ -283,23 +317,29 @@ After the data check was completed, an exploratory data analysis (EDA) was condu
 
 Description of `all_data$Match_Status` variable.  
 ```{r data check, include=TRUE, out.width="50%"}
-Hmisc::describe(as.factor(all_data$Match_Status))
-whomatched <- 
-  ggplot2::ggplot(all_data[!is.na(all_data$Match_Status),], aes(x = Match_Status, fill = Match_Status)) +
-  geom_bar(stat='count') +
-  labs(x = 'How many applicants matched into OBGYN?') +
-        geom_label(stat='count',aes(label=..count..), size=7) +
-        theme_grey(base_size = 18)
-whomatched
+#Added function for Rmarkdown
+tm_ggsave <- function (object, filename, ...){  #make sure the file name has quotation marks around it.  
+  print("Function Sanity Check: Saving a ggplot image as a TIFF")
+  ggplot2::ggsave(here::here("results", filename), object, device = "tiff", width = 10, height = 7, dpi = 200)
+}
 
-tm_ggsave(object = whomatched, filename = "whomatched.tiff")
+# Hmisc::describe(as.factor(all_data$Match_Status))
+# whomatched <- 
+#   ggplot2::ggplot(all_data[!is.na(all_data$Match_Status),], aes(x = Match_Status, fill = Match_Status)) +
+#   geom_bar(stat='count') +
+#   labs(x = 'How many applicants matched into OBGYN?') +
+#         geom_label(stat='count',aes(label=..count..), size=7) +
+#         theme_grey(base_size = 18)
+# whomatched
+
+# tm_ggsave(object = whomatched, filename = "whomatched.tiff")
 ```
 
 # Data Description and *Univariate* analysis of variables. 
 Categorical and numerical variable plots:
 ```{r DataExplorer, results='asis', echo=TRUE, include=TRUE, align = 'left', cache=FALSE, out.width="75%"}
 #General Data Description
-inspect_cat_plot <- inspectdf::inspect_cat(all_data) %>% show_plot()  #Please use `cols = c(data)` is the error message I get here.  But it still runs.  
+inspect_cat_plot <- inspectdf::inspect_cat(all_data) %>% inspectdf::show_plot()  #Please use `cols = c(data)` is the error message I get here.  But it still runs.  
 inspect_cat_plot
 tm_ggsave(object = inspect_cat_plot, filename = "inspect_cat_plot.tiff")
 
@@ -309,7 +349,7 @@ plot_histogram_plot
 DataExplorer::plot_bar(all_data, nrow = 2L, ncol = 2L)  #Not useful whatsoever.  
 
 #Univariate of boxplots
-inspect_num_plot <- inspectdf::inspect_num(all_data) %>% show_plot()  
+inspect_num_plot <- inspectdf::inspect_num(all_data) %>% inspectdf::show_plot()  
 inspect_num_plot
 
 tm_ggsave(inspect_num_plot, "inspect_num_plot.tiff")
@@ -347,7 +387,7 @@ tm_ggsave(create_plot_num_plot, "create_plot_num_plot.tiff")
 df_status_output <- funModeling::df_status(all_data)
 #desc_groups(data=all_data, group_var="Match_Status")  #Breaks the knitr for some reason
 df_status_output
-write_csv(df_status_output, (here::here("results", "df_status_output.csv")))
+readr::write_csv(df_status_output, (here::here("results", "df_status_output.csv")))
 ```
 
 ```{r funModeling3, echo=TRUE, message=FALSE, warning=TRUE, results='asis', include=FALSE}
@@ -481,6 +521,7 @@ I will call the training sample `train` and the test sample `test`.  *Creative!*
 Shows four different ways to split the data  
 ```{r, train vs test, warning=FALSE, echo=TRUE, message=FALSE, include=TRUE}
 #http://rpubs.com/josevilardy/crossvalidation
+
 # WE USED THIS ONE
 set.seed(seed = 1978) 
 all_data$Age <- as.numeric(all_data$Age)
@@ -488,15 +529,15 @@ data_split <- rsample::initial_split(data = all_data,
                                      strata = "Match_Status", 
                                      prop = 0.8)
 
-train <- data_split %>% training() %>% glimpse()  # Extract the training dataframe
-write_csv(x = train, 
+train <- data_split %>% rsample::training() %>% dplyr::glimpse()  # Extract the training dataframe
+readr::write_csv(x = train, 
           path = (here::here("results", "train_at_data_split_phase.csv")), 
           col_names = TRUE)
 training_data_plot_hist_facet <- plot_hist_facet(data = train)
 training_data_plot_hist_facet
 
-test <- data_split %>% testing() %>% glimpse() # Extra
-write_csv(x = test, 
+test <- data_split %>% rsample::testing() %>% dplyr::glimpse() # Extra
+readr::write_csv(x = test, 
           path = (here::here("results", "test_at_data_split_phase.csv")), 
           col_names = TRUE)
 
@@ -504,7 +545,7 @@ plot_hist_facet(data=test)
 ```
 
 
-```{r, train vs test, warning=FALSE, echo=TRUE, message=FALSE, include=TRUE}
+```{r, train vs test1, warning=FALSE, echo=TRUE, message=FALSE, include=TRUE}
 #More ways to split the data.  
 
 # Using base R
@@ -609,7 +650,7 @@ Using the training sample, we will provide numerical summaries of each predictor
 #Is feature skew present?
 skewed_feature_names <- train %>%
   dplyr::select_if(is.numeric) %>%
-  map_df(PerformanceAnalytics::skewness) %>% #returns a single row tibble 
+  purrr::map_df(PerformanceAnalytics::skewness) %>% #returns a single row tibble 
   tidyr::gather(factor_key = TRUE) %>% #transposes into a long data column
   dplyr::arrange(desc(value)) %>% #Look for low and high values, high values have a fat tail on right, low has fat tail on left side
   dplyr::filter(value>2.0) %>% #eyeballed cutoff for value cut off
@@ -617,15 +658,15 @@ skewed_feature_names <- train %>%
   as.character()
 ```
 
-# Factor Selection: Scatterplot Matrix and Correlation
+# Correlation
 Get a correlation matrix for elementary feature selection and remove highly correlated features.  
 ```{r}
 # get a correlation matrix for elementary feature selection and
 # remove highly correlated fields
-numeric_data <- select_if(all_data, is.numeric)
+numeric_data <- dplyr::select_if(all_data, is.numeric)
 thres <- 0.75
 corr.m <- cor(numeric_data)
-highly.corr <- findCorrelation(corr.m, cutoff = thres)
+highly.corr <- caret::findCorrelation(corr.m, cutoff = thres)
 highly.corr
 data.clean <- numeric_data[,-highly.corr]
 ```
@@ -658,8 +699,8 @@ tm_chi_square_test(train$Medical_Degree)#Medical Degree is significant
 
 ```{r}
 cnum <- train[,c("Age", "USMLE_Step_1_Score")]
-cormat <- cor(cnum) # Select only numeric variables that are significant on univariate testing.  
-pairs <- pairs(cnum)
+cormat <- stats::cor(cnum) # Select only numeric variables that are significant on univariate testing.  
+pairs <- graphics::pairs(cnum)
 #tm_print_save("significant_numeric_variable_correlation.tiff")
 
 corrplot::corrplot(cormat, method="circle")
@@ -702,7 +743,7 @@ In this correlation plot we want to look for the bright, large circles which imm
 Observations:  Match_Status is most correlated to US_or_Canadian_Applicant and then to Age.  Visa_Sponsorship_Needed, Medical_Education_or_Training_Interrupted, and white_non_white are all variables that might play a secondary role.  The other features are pretty weak.  
 
 ```{r, echo=TRUE, include = TRUE}
-inspect_cor_plot <- inspectdf::inspect_cor(train, method = "pearson", alpha = 0.05) %>% show_plot()  
+inspect_cor_plot <- inspectdf::inspect_cor(train, method = "pearson", alpha = 0.05) %>% inspectdf::show_plot()  
 inspect_cor_plot
 
 tm_ggsave(inspect_cor_plot, "inspect_cor_plot.tiff")
@@ -754,7 +795,7 @@ M <- corrgram::corrgram(all_data)
 M
 ```
 
-# Fitting and Summarizing the Kitchen Sink Model: (aka throw everything at it)
+# Kitchen Sink Model: (aka throw everything at it)
 Create a Kitchen Sink or a "large" model with all factors in the `train` data set first. This is essentially a screening model with all variables. 
 
 Logistic regression model from the `rms` package on the `kitchen.sink` model
@@ -764,15 +805,30 @@ class(train$Match_Status)
 #train <- train %>% select(-Match_Status1)
 require(rms)
 
-train1 <- train %>% select(-Type_of_medical_school, -USMLE_Step_2_CK_Score, -USMLE_Step_1_Score, -US_or_Canadian_Applicant, -Medical_Degree)
+all_data$white_non_white <- as.factor(all_data$white_non_white)
+all_data$Gender <- as.factor(all_data$Gender)
+all_data$Couples_Match <- as.factor(all_data$Couples_Match)
+all_data$US_or_Canadian_Applicant <- as.factor(all_data$US_or_Canadian_Applicant)
+all_data$Medical_Education_or_Training_Interrupted <- as.factor(all_data$Medical_Education_or_Training_Interrupted)
+all_data$Alpha_Omega_Alpha <- as.factor(all_data$Alpha_Omega_Alpha)
+all_data$Military_Service_Obligation <- as.factor(all_data$Military_Service_Obligation)
+all_data$Visa_Sponsorship_Needed <- as.factor(all_data$Visa_Sponsorship_Needed)
+all_data$Medical_Degree <- as.factor(all_data$Medical_Degree)
+all_data$Match_Status <- as.factor(all_data$Match_Status)
+all_data$Type_of_medical_school <- as.factor(all_data$Type_of_medical_school)
+all_data$USMLE_Step_2_CK_Score <- as.numeric(all_data$USMLE_Step_2_CK_Score)
+all_data$USMLE_Step_1_Score <- as.numeric(all_data$USMLE_Step_1_Score)
+all_data$Medical_Degree <- as.factor(all_data$Medical_Degree)
+
+#singular information matrix in lrm.fit (rank= 30 ).  Offending variable(s):
+# USMLE_Step_2_CK_Score Type_of_medical_school=U.S. Public School USMLE_Step_1_Score US_or_Canadian_Applicant=US senior Medical_Degree=MD 
+
+train1 <- train %>% dplyr::select(-Type_of_medical_school, -US_or_Canadian_Applicant, -Medical_Degree, -USMLE_Step_1_Score, -USMLE_Step_2_CK_Score)
 
 d <- 
   rms::datadist(train1)
 
 options(datadist = "d")
-
-#singular information matrix in lrm.fit (rank= 30 ).  Offending variable(s):
-# USMLE_Step_2_CK_Score Type_of_medical_school=U.S. Public School USMLE_Step_1_Score US_or_Canadian_Applicant=US senior Medical_Degree=MD 
 
 kitchen.sink <- 
   rms::lrm(formula = Match_Status~., 
@@ -963,10 +1019,10 @@ Try forwards stepwise regression here:
 ```{r, echo=TRUE, include = FALSE}
 #Forward regression!!  #https://campus.datacamp.com/courses/supervised-learning-in-r-classification/chapter-3-logistic-regression?ex=15
 # Specify a null model with no predictors
-null_model <- glm(formula = Match_Status ~ 1, data = train, family = "binomial")
+null_model <- stats::glm(formula = Match_Status ~ 1, data = train, family = "binomial")
 
 # Specify the full model using all of the potential predictors
-full_model <- glm(formula = formula, data = train, family = "binomial")
+full_model <- stats::glm(formula = formula, data = train, family = "binomial")
 
 # Use a forward stepwise algorithm to build a parsimonious model
 step_model <- stats::step(null_model, scope = list(lower = null_model, upper = full_model), direction = "forward")
@@ -1035,7 +1091,7 @@ Feature Selection: Principal Component Analysis - Use principal components analy
 #From nomogram_matching_medical_students.R
 
 #Method 1:  Principal Component Analysis - Use principal components analysis to pick what predictors to use 
-train_pca <- preProcess(select(all_data, - Match_Status), 
+train_pca <- caret::preProcess(dplyr::select(all_data, - Match_Status), 
                         method = c("center", "scale", "nzv", "pca"))
 train_pca
 train_pca$method
@@ -1046,7 +1102,7 @@ train_pca$method$pca
 
 Approach 2
 ```{r}
-numeric_data <- select_if(all_data, is.numeric)
+numeric_data <- dplyr::select_if(all_data, is.numeric)
 numeric_data <- base::scale(numeric_data, center=TRUE, scale = TRUE)
 pcaObj <- stats::princomp(numeric_data, cor = TRUE, scores = TRUE, covmat = NULL)
 summary(pcaObj)
@@ -1115,10 +1171,10 @@ res.ind$cos2           # Quality of representation
 
 # convert data to h2o object
 h2o::h2o.init()
-my_basket.h2o <- as.h2o(all_data)
+my_basket.h2o <- h2o::as.h2o(all_data)
 
 # run PCA
-my_pca <- h2o.prcomp(
+my_pca <- h2o::h2o.prcomp(
   training_frame = my_basket.h2o,
   pca_method = "GramSVD",
   k = ncol(my_basket.h2o), 
@@ -1176,12 +1232,28 @@ MARS allows for non-linear models.  The MARS method and algorithm can be extende
 https://bradleyboehmke.github.io/HOML/mars.html
 http://uc-r.github.io/mars
 ```{r}
+# https://bradleyboehmke.github.io/HOML/mars.html
+# create a tuning grid
+hyper_grid <- expand.grid(
+  degree = 1:3, 
+  nprune = seq(2, 100, length.out = 10) %>% floor()
+)
+
+head(hyper_grid)
+```
+
+```{r}
+levels(train$Match_Status) <- c("0", "1")
+levels(train$Match_Status)
+
+
+
 # cross validated model
 tuned_mars <- caret::train(
   x = subset(train, select = -Match_Status),
   y = train$Match_Status,
   method = "earth",
-  trControl = trainControl(method = "cv", number = 10),
+  trControl = caret::trainControl(method = "cv", number = 10),
   tuneGrid = hyper_grid
 )
 tuned_mars
@@ -1271,8 +1343,12 @@ Variable importance based on impact to GCV (left) and RSS (right) values as pred
 
 p1 <- tm_vip(object = cv_mars, value = "gcv", title = "Generalized cross-validation \n(GCV) procedure")
 p2 <- tm_vip(object = cv_mars, value = "rss", title = "Residual Sums of Squares")
-gridExtra::grid.arrange(p1, p2, ncol = 2)
-tm_print_save(filename = "p1p2.tiff")
+
+p1
+tm_print_save(filename = "p1.tiff")
+
+p2
+tm_print_save(filename = "p2.tiff")
 ```
 
 Its important to realize that variable importance will only measure the impact of the prediction error as features are included; however, it does not measure the impact for particular hinge functions created for a given feature.
@@ -1281,9 +1357,9 @@ Its important to realize that variable importance will only measure the impact o
 # filter for interaction terms
 # https://bradleyboehmke.github.io/HOML/mars.html
 optimal_combinations <- cv_mars$finalModel %>%
-  coef() %>%  
+  stats::coef() %>%  
   broom::tidy() %>%  
-  filter(stringr::str_detect(names, "\\*")) 
+  dplyr::filter(stringr::str_detect(names, "\\*")) 
 optimal_combinations
 ```
 Interaction between features show that younger Age and international/US_or_Canadian_Applicant interact positively.  A medical education interruption and USMLE Step 1 score are negative interaction.  There is a three way interaction between (Age-34.6), international applicants (US_or_Canadian_Applicantinternational), Visa_Sponsorship_needed_yes (Visa_Sponsorship_NeededYes) that is negative.  
@@ -1293,7 +1369,7 @@ Interaction between features show that younger Age and international/US_or_Canad
 # Train the model using randomForest and predict on the training data itself.
 model_mars = caret::train(Match_Status ~ ., data=train, method='earth')
 model_mars
-fitted <- predict(model_mars)
+fitted <- stats::predict(model_mars)
 fitted
 
 plot(model_mars, main="Model Accuracies based on \n the number of terms with MARS") 
@@ -1484,7 +1560,7 @@ x <- x[,-1]  #Removes intercept
 
 set.seed(356)
 glmnet1 <- 
-  cv.glmnet(x=x,
+  glmnet::cv.glmnet(x=x,
             y=train$Match_Status,
             nfolds=10,
             alpha=.5, 
@@ -1505,7 +1581,7 @@ Coefficients for our ridge regression model as λ  grows from 0 → ∞.
 ```{r}
 # https://bradleyboehmke.github.io/HOML/regularized-regression.html
 # Apply CV ridge regression to Matching data
-ridge <- cv.glmnet(
+ridge <- glmnet::cv.glmnet(
   x = x,
   y=train$Match_Status,
   alpha = 0, 
@@ -1523,7 +1599,7 @@ ridge$lambda %>% head()
 CV lasso regression with alpha at 1.0
 ```{r}
 # Apply CV lasso regression to Matching data
-lasso <- cv.glmnet(
+lasso <- glmnet::cv.glmnet(
   x = x,
   y=train$Match_Status,
   alpha = 1,
@@ -1555,14 +1631,14 @@ lasso$lambda.1se  # lambda for this MSE
 Coefficients for our ridge and lasso models. First dotted vertical line in each plot represents the λ with the smallest MSE and the second represents the λ with an MSE within one standard error of the minimum MSE.
 ```{r}
 # Ridge model
-ridge_min <- glmnet(
+ridge_min <- glmnet::glmnet(
   x = x,
   y=train$Match_Status,
   alpha = 0,
   family="binomial")
 
 # Lasso model
-lasso_min <- glmnet(
+lasso_min <- glmnet::glmnet(
   x = x,
   y=train$Match_Status,
   alpha = 1,
@@ -3357,7 +3433,7 @@ error<- vector(mode = "list", length = 0)
 y<-train$Match_Status
 # ---------model 1---------------------------------------------------------------
 X<-model.matrix(Match_Status~US_or_Canadian_Applicant + USMLE_Step_1_Score + Age+Gender+Couples_Match+white_non_white, train )[,-18]
-cv <- cv.glmnet(X, y, alpha=1,nfolds = 10,family="binomial",type.measure = "class")
+cv <- glmnet::cv.glmnet(X, y, alpha=1,nfolds = 10,family="binomial",type.measure = "class")
 model_1 <- glmnet(X, y, alpha = 1, family = "binomial", lambda = cv$lambda.1se)
 imin=which(cv$lambda==cv$lambda.1se)
 error[1]<-cv$cvm[imin]

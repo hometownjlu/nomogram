@@ -1,0 +1,362 @@
+---
+title: "A Model to Predict Chances of Matching into Obstetrics and Gynecology Residency"
+author: "Tyler M. Muffly, MD"
+date: "Department of Obstetrics and Gynecology, Denver Health, Denver, CO"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 2
+    self_contained: true
+    code_folding: show
+    dev: svg
+    df_print: paged
+    theme: journal
+  pdf_document:
+    pandoc_args:
+    - --wrap=none
+    - --top-level-division=chapter
+    df_print: paged
+    fig_caption: yes
+    #keep_tex: no
+    latex_engine: xelatex
+  word_document:
+    toc_depth: '2'
+fontsize: 12pt
+geometry: margin=1in
+header-includes:
+- \usepackage{fancyhdr}
+- \pagestyle{fancy}
+- \fancyhead[R]{Muffly et al.}
+- \usepackage{lineno}
+- \linenumbers
+fontfamily: mathpazo
+spacing: double
+always_allow_html: yes
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+all_data <- readr::read_csv("~/Dropbox/Nomogram/nomogram/all_data_output_of_split_correlation.csv")
+train <- readr::read_csv("~/Dropbox/Nomogram/nomogram/train_output_of_split_correlation.csv")
+test <- readr::read_csv("~/Dropbox/Nomogram/nomogram/test_output_of_split_correlation.csv")
+```
+
+```{r}
+#https://github.com/manojmukkamala/DiabeticPatientsReadmission/blob/master/Project_V4.R
+#Just writing the names of all the variables under one term to avoid re-writing when we apply model multiple times
+
+#"Malpractice_Cases_Pending", Removed because this is due to the fact that all people had 0 cases
+
+drivers <- c("ACLS",
+                                                                     "Age",
+                                                       "Alpha_Omega_Alpha",
+                                                         # "Applicant_Name",
+                                                                     "BLS",
+                                                             "Citizenship",
+                           "Count_of_Non_Peer_Reviewed_Online_Publication",
+                                              "Count_of_Oral_Presentation",
+                                                 "Count_of_Other_Articles",
+                                    "Count_of_Peer_Reviewed_Book_Chapter",
+                      "Count_of_Peer_Reviewed_Journal_Articles_Abstracts",
+ "Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published",
+                              "Count_of_Peer_Reviewed_Online_Publication",
+                                           "Count_of_Poster_Presentation",
+                                          "Count_of_Scientific_Monograph",
+                                                          "Couples_Match",
+                                                                 "Gender",
+                                                           "Match_Status",
+                                                         "Medical_Degree",
+                              "Medical_Education_or_Training_Interrupted",
+                                              "Medical_Licensure_Problem",
+                                            "Military_Service_Obligation",
+                                                 "Misdemeanor_Conviction",
+                                                            "NIH_dollars",
+                                                                   "PALS",
+                                                        "Sigma_Sigma_Phi",
+                                                 "Type_of_medical_school",
+                                               "US_or_Canadian_Applicant",
+                                                     "USMLE_Step_1_Score",
+                                                  "USMLE_Step_2_CK_Score",
+                                                "Visa_Sponsorship_Needed",
+                                                        "white_non_white")
+
+#Writing the name of dependent variable seperately
+dependentVar <- "Match_Status"
+
+#Bringing all the column names under one term
+formula <- paste(dependentVar, "~", paste(drivers, collapse = " + "))
+formula
+```
+
+#Messing around
+```{r}
+#https://www.kaggle.com/ravichaubey1506/postgraduate-admission-analysis#Predective-Modeling
+regressor=lm(Match_Status~.,train)
+summary(regressor)
+```
+
+#Run the model now with only significant variables
+```{r}
+#https://www.kaggle.com/ravichaubey1506/postgraduate-admission-analysis#Predective-Modeling
+new_model=lm(Match_Status~Age + BLS + Citizenship + Gender + Medical_Education_or_Training_Interrupted + USMLE_Step_1_Score + USMLE_Step_2_CK_Score + white_non_white, train)
+summary(new_model)
+```
+
+
+#Odd that the predictions are greater than one and less than 0.  
+```{r}
+#https://www.kaggle.com/ravichaubey1506/postgraduate-admission-analysis#Predective-Modeling
+chance_admi_pred=predict(new_model,test)
+final_data=cbind(test,chance_admi_pred) #Combining Predicted Value to Original Data
+write.csv(final_data,"final_data.csv")
+head(final_data,6)
+```
+
+```{r}
+#https://www.kaggle.com/ravichaubey1506/postgraduate-admission-analysis#Predective-Modeling
+library(ggplot2)
+ggplot(final_data,aes(x=USMLE_Step_2_CK_Score,y=chance_admi_pred))+
+geom_point(color="red")+
+stat_smooth(method="lm")+
+scale_x_continuous(name="USMLE_Step_2_CK_Score")+
+scale_y_continuous(name="Prediction of Chance of Admission")+
+ggtitle("Prediction Curve with USMLE_Step_2_CK Score")
+```
+
+```{r}
+#https://www.kaggle.com/ravichaubey1506/postgraduate-admission-analysis#Predective-Modeling
+residuals=as.numeric(final_data$Match_Status) - final_data$chance_admi_pred
+residuals=as.data.frame(residuals)
+head(residuals,10)
+```
+
+
+
+
+
+
+
+
+# Kitchen Sink Model: (aka throw everything at it)
+Create a Kitchen Sink or a "large" model with all factors in the `train` data set first. This is essentially a screening model with all variables. 
+
+Logistic regression model from the `rms` package on the `kitchen.sink` model
+```{r, echo=TRUE, include = TRUE}
+library(magrittr)
+train$Match_Status <- as.factor(train$Match_Status)
+class(train$Match_Status)  
+#train <- train %>% select(-Match_Status1)
+require(rms)
+
+train1 <- train %>% dplyr::select(-Type_of_medical_school, -USMLE_Step_2_CK_Score, -USMLE_Step_1_Score, -US_or_Canadian_Applicant, -Medical_Degree)
+
+d <- 
+  rms::datadist(train1)
+
+options(datadist = "d")
+
+#singular information matrix in lrm.fit (rank= 30 ).  Offending variable(s):
+# USMLE_Step_2_CK_Score Type_of_medical_school=U.S. Public School USMLE_Step_1_Score US_or_Canadian_Applicant=US senior Medical_Degree=MD 
+
+kitchen.sink <- 
+  rms::lrm(formula = Match_Status~., 
+      data = train1, 
+      method = "lrm.fit",
+      x = T, 
+      y = T)
+
+kitchen.sink
+anova(kitchen.sink, test="Chisq")
+invisible(gc())
+
+#This is a nice view of the model formula:  
+kitchen.sink[[26]]
+```
+
+```{r, include=TRUE}
+#https://thepoliticalmethodologist.com/2013/11/25/making-high-resolution-graphics-for-academic-publishing/
+#See custom-made function in Additional_functions_nomogram.R for specific settings on nomogram build. 
+#https://www.kaggle.com/pjmcintyre/titanic-first-kernel#final-checks
+tm_nomogram_prep <- function(df){  #signature of the function
+  set.seed(1978)                  #body of the function
+  print("Function Sanity Check: Creation of Nomogram")
+  test <- rms::nomogram(df,
+                #lp.at = seq(-3,4,by=0.5),
+                fun = plogis,
+                fun.at = c(0.001, 0.01, 0.05, seq(0.2, 0.8, by = 0.2), 0.95, 0.99, 0.999),
+                funlabel = "Chance of Matching in OBGYN",
+                lp =FALSE,
+                #conf.int = c(0.1,0.7),
+                abbrev = F,
+                minlength = 9)
+  
+  tm_plot <- plot(test, lplabel="Linear Predictor",
+       cex.sub = 0.3, cex.axis=0.4, cex.main=1, cex.lab=0.2, ps=10, xfrac=1,
+       col.conf=c('red','green'),
+       conf.space=c(0.1,0.5),
+       label.every=1,
+       col.grid = gray(c(0.8, 0.95)),
+       which="Match_Status")
+  return(tm_plot)
+  }
+
+tm_nomogram_prep(kitchen.sink)
+
+tm_print_save <- function (filename) {
+  print("Function Sanity Check: Saving TIFF of what is in the viewer")
+  dev.print(tiff, (here::here("results", filename)), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
+  dev.off()
+}
+
+tm_print_save("tm_nomogram_prep_kitchen_sink.tiff")
+```
+
+Create a Confusion Matrix
+```{r}
+test$Match_Status <- as.factor(test$Match_Status)
+
+Predprob <- stats::predict.glm(object = kitchen.sink, newdata = train1, type = "response")
+#plot(Predprob, jitter(as.numeric(train$Match_Status)))
+
+# test model
+###Not working!!!
+prediction_test <- rms::Predict(x = kitchen.sink)
+prediction_test
+prediction_categories <- ifelse(prediction_test > 0.5, 1, 0)
+nrow(prediction_categories)
+nrow(train1)
+confusion <- base::table(prediction_categories, train1$Match_Status)
+(confusion.limited.vif.model.kitchen.sink <- caret::confusionMatrix(confusion, positive = "1"))
+```
+
+Calculates the Brier score for the `kitchen.sink` model.  
+```{r, warning=FALSE, echo=TRUE, include = TRUE}
+#Shows the C-statistic and the Brier score.  
+tmp <- 
+  as.data.frame(kitchen.sink$stats)
+
+knitr::kable(tmp, 
+             caption = "Performance statistics of the Kitchen Sink Model Using All Variables", 
+             digits=2)
+```
+
+This `kitchen.sink` model accounts for just over `r kitchen.sink$stats[[10]]*100`% (r.squared) of the variation in Match_Status in our training sample of `r nrow(train)` medical students in `train`.  The C-statistic is `r round(kitchen.sink$stats[[6]], digit =2)`.  The c-statistic, also known as the concordance statistic, is equal to to the AUC (area under curve) and has the following interpretations:
+* A value below 0.5 indicates a poor model.
+* A value of 0.5 indicates that the model is no better out classifying outcomes than random chance.
+* The closer the value is to 1, the better the model is at correctly classifying outcomes.
+* A value of 1 means that the model is perfect at classifying outcomes.
+
+The c-statistic is equal to the AUC (area under the curve), and can also be calculated by taking all possible pairs of individuals consisting of one individual who experienced a positive outcome and one individual who experienced a negative outcome. Then, the c-statistic is the proportion of such pairs in which the individual who experienced a positive outcome had a higher predicted probability of experiencing the outcome than the individual who did not experience the positive outcome.  The closer a c-statistic is to 1, the better a model is able to classify outcomes correctly.
+
+Brier score for `kitchen.sink` is `r round(kitchen.sink$stats[[11]], digits = 2)`.  The best possible Brier score is 0, for total accuracy.  A Brier score is a way to verify the accuracy of a probability forecast.
+
+The `kitchen.sink` p.value (`r kitchen.sink$stats[[5]]`, which is zero for all reasonable purposes) indicates a highly statistically significant amount of predictive value is accounted for by the model. This predictive value is no surprise given the moderate R2 value (`r kitchen.sink$stats[[10]]*100`%) and reasonably large (n = `r nrow(train)`) size of this training sample.
+
+Effect Sizes: Interpreting Coefficient Estimates
+Specify the size, magnitude and meaning of all coefficients, and identify appropriate conclusions regarding effect sizes with 90% confidence intervals.
+
+This is messy (and maybe unncecessary) but I have to create a linear model using stats::lm to pull out values like R squared into the Rmarkdown inline values.
+```{r, echo=TRUE, include=FALSE}
+## Fitting a linear model of the kitchen sink using lm from the stats package
+#train$Match_Status
+class(train$Match_Status) #For lm models you MUST have the outcome be numeric class and a number!!!!
+train$Match_Status <- as.numeric(train$Match_Status) - 1  #To make lm work you need to change the Match_status to 1 vs. 0
+train$Match_Status
+str(train)
+
+lm.fit2 <- 
+  stats::lm(formula = formula,  
+     data = train)
+
+summary(lm.fit2)
+summary.lmfit2<- summary(lm.fit2) #Do this so that we can pull out the r squared values showing model performance
+```
+
+```{r, include = TRUE}
+broom::glance(lm.fit2)
+```
+
+
+```{r}
+coefficients <- broom::tidy(lm.fit2, conf.int = TRUE, conf.level = 0.9) 
+coefficients
+```
+y = mx + b
+Our model formula is intercept of `r round(coefficients[[1, 2]], digit=1)`+`r round(coefficients[[2, 2]], digit = 2)`(`r coefficients[[2, 1]]`) `r round(coefficients[[3, 2]], digit =2)`(`r coefficients[[3, 1]]`) `r round(coefficients[[4, 2]], digit =2)`(`r coefficients[[4, 1]]`) `r round(coefficients[[5, 2]], digit =2)`(`r coefficients[[5, 1]]`) `r round(coefficients[[6, 2]], digit =2)`(`r coefficients[[6, 1]]`) `r round(coefficients[[7, 2]], digit =2)`(`r coefficients[[7, 1]]`) `r round(coefficients[[8, 2]], digit=3)` (`r coefficients[[8, 1]]`) `r round(coefficients[[9, 2]], digit=2)`(`r coefficients[[9, 1]]`) `r round(coefficients[[10, 2]], digit=2)`(`r coefficients[[10, 1]]`).  
+
+The r squared for model `lmfit2` is: `r round(summary.lmfit2[[8]], digit=3)`.  
+
+```{r}
+# Not working with R Markdown ????
+# prediction_test <- rms::Predict(x = lm.fit2)
+# prediction_categories <- ifelse(prediction_test > 0.5, 1, 0)
+# confusion <- table(prediction_categories, test$Match_Status)
+# confusion
+```
+
+
+# Does collinearity in the kitchen sink model have a meaningful impact?
+Logistic regression models should be free of multicollinearity so we used the variance inflation factor (VIF).   The VIF may be calculated for each predictor by doing a linear regression of that predictor on all the other predictors.  It’s called the variance inflation factor because it estimates how much the variance of a coefficient is “inflated” because of linear dependence with other predictors. Thus, a VIF of 1.8 tells us that the variance (the square of the standard error) of a particular coefficient is 80% larger than it would be if that predictor was completely uncorrelated with all the other predictors.
+* VIF = 1, no correlation
+* VIF between 1 and 5 , moderately correlated
+* VIF greater than 5, highly correlated
+
+```{r, echo=TRUE, include=TRUE}
+car::vif(kitchen.sink)
+#https://statisticalhorizons.com/multicollinearity
+#https://campus.datacamp.com/courses/human-resources-analytics-in-r-predicting-employee-churn/model-validation-hr-interventions-and-roi?ex=1
+```
+
+I removed variables one at a time from `kitchen.sink` until VIF is <5.  Here I removed `train$Medical_Degree` and all collinearity dropped out based on VIF readings.  Now I rebuilt the model named `limited.vif.model.kitchen.sink` without the multicollinear factor of `train$Medical_Degree`.  
+```{r}
+limited.vif.model.kitchen.sink <- stats::glm(Match_Status ~ . - Medical_Degree,   #Nice trick to remove one variable at a time
+                 family = "binomial", data = train)
+
+rms::vif(limited.vif.model.kitchen.sink)
+```
+
+Perform In Sample Prediction - Run train model on the `train` data
+```{r}
+prediction_train <- rms::Predict(x = limited.vif.model.kitchen.sink)
+
+hist(prediction_train)
+tm_print_save("hist_prediction_train.tiff")
+```
+
+Out of data set prediction, predicting probability on test data set with collinear variable of `train$Medical_Degree` removed.  
+```{r}
+#https://campus.datacamp.com/courses/human-resources-analytics-in-r-predicting-employee-churn/model-validation-hr-interventions-and-roi?ex=1
+colnames(test)
+prediction_test <- predict(limited.vif.model.kitchen.sink, newdata = test, 
+                           type = "response")
+
+hist(prediction_test)
+tm_print_save("hist_prediction_test.tiff")
+```
+
+```{r}
+# Classify predictions using a cut-off of 0.5
+prediction_categories <- ifelse(prediction_test > 0.5, 1, 0)
+```
+
+Create a confusion matrix 
+```{r}
+## Creating confusion matrix
+test$Match_Status <- as.numeric(test$Match_Status)  -1 
+#test$Match_Status
+
+confusion <- table(prediction_categories, test$Match_Status)
+knitr::kable(confusion, caption = "Confusion Matrix of non-colinear Variables", digits=2)
+```
+True negative is `r confusion[1]`.
+False negative is `r confusion[1,2]`.  These people were predicted not to match but did match.  
+True positive is `r confusion[2,2]`.  These are the people predicted to match who did match.  
+False positive is `r confusion[2]`.  These are the people who were predicted to match and did not match.  ??
+
+# Calculate accuracy. 
+```{r}
+(confusion.limited.vif.model.kitchen.sink <- caret::confusionMatrix(confusion, positive = "1"))
+```
+The accuracy of the `limited.vif.model.kitchen.sink` model is `r round(confusion.limited.vif.model.kitchen.sink$overall[[1]], digit=3)`.  The sensitivity of the `limited.vif.model.kitchen.sink` model is `r round(confusion.limited.vif.model.kitchen.sink$byClass[[1]], digit=3)`. The specificity of the `limited.vif.model.kitchen.sink` model is `r round(confusion.limited.vif.model.kitchen.sink$byClass[[2]], digit=3)`.

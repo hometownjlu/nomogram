@@ -1,0 +1,1127 @@
+---
+title: "A Model to Predict Chances of Matching into Obstetrics and Gynecology Residency"
+author: "Tyler M. Muffly, MD"
+date: "Department of Obstetrics and Gynecology, Denver Health, Denver, CO"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 2
+    self_contained: true
+    code_folding: show
+    dev: svg
+    df_print: paged
+    theme: journal
+  pdf_document:
+    pandoc_args:
+    - --wrap=none
+    - --top-level-division=chapter
+    df_print: paged
+    fig_caption: yes
+    #keep_tex: no
+    latex_engine: xelatex
+  word_document:
+    toc_depth: '2'
+fontsize: 12pt
+geometry: margin=1in
+header-includes:
+- \usepackage{fancyhdr}
+- \pagestyle{fancy}
+- \fancyhead[R]{Muffly et al.}
+- \usepackage{lineno}
+- \linenumbers
+fontfamily: mathpazo
+spacing: double
+always_allow_html: yes
+editor_options: 
+  chunk_output_type: console
+---
+# Read in the original `all_data`, `train`, and `test`
+```{r}
+library(magrittr)
+all_data <- readr::read_csv("~/Dropbox/Nomogram/nomogram/all_data_output_of_split_correlation.csv")
+train <- readr::read_csv("~/Dropbox/Nomogram/nomogram/train_output_of_split_correlation.csv")
+test <- readr::read_csv("~/Dropbox/Nomogram/nomogram/test_output_of_split_correlation.csv")
+
+train <- train %>%
+dplyr::mutate(Match_Status = dplyr::recode(Match_Status, `Did Not Match` = "0", Match = "1"))
+train$Match_Status <- as.numeric(train$Match_Status)
+class(train$Match_Status)
+
+all_data <- all_data %>%
+dplyr::mutate(Match_Status = dplyr::recode(Match_Status, `Did Not Match` = "0", Match = "1"))
+all_data$Match_Status <- as.numeric(all_data$Match_Status)
+```
+
+# Review the variables
+"Malpractice_Cases_Pending", Removed because this is due to the fact that all people had 0 cases/zero variance
+```{r}
+#https://github.com/manojmukkamala/DiabeticPatientsReadmission/blob/master/Project_V4.R
+#Just writing the names of all the variables under one term to avoid re-writing when we apply model multiple times
+
+#"Malpractice_Cases_Pending", Removed because this is due to the fact that all people had 0 cases/zero variance
+
+drivers <- c("ACLS",
+                                                                     "Age",
+                                                       "Alpha_Omega_Alpha",
+                                                         # "Applicant_Name",
+                                                                     "BLS",
+                                                             "Citizenship",
+                           "Count_of_Non_Peer_Reviewed_Online_Publication",
+                                              "Count_of_Oral_Presentation",
+                                                 "Count_of_Other_Articles",
+                                    "Count_of_Peer_Reviewed_Book_Chapter",
+                      "Count_of_Peer_Reviewed_Journal_Articles_Abstracts",
+ "Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published",
+                              "Count_of_Peer_Reviewed_Online_Publication",
+                                           "Count_of_Poster_Presentation",
+                                          "Count_of_Scientific_Monograph",
+                                                          "Couples_Match",
+                                                                 "Gender",
+                                                         "Medical_Degree",
+                              "Medical_Education_or_Training_Interrupted",
+                                              "Medical_Licensure_Problem",
+                                            "Military_Service_Obligation",
+                                                 "Misdemeanor_Conviction",
+                                                            "NIH_dollars",
+                                                                   "PALS",
+                                                        "Sigma_Sigma_Phi",
+                                                 "Type_of_medical_school",
+                                               "US_or_Canadian_Applicant",
+                                                     "USMLE_Step_1_Score",
+                                                  "USMLE_Step_2_CK_Score",
+                                                "Visa_Sponsorship_Needed",
+                                                        "white_non_white")
+
+#Writing the name of dependent variable seperately
+dependentVar <- "Match_Status"
+
+#Bringing all the column names under one term
+formula <- paste(dependentVar, "~", paste(drivers, collapse = " + "))
+formula
+```
+
+
+# Factor Selection using Forward/Backwards Regression via Variable Importance
+
+https://dataaspirant.com/2018/01/15/feature-selection-techniques-r/
+Using Regression to Calculate Variable Importance: The summary function in regression also describes features and how they affect the dependent feature through significance.
+
+Start with Stepwise Regression  
+Backwards is when you start with a model of all the predictors and then check what happens when each of the predictors is removed.  If removing a variable does not change the ability to predict then the predictor is safely deleted.  This continues step by step until only important predictors remain.  
+
+##Try forwards stepwise regression
+```{r, echo=TRUE, include = T}
+#Forward regression!!  #https://campus.datacamp.com/courses/supervised-learning-in-r-classification/chapter-3-logistic-regression?ex=15
+# Specify a null model with no predictors
+null_model <- stats::glm(formula = Match_Status ~ 1, data = all_data, family = "binomial")
+
+# Specify the full model using all of the potential predictors
+full_model <- stats::glm(formula = formula, data = all_data, family = "binomial")
+
+# Use a forward stepwise algorithm to build a parsimonious model
+step_model <- stats::step(null_model, scope = list(lower = null_model, upper = full_model), direction = "forward")
+```
+
+The output by logistic model gives us the estimates and probability values for each of the features. It also marks the important features with stars based on p-values.
+```{r, echo=TRUE, include = T}
+tm_broom <- function(model){
+  print("Function Sanity Test: Model Evaluation")
+  model_output <- broom::tidy(step_model, conf.int=TRUE) %>% 
+  dplyr::select(-statistic, -std.error) %>% 
+  dplyr::filter(term != "(Intercept)") %>%
+  dplyr::arrange(p.value) %>%
+  dplyr::select(term, estimate, conf.low, conf.high, p.value, everything())
+  return(model_output)
+}
+
+tm_broom(step_model)
+broom::glance(step_model)
+
+summary(step_model)
+step_model$anova
+```
+
+Use this list of significant variables from forwards step-wise regression.  
+```{r, echo=TRUE, include = T}
+forward_drivers <- step_model$formula[[c(3)]]
+forward_drivers
+```
+
+
+```{r, echo=TRUE, include = T}
+# Estimate the stepwise matching probability
+step_prob <- stats::predict(step_model, type = "response")
+```
+
+## Plot the ROC of the stepwise model
+```{r, echo=TRUE, include = TRUE}
+forwards_ROC <- pROC::roc(all_data$Match_Status, step_prob,
+    levels=c("1", "0"), direction = "auto")
+plot(forwards_ROC, col = "red", main="Forwards Stepwise Regression \n for Factor Selection")
+pROC::auc(forwards_ROC) 
+
+tm_print_save <- function (filename) {
+  print("Function Sanity Check: Saving TIFF of what is in the viewer")
+  grDevices::dev.print(tiff, (here::here("results", filename)), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
+  dev.off()
+}
+
+tm_print_save("forward_ROC.tiff")
+```
+
+
+##Try BACKWARDS stepwise regression here:
+```{r, echo=TRUE, include = T}
+#BACKWARDS regression!!  #https://campus.datacamp.com/courses/supervised-learning-in-r-classification/chapter-3-logistic-regression?ex=15
+# Specify a null model with no predictors
+null_model <- glm(formula = formula, data = all_data, family = "binomial")
+
+# Specify the full model using all of the potential predictors
+full_model <- glm(formula = formula, data = all_data, family = "binomial")
+
+# Use a forward stepwise algorithm to build a parsimonious model
+back_step_model <- stats::step(full_model, scope = list(lower = null_model, upper = full_model), direction = "backward", trace=1)
+```
+
+The output by logistic model gives us the estimates and probability values for each of the features. It also marks the important features with stars based on p-values.
+```{r, echo=TRUE, include = T}
+summary(back_step_model)
+back_step_model$anova
+```
+
+These are the predictors that the backwards stepwise model used:
+```{r, echo=TRUE, include = T}
+backward_drivers <- back_step_model$formula[[c(3)]]
+backward_drivers
+# Estimate the stepwise matching probability
+back_step_prob <- predict(back_step_model, data = test, type = "response")  
+```
+
+
+```{r, echo=TRUE, include = TRUE}
+# Plot the ROC of the stepwise model
+backwards_ROC <- pROC::roc(all_data$Match_Status, back_step_prob,
+    levels=c("1", "0"), direction = "auto")
+plot(backwards_ROC, col = "blue", main="Backwards Stepwise Regression \n for Feature Selection")
+pROC::auc(backwards_ROC) 
+
+#BACKWARDS step-wise regression model `step_model` has an AUC of `r round(pROC::auc(backwards_ROC)[[1]], digits=2) ` using these predictors `r back_step_model$formula[[c(3)]]`
+```
+
+
+#Factor Selection:  Principal Components Analysis
+Principal Component Analysis (PCA) is a very powerful technique that has wide applicability in data science, bioinformatics, and further afield. It was initially developed to analyse large volumes of data in order to tease out the differences/relationships between the logical entities being analysed. It extracts the fundamental structure of the data without the need to build any model to represent it. This 'summary' of the data is arrived at through a process of reduction that can transform the large number of variables into a lesser number that are uncorrelated (i.e. the ‘principal components'), whilst at the same time being capable of easy interpretation on the original data (Blighe, Lewis, and Lun 2018) (Blighe 2013).
+
+In order to reduce 30 dimensions or knowing the significant impact of our reduction we will do PCA.
+
+Feature Selection: Principal Component Analysis - Use principal components analysis to pick what predictors to use 
+```{r}
+#From nomogram_matching_medical_students.R
+
+#Method 1:  Principal Component Analysis - Use principal components analysis to pick what predictors to use 
+train_pca <- caret::preProcess(dplyr::select(all_data, - Match_Status), 
+                        method = c("center", "scale", "nzv", "pca"))
+train_pca
+train_pca$method
+train_pca$rotation
+train_pca$method$pca
+```
+
+
+Approach 2
+```{r}
+numeric_data <- dplyr::select_if(all_data, is.numeric)
+numeric_data <- base::scale(numeric_data, center=TRUE, scale = TRUE)
+pcaObj <- stats::princomp(numeric_data, cor = TRUE, scores = TRUE, covmat = NULL)
+summary(pcaObj)
+print(pcaObj)
+names(pcaObj)
+plot(pcaObj, main="Principal Component Analysis \n Reduction in Number of Variables")
+pcaObj$loadings[,1]
+#I have no idea what this plot means
+stats::biplot(pcaObj, cex = 1.0, main="Biplot of Principal Component Analysis \n Reduction in Number of Variables")
+tm_print_save("Principal_Components_for_numeric_data.tiff")
+
+final_data <- as.data.frame(pcaObj$scores)
+```
+According to PCA,the columns that are of utmost importance are as follows:
+***
+
+```{r}
+#http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/118-principal-component-analysis-in-r-prcomp-vs-princomp/
+library(factoextra)
+res.pca <- prcomp(numeric_data, scale = TRUE)
+factoextra::fviz_eig(res.pca)  #Visualize eigenvalues (scree plot). Show the percentage of variances explained by each principal component.
+#tm_print_save("scree_plot_PCA.tiff")
+
+#Graph of individuals. Individuals with a similar profile are grouped together.
+# factoextra::fviz_pca_ind(res.pca,
+#              col.ind = "cos2", # Color by the quality of representation
+#              gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+#              repel = TRUE     # Avoid text overlapping
+#              )
+#tm_print_save("individuals_plot_PCA.tiff")
+
+# #Graph of variables. Positive correlated variables point to the same side of the plot. Negative correlated variables point to opposite sides of the graph.
+# factoextra::fviz_pca_var(res.pca,
+#              col.var = "contrib", # Color by contributions to the PC
+#              gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+#              repel = TRUE     # Avoid text overlapping
+#              )
+#tm_print_save("graph_of_vars_plot_PCA.tiff")
+
+#Biplot of individuals and variables
+#Takes forever to run.  
+# factoextra::fviz_pca_biplot(res.pca, repel = TRUE,
+#                 col.var = "#2E9FDF", # Variables color
+#                 col.ind = "#696969"  # Individuals color
+#                 )
+# tm_print_save("barpot_plot_PCA.tiff")
+
+# Eigenvalues
+eig.val <- get_eigenvalue(res.pca)
+eig.val
+
+# Results for Variables
+res.var <- get_pca_var(res.pca)
+head(res.var$coord)          # Coordinates
+head(res.var$contrib)        # Contributions to the PCs
+head(res.var$cos2)           # Quality of representation
+# Results for individuals
+res.ind <- get_pca_ind(res.pca)
+head(res.ind$coord)          # Coordinates
+head(res.ind$contrib)        # Contributions to the PCs
+head(res.ind$cos2)           # Quality of representation
+```
+
+
+
+<!-- ```{r} -->
+<!-- #https://bradleyboehmke.github.io/HOML/pca.html -->
+
+<!-- # convert data to h2o object -->
+<!-- h2o::h2o.init() -->
+<!-- my_basket.h2o <- h2o::as.h2o(all_data) -->
+
+<!-- # run PCA -->
+<!-- my_pca <- h2o::h2o.prcomp( -->
+<!--   training_frame = my_basket.h2o, -->
+<!--   pca_method = "GramSVD", -->
+<!--   k = ncol(my_basket.h2o),  -->
+<!--   transform = "STANDARDIZE",  -->
+<!--   impute_missing = TRUE, -->
+<!--   max_runtime_secs = 1000 -->
+<!-- ) -->
+
+<!-- my_pca@model$importance -->
+<!-- ``` -->
+
+<!-- Naturally, the first PC (PC1) captures the most variance followed by PC2, then PC3, etc. We can identify which of our original features contribute to the PCs by assessing the loadings.  -->
+<!-- ```{r} -->
+<!-- #https://bradleyboehmke.github.io/HOML/pca.html -->
+<!-- my_pca@model$eigenvectors %>%  -->
+<!--   as.data.frame() %>%  -->
+<!--   mutate(feature = row.names(.)) %>% -->
+<!--   ggplot(aes(pc1, reorder(feature, pc1))) + -->
+<!--   geom_point() +  -->
+<!--   ggtitle("Principal Components 1 \n Feature Selection") -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- #https://bradleyboehmke.github.io/HOML/pca.html -->
+
+<!-- # Compute eigenvalues -->
+<!-- eigen <- my_pca@model$importance["Standard deviation", ] %>% -->
+<!--   as.vector() %>% -->
+<!--   .^2 -->
+
+<!-- # Sum of all eigenvalues equals number of variables -->
+<!-- sum(eigen) -->
+<!-- ## [1] 42 -->
+
+<!-- # Find PCs where the sum of eigenvalues is greater than or equal to 1 -->
+<!-- which(eigen >= 1) -->
+<!-- #Consequently, using this criteria would have us retain the first 3 PCs in my_basket.   -->
+
+<!-- #Scree Plot -->
+<!-- data.frame( -->
+<!--   PC  = my_pca@model$importance %>% seq_along, -->
+<!--   PVE = my_pca@model$importance %>% .[2,] %>% unlist() -->
+<!-- ) %>% -->
+<!--   ggplot(aes(PC, PVE, group = 1, label = PC)) + -->
+<!--   geom_point() + -->
+<!--   geom_line() + -->
+<!--   geom_text(nudge_y = -.002) -->
+
+<!-- #Needs to be saved.   -->
+<!-- ``` -->
+So how many principal components should we use in the my_basket example? The frank answer is that there is no one best method for determining how many components to use. In this case, differing criteria suggest to retain *** (scree plot criterion), and *** (eigenvalue criterion).  
+
+# Feature Selection: MARS model (Multivariate Adaptive Regression Splines)
+```{r}
+# https://bradleyboehmke.github.io/HOML/mars.html
+# create a tuning grid
+hyper_grid <- expand.grid(
+  degree = 1:3, 
+  nprune = seq(2, 100, length.out = 10) %>% floor()
+)
+
+head(hyper_grid)
+```
+
+
+```{r}
+all_data <- readr::read_csv("~/Dropbox/Nomogram/nomogram/all_data_output_of_split_correlation.csv")
+train <- readr::read_csv("~/Dropbox/Nomogram/nomogram/train_output_of_split_correlation.csv")
+test <- readr::read_csv("~/Dropbox/Nomogram/nomogram/test_output_of_split_correlation.csv")
+
+train <- train %>%
+dplyr::mutate(Match_Status = dplyr::recode(Match_Status, `Did Not Match` = "Did.Not.Match", Match = "Matched"))
+train$Match_Status <- as.factor(train$Match_Status)
+class(train$Match_Status)
+
+all_data <- all_data %>%
+dplyr::mutate(Match_Status = dplyr::recode(Match_Status, `Did Not Match` = "Did.Not.Match", Match = "Matched"))
+
+all_data$Match_Status <- as.factor(all_data$Match_Status)
+class(all_data$Match_Status)
+all_data$Match_Status<- as.factor(all_data$Match_Status)
+
+#Caret needs variables without spaces in them "Did Not Match" does NOT work
+```
+
+MARS allows for non-linear models.  The MARS method and algorithm can be extended to handle classification problems and GLMs in general.
+https://bradleyboehmke.github.io/HOML/mars.html
+http://uc-r.github.io/mars
+```{r}
+tuned_mars <- caret::train(Match_Status~.,
+  data = all_data,
+  method = "earth",
+  trControl = caret::trainControl(method = "cv", number = 10, classProbs = TRUE),
+  tuneGrid = hyper_grid
+)
+
+tuned_mars
+tm_print_save("Degree_of_products.tiff")
+
+# best model
+tuned_mars$bestTune
+
+#Variables of interest per MARS
+summary(tuned_mars) %>% .$coefficients
+```
+
+```{r}
+plot(tuned_mars, which = 1, , main="Model summary capturing GCV  R2 (left-hand y-axis and solid black line) based on the number of terms retained (x-axis) which is based on the number of predictors used to make those terms (right-hand side y-axis). For this model, 11 non-intercept terms were retained which are based on 18 predictors. Any additional terms retained in the model, over and above these 11, result in less than 0.001 improvement in the GCV R2")
+tm_print_save(filename = "mars1_model_selection.tiff")
+```
+
+In addition to pruning the number of knots, earth::earth() allows us to also assess potential interactions between different hinge functions. The following illustrates this by including a degree = 2 argument. 
+
+You can see that now our model includes interaction terms between a maximum of two hinge functions (e.g., h(Age-34.1890410958904)*US_or_Canadian_Applicantinternational represents an interaction effect for those applicants less than 34 and was not a US_or_Canadian_Applicant).
+```{r}
+# Fit a basic MARS model
+mars2 <- earth(
+  Match_Status ~ .,  
+  data = all_data,
+  degree = 2
+)
+
+# check out the first 10 coefficient terms
+summary(mars2) %>% .$coefficients %>% head(10)
+```
+
+There are two important tuning parameters associated with our MARS model: the maximum degree of interactions and the number of terms retained in the final model. We need to perform a grid search to identify the optimal combination of these hyperparameters that minimize prediction error (the above pruning process was based only on an approximation of CV model performance on the training data rather than an exact k-fold CV process). As in previous chapters, we’ll perform a CV grid search to identify the optimal hyperparameter mix. Below, we set up a grid that assesses 30 different combinations of interaction complexity (degree) and the number of terms to retain in the final model (nprune).
+
+Cross-validated RMSE for the 30 different hyperparameter combinations in our grid search. The optimal model retains *** terms and includes up to ***3rd degree interactions.
+
+The  grid search helps to focus where we can further refine our model tuning. As a next step, we could perform a grid search that focuses in on a refined grid space for nprune (e.g., comparing 5–20 terms retained).
+```{r}
+# https://bradleyboehmke.github.io/HOML/mars.html
+set.seed(123)  # for reproducibility
+cv_mars <- caret::train(Match_Status~.,
+  data = all_data, 
+  method = "earth",
+  metric = "Accuracy",
+  trControl = trainControl(method = "cv", number = 10),
+  tuneGrid = hyper_grid
+)
+
+# View results
+cv_mars$bestTune
+
+cv_mars_plot <- ggplot(cv_mars) + ggtitle("The model that provides the optimal combination \n includes third degree interaction effects \n and retains 23 terms.")
+cv_mars_plot
+
+tm_ggsave <- function (object, filename, ...){  #make sure the file name has quotation marks around it.  
+  print("Function Sanity Check: Saving a ggplot image as a TIFF")
+  ggplot2::ggsave(here::here("results", filename), object, device = "tiff", width = 10, height = 7, dpi = 200)
+}
+
+tm_ggsave(cv_mars_plot, "cv_mars_plot.tiff") 
+```
+
+GCV = Generalized cross-validation (GCV) procedure,
+RSS = residual sums of squares
+
+Variable importance based on impact to GCV (left) and RSS (right) values as predictors are added to the model. Both variable importance measures will usually give you very similar results.
+```{r}
+# variable importance plots
+# https://bradleyboehmke.github.io/HOML/mars.html
+#Variable Importance Function
+tm_vip <- function (object, title, ...) {
+  print("Function Sanity Check: Variable Importance Function")
+  vip <- vip::vip(object = object, 
+                  bar = TRUE,
+                  horizontal = TRUE,
+                  shape = 1,
+                  color = "grey35",
+                  fill = "grey35",
+                  all_permutations = TRUE,
+                  num_features = 10L,
+                  alpha = 1) +
+    ggtitle(title)
+  return(vip)
+}
+
+
+p1 <- tm_vip(object = cv_mars, value = "gcv", title = "Generalized cross-validation \n(GCV) procedure")
+p2 <- tm_vip(object = cv_mars, value = "rss", title = "Residual Sums of Squares")
+p1
+#tm_print_save(filename = "p1.tiff")
+
+p2
+#tm_print_save(filename = "p2.tiff")
+```
+
+Its important to realize that variable importance will only measure the impact of the prediction error as features are included; however, it does not measure the impact for particular hinge functions created for a given feature.
+```{r}
+# extract coefficients, convert to tidy data frame, and
+# filter for interaction terms
+# https://bradleyboehmke.github.io/HOML/mars.html
+optimal_combinations <- cv_mars$finalModel %>%
+  stats::coef() %>%  
+  broom::tidy() %>%  
+  dplyr::filter(stringr::str_detect(names, "\\*")) 
+optimal_combinations
+```
+Interaction between features show that younger Age and international/US_or_Canadian_Applicant interact positively.  A medical education interruption and USMLE Step 1 score are negative interaction.  There is a three way interaction between (Age-34.6), international applicants (US_or_Canadian_Applicantinternational), Visa_Sponsorship_needed_yes (Visa_Sponsorship_NeededYes) that is negative.  
+
+```{r}
+#Method 5:  Variable important from ML algorithm 
+# Train the model using randomForest and predict on the training data itself.
+model_mars = caret::train(Match_Status ~ ., data=all_data, method='earth')
+model_mars
+#fitted <- stats::predict(model_mars)
+#fitted
+
+plot(model_mars, main="Model Accuracies based on \n the number of terms with MARS") 
+#tm_print_save(filename = "model_mars_plot.tiff")
+
+varimp_mars <- caret::varImp(model_mars)
+plot(varimp_mars, main="Variable Importance with MARS") #Visual of the most important factors
+#tm_print_save("varimp_mars.tiff")
+```
+The MARS model shows that *** terms were likely to improve accuracy (`model_mars`).  Variable importance shows that *** US_or_Canadian_applicants, USMLE_Step_1_Score, Age, Medial_Degree, and Visa_Sponsorship_Needed all show significant importance (`varimp_mars`).  
+
+#Feature Selection: Recursive Feature Elimination 
+So at first the model is fit on the data. Then we have coefficients of each feature or feature importance. We drop the feature with least coefficient or importance. Then the model is fit on the remaining features. The process is repeated until we have a necessary number of features (or some other criteria is fulfilled).  
+```{r}
+#Method 2: Recursive Feature Elimination
+# train <- readr::read_csv("~/Dropbox/Nomogram/nomogram/train_output_of_split_correlation.csv")
+# test <- readr::read_csv("~/Dropbox/Nomogram/nomogram/test_output_of_split_correlation.csv")
+# 
+# train <- train %>%
+# dplyr::mutate(Match_Status = dplyr::recode(Match_Status, `Did Not Match` = "Did.Not.Match", Match = "Matched"))
+# 
+# train$Match_Status <- as.factor(train$Match_Status)
+# class(train$Match_Status)
+# 
+# 
+# options(warn=-1)
+# colnames(train)
+# subsets <- c(1:30)
+# ctrl <- caret::rfeControl(functions = rfFuncs,
+#                    method = "repeatedcv",
+#                    repeats = 2,
+#                    verbose = FALSE)
+# 
+# nrow(as.data.frame(drivers))
+# sum(is.na(all_data))
+# 
+# 
+# lmProfile <- caret::rfe(x=all_data[, 1:30], y=all_data$Match_Status,
+#                  sizes = subsets,
+#                  rfeControl = ctrl)
+# lmProfile
+# 
+# 
+# lmProfile <- caret::rfe(x=all_data[, 1:30], y=all_data$Match_Status,
+#                  sizes = subsets,
+#                  rfeControl = ctrl)
+# lmProfile  #Picked 5 variables that were able to predict 
+
+
+```
+
+# Feature Selection: Boruta wrapper around randomForest classification algo
+You can see how you can use Boruta to perform a top-down search for relevant features by comparing original attributes' importance with importance achievable at random, estimated using their permuted copies, and progressively eliminating irrelevant features.
+https://www.datacamp.com/community/tutorials/feature-selection-R-boruta 
+
+Reference:  
+https://www.jstatsoft.org/article/view/v036i11 
+DOI:  10.18637/jss.v036.i11
+
+First, Boruta  duplicates the dataset, and shuffle the values in each column. These values are called shadow features. * Then, it trains a classifier, such as a Random Forest Classifier, on the dataset. By doing this, you ensure that you can an idea of the importance -via the Mean Decrease Accuracy or Mean Decrease Impurity- for each of the features of your data set. The higher the score, the better or more important.
+
+Then, the algorithm checks for each of your real features if they have higher importance. That is, whether the feature has a higher Z-score than the maximum Z-score of its shadow features than the best of the shadow features. If they do, it records this in a vector. These are called a hits. Next,it will continue with another iteration. After a predefined set of iterations, you will end up with a table of these hits. Remember: a Z-score is the number of standard deviations from the mean a data point is.
+
+At every iteration, the algorithm compares the Z-scores of the shuffled copies of the features and the original features to see if the latter performed better than the former. If it does, the algorithm will mark the feature as important. In essence, the algorithm is trying to validate the importance of the feature by comparing with random shuffled copies, which increases the robustness. This is done by simply comparing the number of times a feature did better with the shadow features using a binomial distribution.
+
+If a feature hasn't been recorded as a hit in say 15 iterations, you reject it and also remove it from the original matrix. After a set number of iterations -or if all the features have been either confirmed or rejected- you stop.
+```{r}
+#Method:  Boruta search
+set.seed(123)
+boruta_output <- Boruta::Boruta(Match_Status ~ ., 
+                                data=na.omit(all_data), 
+                                pValue = 0.01,
+                                maxRuns = 1000,
+                                doTrace=2,  #show the models as it works
+                                ntree=500)  
+names(boruta_output)
+Boruta::getConfirmedFormula(boruta_output)
+Boruta::attStats(boruta_output)
+```
+
+## Get significant variables including tentatives from Boruta.
+Boruta gives a call on the significance of features in a data set. Many of them are already classified as important and unimportant but you see that there are some who have been assigned in tentative category.
+
+But what does this mean?
+Tentative features have an importance that is so close to their best shadow features that Boruta is not able to make a decision with the desired confidence in the default number of Random Forest runs.  I increased the number of maxRuns and the number of trees to decrease the number of tentatives.  
+
+I am selecting variables with `all_data`.
+
+```{r}
+# Get significant variables including tentatives
+boruta_signif <-Boruta::getSelectedAttributes(boruta_output, withTentative = TRUE)
+print(boruta_signif)  
+boruta_signif1 <- tibble::as_tibble(boruta_signif)
+boruta_signif1
+readr::write_csv(boruta_signif1, (here::here("results", "boruta_signif.csv")))
+
+roughFixMod <- Boruta::TentativeRoughFix(boruta_output)  # Do a tentative rough fix
+boruta_signif <- Boruta::getSelectedAttributes(roughFixMod)
+
+imps <- Boruta::attStats(roughFixMod)
+imps2 = imps[imps$decision != 'Rejected', c('meanImp', 'decision')] #filter out the Rejects
+boruta_confirmed_variables <- imps2[order(-imps2$meanImp), ]  # sort all the confirmed variables in descending sort
+boruta_confirmed_variables
+```
+
+## Plot Boruta variables by importance
+The y axis label Importance represents the Z score of every feature in the shuffled dataset.  The blue boxplots correspond to minimal, average and maximum Z score of a shadow feature, while the red and green boxplots represent Z scores of rejected and confirmed features, respectively. As you can see the red boxplots have lower Z score than that of maximum Z score of shadow feature which is precisely the reason they were put in unimportant category.
+```{r}
+BorutaImportance <- plot(boruta_output, cex.axis=0.35, las=2, xlab="", main="Boruta Variable Importance")  # Plot variable importance
+#plot(BorutaImportance)
+#plot(BorutaImportance,las=3)
+
+tm_print_save("Boruta_Variable_Importance.tiff")
+```
+
+# Feature Selection: GLMNet to do factor selection with the previously made LASSO model
+Regularization methods provide a means to constrain or regularize the estimated coefficients, which can reduce the variance and decrease out of sample error.
+
+The glmnet package is extremely efficient and fast, even on very large data sets (mostly due to its use of Fortran to solve the lasso problem via coordinate descent); note, however, that it only accepts the non-formula XY interface so prior to modeling we need to separate our feature and target sets.
+
+```{r, echo=TRUE}
+# https://bradleyboehmke.github.io/HOML/regularized-regression.html#attrition-data
+#https://www.datacamp.com/community/tutorials/tutorial-ridge-lasso-elastic-net
+
+# Create custom trainControl: myControl
+set.seed(1978)
+myControl <- 
+  caret::trainControl(
+    method = "repeatedcv",
+    number = 10,
+    repeats = 5,
+    summaryFunction = twoClassSummary,
+    classProbs = TRUE, # IMPORTANT!
+    verboseIter = FALSE)
+
+dim(train)
+#train$Match_Status
+train$Match_Status <-
+  as.factor(train$Match_Status)
+
+test$Match_Status <-
+  as.factor(test$Match_Status)
+#test$Match_Status
+
+#Levels of the target outcome variable for glmnet need to be words and not numbers.
+levels(train$Match_Status) <-
+  c("No.Match", "Matched")
+
+levels(test$Match_Status) <-
+  c("No.Match", "Matched")
+
+#train$Match_Status
+levels(train$Match_Status)
+class(train$Match_Status)
+
+levels(all_data$Match_Status)
+class(all_data$Match_Status)
+
+dim(train)
+sum(is.na(train))
+```
+
+Create the LASSO using glmnet within the caret package.  Here we are solely using the train dataset to determine what varaiables predict the outcome.  
+
+The alpha parameter tells glmnet to perform a ridge (alpha = 0), lasso (alpha = 1), or elastic net (0 < alpha < 1) model. 
+
+```{r}
+# https://bradleyboehmke.github.io/HOML/regularized-regression.html
+
+# Train glmnet with custom trainControl and tuning: model
+set.seed(1978)
+glm.kitchen.sink <- stats::glm(formula = formula, 
+                               family = "binomial", 
+                               data = train)
+glm.kitchen.sink
+
+lasso.mod <- 
+  caret::train(
+    Match_Status ~ .,
+    data = train,
+    family = "binomial",
+    tuneGrid = expand.grid(
+      alpha = 0:1,
+      lambda = seq(0.0001, 1, length = 20)
+    ),
+    method = "glmnet",
+    metric = "ROC",
+    trControl = myControl)
+```
+
+```{r, echo=TRUE, include=TRUE}
+lasso.mod[["results"]]
+lasso.mod$bestTune #Final model is more of a ridge and less of a LASSO model
+
+best <- 
+  lasso.mod$finalModel
+
+coef(best, s=lasso.mod$bestTune$lambda) ###Look for the largest coefficient
+```
+Final model is more of a ridge and less of a LASSO model:  `r lasso.mod$bestTune `
+
+Plot the results of the lasso.mod so we can see if this is more ridge or more lasso.  0 = ridge regression and 1 = LASSO regression, here ridge is better.
+
+```{r, fig.width=7, fig.asp=1, fig.cap="Figure: Plotting the results of ridge or lasso in regression"}
+plot(lasso.mod, main = "More ridge regression than LASSO")
+tm_print_save("lasso_mod.tiff")
+```
+  
+Plot LASSO factors - Plot the individual variables by lambda.  Saves the lasso.mod to an RDS file for later use.  Coefficients for our ridge regression model as λ grows from  0 → ∞
+ 
+```{r,  fig.asp=1}
+lasso.mod.plot <- plot(lasso.mod$finalModel, xvar = 'lambda', label = TRUE, main = "Plot of the LASSO factors")
+tm_print_save(filename = "lasso_mod_plot.tiff")
+
+print("Coefficients for our ridge regression model as λ grows from  0 → ∞")
+#legend("topright", lwd = 1, col = 1:5, legend = colnames(train), cex = .6)
+#https://www.datacamp.com/community/tutorials/tutorial-ridge-lasso-elastic-net
+
+colnames(train[1:17])
+saveRDS(lasso.mod, "best.LASSO.rds")  #save the model
+```
+
+Makes predictions of matching based on the lasso.mod using the training data.  
+```{r, echo=TRUE, warning=FALSE, include=FALSE}
+#stats::predict(lasso.mod, newx = x[1:5,], type = "prob", s = c(0.05, 0.01))
+```
+
+And we use the glmnet library to determine the optimal penalization parameter. Note that this must be assigned through cross validation; here, we use 50-fold cross validation (only suitable in small datasets).  GLMnet accepts data in a matrix format so the data format was changed before giving it to glmnet.cv. Match_Status ~ . is shorthand for all predictors.
+
+```{r, echo=TRUE, message=FALSE, include=TRUE, fig.cap="Figure: Determining optimal penalization parameters for factor selection with the least absolute shrinkage and selection operator (LASSO) model."}
+`%nin%`<-Negate(`%in%`)
+# save the outcome for the glmnet model, could use dummyVars with fullRan=FALSE can remove collinearity by removing male.gender so you are either male or female
+
+# Create training  feature matrices
+# we use model.matrix(...)[, -1] to discard the intercept
+x <- model.matrix(train$Match_Status~., data=train)
+
+class(x)
+
+x <- x[,-1]  #Removes intercept
+
+set.seed(356)
+glmnet1 <- 
+  glmnet::cv.glmnet(x=x,
+            y=train$Match_Status,
+            nfolds=10,
+            alpha=.5, 
+            family="binomial")
+
+misclassification_error <- plot(glmnet1,main = "Misclassification Error")
+misclassification_error
+
+tm_ggsave(misclassification_error, "misclassification_error.tiff")
+```
+The left vertical line represents the minimum error, and the right vertical line represents the cross-validated error within 1 standard error of the minimum. LASSO, least absolute shrinkage and selection operator
+
+If you look at this graph we ran the model with a range of values for lambda and saw which returned the lowest cross-validated error. You'll see that our cross-validated error remains consistent until we hit the dotted lines, where we start to see our model perform very poorly due to underfitting with misclassification error.  Cross validation is an essential step in studies to help up us not only calibrate the parameters of our model but estimate the prediction accuracy with unseen data.
+
+CV ridge regression with alpha at 0.0
+
+Coefficients for our ridge regression model as λ  grows from 0 → ∞.
+```{r}
+# https://bradleyboehmke.github.io/HOML/regularized-regression.html
+# Apply CV ridge regression to Matching data
+ridge <- glmnet::cv.glmnet(
+  x = x,
+  y=train$Match_Status,
+  alpha = 0, 
+  family="binomial")
+tm_print_save("ridge.tiff")
+```
+
+We can also access the coefficients for a particular model using coef(). glmnet stores all the coefficients for each model in order of largest to smallest λ. 
+```{r}
+# lambdas applied to penalty parameter
+ridge$lambda %>% head()
+```
+
+
+CV lasso regression with alpha at 1.0
+```{r}
+# Apply CV lasso regression to Matching data
+lasso <- glmnet::cv.glmnet(
+  x = x,
+  y=train$Match_Status,
+  alpha = 1,
+  family="binomial")
+
+# plot results
+par(mfrow = c(1, 2))
+plot(ridge, main = "Ridge penalty\n\n")
+plot(lasso, main = "Lasso penalty\n\n")
+tm_print_save("ridgeandlassopenalty.tiff")
+```
+
+```{r}
+# Ridge model
+min(ridge$cvm)       # minimum MSE
+ridge$lambda.min     # lambda for this min MSE
+
+ridge$cvm[ridge$lambda == ridge$lambda.1se]  # 1-SE rule
+ridge$lambda.1se  # lambda for this MSE
+
+# Lasso model
+min(lasso$cvm)       # minimum MSE
+lasso$lambda.min     # lambda for this min MSE
+
+lasso$cvm[lasso$lambda == lasso$lambda.1se]  # 1-SE rule
+lasso$lambda.1se  # lambda for this MSE
+```
+
+Coefficients for our ridge and lasso models. First dotted vertical line in each plot represents the λ with the smallest MSE and the second represents the λ with an MSE within one standard error of the minimum MSE.
+```{r}
+# Ridge model
+ridge_min <- glmnet::glmnet(
+  x = x,
+  y=train$Match_Status,
+  alpha = 0,
+  family="binomial")
+
+# Lasso model
+lasso_min <- glmnet::glmnet(
+  x = x,
+  y=train$Match_Status,
+  alpha = 1,
+  family="binomial")
+
+par(mfrow = c(1, 2))
+# plot ridge model
+plot(ridge_min, xvar = "lambda", main = "Ridge penalty\n\n")
+abline(v = log(ridge$lambda.min), col = "red", lty = "dashed")
+abline(v = log(ridge$lambda.1se), col = "blue", lty = "dashed")
+#tm_print_save(filename = "tidge_abline.tiff")
+
+# plot lasso model
+plot(lasso_min, xvar = "lambda", main = "Lasso penalty\n\n")
+abline(v = log(lasso$lambda.min), col = "red", lty = "dashed")
+abline(v = log(lasso$lambda.1se), col = "blue", lty = "dashed")
+#tm_print_save(filename = "lasso_abline.tiff")
+```
+
+So far we’ve implemented a pure ridge and pure lasso model. However, we can implement an elastic net the same way as the ridge and lasso models, by adjusting the alpha parameter. Any alpha value between 0–1 will perform an elastic net. 
+
+When alpha = 0.5 we perform an equal combination of penalties whereas alpha <0.5 will have a heavier ridge penalty applied and alpha  > 0.5 will have a heavier lasso penalty.
+```{r}
+elastic_net_one_quarter <- glmnet::glmnet(
+  x = x,
+  y=train$Match_Status,
+  alpha = 0.25,  #
+  family="binomial")
+plot(elastic_net_one_quarter, main = "Elastic net with alpha 0f 0.25")
+#tm_print_save(filename = "elastic_net_one_quarter.tiff")
+
+elastic_net_three_quarter <- glmnet::glmnet(
+  x = x,
+  y=train$Match_Status,
+  alpha = 0.75,  #
+  family="binomial")
+plot(elastic_net_three_quarter, main = "Elastic net with alpha 0f 0.75")
+#tm_print_save("elastic_net_three_quarter.tiff")
+```
+
+
+```{r}
+# for reproducibility
+set.seed(123)
+
+# grid search across 
+cv_glmnet <- caret::train(
+  x = x,
+  y=train$Match_Status,
+  family = "binomial",
+  method = "glmnet",
+  preProc = c("zv", "center", "scale"),
+  trControl = trainControl(method = "cv", number = 10),
+  tuneLength = 10
+)
+
+# model with lowest RMSE
+cv_glmnet$bestTune
+
+# plot cross-validated RMSE
+cv_glmnet_plot <- ggplot2::ggplot(cv_glmnet) + ggtitle("The 10-fold cross valdation accuracy of cv_glmnet_plot \n across 10 alpha values (x-axis) \n and 10 lambda values (line color)")
+cv_glmnet_plot
+
+tm_ggsave(cv_glmnet_plot, "cv_glmnet_plot.tiff")
+```
+So how does this compare to our previous best model for the train data set? Introducing a penalty parameter to constrain the coefficients provided some improvement over our previously obtained dimension reduction approach.  See figure with The 10-fold cross valdation accuracy across 10 alpha values (x-axis) and 10 lambda values (line color).  
+
+```{r}
+# predict matching_status on training data
+pred <- stats::predict(cv_glmnet, x)
+head(pred)
+```
+
+# Feature Selection : Magnitude Feature Interpretation
+Variable importance for regularized models provides a similar interpretation as in logistic regression. Importance is determined by magnitude of the standardized coefficients and we can see in figure below.  
+
+```{r}
+
+feature_interpretation_regularized_regression <- tm_vip(object = cv_glmnet, title = "Variable Importance for \n Regularized Regression Model")
+feature_interpretation_regularized_regression
+
+tm_ggsave(object = feature_interpretation_regularized_regression, filename = "feature_interpretation_regularized_regression.tiff")
+```
+Penalized regression model shows that USMLE Step 1 Score is the most important followed by IMG and followed by Age.  
+
+
+# Review of all feature Selection Results
+```{r}
+#Forward regression
+forward_drivers
+
+#Backward regression
+backward_drivers
+
+#List of boruta variables
+boruta_confirmed_variables
+
+#MARS
+plot(tuned_mars)
+summary(tuned_mars) %>% .$coefficients 
+gridExtra::grid.arrange(p1, p2, ncol = 2)
+
+cv_mars$bestTune
+##    nprune degree
+## 22     12      3  #The model that provides the optimal combination includes third degree interaction effects and retains 12 terms.
+plot(model_mars, main="Model Accuracies based on \n the number of terms with MARS")  # Number of terms to use to optimize accuracy
+
+optimal_combinations
+
+plot(varimp_mars, main="Variable Importance with MARS") #Visual of the most important factors
+
+
+
+#Principal Components Analysis foudn thhat six factors were needed to capture 95% of the variance:
+train_pca$method$pca
+#Alternative PCA
+pcaObj$loadings[,1]
+
+#Using recursive feature eliminiation found eight variables were needed:
+#lmProfile
+
+#Boruta
+boruta_output
+boruta_signif
+
+#Variable Importance of Each Variable in the Regularized Regression Model
+feature_interpretation_regularized_regression
+
+#Boruta is nice because it tells you what is rejected and what was included.  
+boruta_output
+boruta_output$finalDecision
+plot(BorutaImportance)
+boruta_signif
+
+# plot results, create grid of all importance graphs?
+par(mfrow = c(1, 2))
+plot(ridge, main = "Ridge penalty\n\n")
+plot(lasso, main = "Lasso penalty\n\n")
+```
+
+
+
+Comparing logistic regression model with penalized regression model. 
+```{r}
+# train logistic regression model
+set.seed(123)
+glm_mod <- caret::train(
+  Match_Status ~ ., 
+  data = train, 
+  method = "glm",
+  family = "binomial",
+  preProc = c("zv", "center", "scale"),
+  trControl = trainControl(method = "cv", number = 10)
+  )
+
+# train regularized logistic regression model
+set.seed(123)
+penalized_mod <- caret::train(
+  Match_Status ~ ., 
+  data = train, 
+  method = "glmnet",
+  family = "binomial",
+  preProc = c("zv", "center", "scale"),
+  trControl = trainControl(method = "cv", number = 10),
+  tuneLength = 10
+  )
+```
+
+
+```{r}
+# extract out of sample performance measures
+summary(resamples(list(
+  logistic_model = glm_mod, 
+  penalized_model = penalized_mod, 
+  mars_model = tuned_mars
+  )))$statistics$Accuracy
+```
+The output shows minimal improvement with the penalized model (median accuracy = 0.809) compared to the logistic model (median accuracy = 0.803). 
+
+
+#Factor Selection: LASSO (Least Absolute Shrinkage and Selection Operator)
+Also, I like lasso because some people will find that using predictors of age, race, gender as predictors will be discriminatory.  In short, LASSO eliminates the need for an author to be a subject expert on matching when selecting variables.  
+
+Here, we use Lasso for simplicity and interpretability. The aim is to avoid over-parametrization and unnecessary model bias by carrying feature selection on-the-go. Key to this task will be cross-validation.  Start by creating a custom train control providing the number of cross-validations and setting the classProbs to TRUE for logistic regression. 
+
+Factor Selection: Variable selection using LASSO in the train dataset
+```{r, echo=TRUE, warning=FALSE, message=FALSE}
+# c <-
+#   coef(glmnet1,s='lambda.min',exact=TRUE)  #Bring in the coefficients from LASSO
+#
+# inds <-
+#   base::which(c!=0)   #Pick which coefficients are not zero
+#
+# variables <-    #Select the row names for the coefficients that are not zero by subsetting
+#   row.names(c)[inds]
+#
+# variables <-    #List out the variables LASSO chose exempting the intercept variable
+#   variables[variables %nin% '(Intercept)']
+#
+# variables
+```
+ This feature selection with LASSO was not very helpful because it eliminated zero features (see `variables`).  See VIP figure above (`feature_interpretation_regularized_regression`) for a clearer answer as to what features to select.
+
+ ```{r, results="asis"}
+# knitr::kable(variables, caption = "Variables Chosen by LASSO to Predict Matching into OBGYN based on the Train Data")
+ ```
+  
+## Factor Selection: Revise GLM Model with factors selected by LASSO
+Creating a more parsiomonious model using the variables selected by LASSO in the train dataset. 
+
+```{r}
+limited.to.lasso.variables <- stats::glm(formula = formula, 
+                 family = "binomial", data = train)
+
+rms::vif(limited.to.lasso.variables)
+```
+
+```{r, echo=TRUE, results="asis", warning=FALSE, include=TRUE}
+#lrm
+#Print out variables that LASSO found were helpful.  
+#print(variables)  # Include these variables into the new model called lrm.with.lasso.variables
+
+d <- 
+  rms::datadist(test)
+
+options(datadist = "d")
+
+lrm.with.lasso.variables <- 
+  rms::lrm(Match_Status ~ 
+                                    white_non_white + 
+                                    Age +
+                                    Gender +
+                                    Couples_Match +
+                                    US_or_Canadian_Applicant +
+                                    Medical_Education_or_Training_Interrupted + 
+                                    Alpha_Omega_Alpha + 
+                                    USMLE_Step_1_Score + 
+                                    Count_of_Oral_Presentation + 
+                                    Visa_Sponsorship_Needed,
+                                    #Medical_Degree, #Removed due to VIF issues of collinearity
+      data = train, 
+      x = T, 
+      y = T)
+
+#lrm.with.lasso.variables$stats  #Shows the C-statistic and the Brier score.  
+knitr::kable(broom::tidy(lrm.with.lasso.variables$stats), digits =2, caption = "Performance statistics of the Training Model")
+
+round(lrm.with.lasso.variables$stat[[6]], digits = 2)  #C-statistic
+```
+
+C-statistics of the `lrm.with.lasso.variables` model with variables chosen by LASSO is: `r round(lrm.with.lasso.variables$stat[[6]], digits = 2)`.
+
+```{r, echo=TRUE,  fig.width=7, fig.asp=1, fig.cap="Figure: Charting the strength of the variables chosen using LASSO.", include=TRUE}
+#Draws a nice plot of the variable strengths using ANOVA.  
+tm_chart_strength_of_variables <- function(df) {
+  print("Function Sanity Check: Plotting ANOVA dataframe for variable strength")
+  plot <- plot(anova(df), cex=1, cex.lab=1.3, cex.axis = 0.9)
+  return(plot)
+}
+
+lrm.with.lasso.variables
+tm_chart_strength_of_variables(lrm.with.lasso.variables)
+```
+
+```{r, include=TRUE}
+summary(lrm.with.lasso.variables)
+```
+
+# Odds ratios of the `train` dataset
+
+Odds ratios in graph form in the train dataset.  
+```{r, echo=TRUE,  include = TRUE, fig.width=7, fig.asp=1, fig.cap="Figure: Odds ratios of the training data set to predict matching into OBGYN residency."}
+plot(summary(lrm.with.lasso.variables), cex=1.2, cex.lab=0.7, cex.axis = 0.7)
+#https://rstudio-pubs-static.s3.amazonaws.com/283447_fd922429e1f0415c89b93b6da6dc1ccc.html
+
+tm_print_save("odds_ratio_image.tiff")
+```
+
+```{r, results="asis"}
+#For example, increase one unit in age will decrease the log odd of survival by 0.039; being a male will decrease the log odd of survival by 2.7 compared to female; and being in class2 will decrease the log odd of survival by 0.92, being in class3 will decrease the log odd of survival by 2.15. 
+oddsratios <- 
+  as.data.frame(exp(cbind("Adjusted Odds ratio" = coef(lrm.with.lasso.variables),
+                          confint.default(lrm.with.lasso.variables, level = 0.95))))
+
+knitr::kable(oddsratios, digits = 2)
+```
+
+
+
