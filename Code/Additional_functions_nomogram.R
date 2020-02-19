@@ -8,12 +8,13 @@
 #Install and Load needed R packages.
 #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### ####
 # Set  libPaths.
-.libPaths("/Users/tylermuffly/.exploratory/R/3.6")
+#.libPaths("/Users/tylermuffly/.exploratory/R/3.6")
 
 pkgs <- (c('caret', 'readxl', 'XML', 'reshape2', 'devtools', 'purrr', 'readr', 'ggplot2', 'dplyr', 'magick', 'janitor', 'lubridate', 'hms', 'tidyr', 'stringr', 'openxlsx', 'forcats', 'RcppRoll', 'tibble', 'bit64', 'munsell', 'scales', 'rgdal', 'tidyverse', "foreach", "PASWR", "rms", "pROC", "ROCR", "nnet", "packrat", "DynNom", "export", "caTools", "mlbench", "randomForest", "ipred", "xgboost", "Metrics", "RANN", "AppliedPredictiveModeling", "nomogramEx", "shiny", "earth", "fastAdaboost", "Boruta", "glmnet", "ggforce", "tidylog", "InformationValue", "pscl", "scoring", "DescTools", "gbm", "Hmisc", "arsenal", "pander", "moments", "leaps", "MatchIt", "car", "mice", "rpart", "beepr", "fansi", "utf8", "zoom", "lmtest", "ResourceSelection", "rmarkdown", "rattle", "rmda", "funModeling", "tinytex", "caretEnsemble", "Rmisc", "corrplot", "progress", "perturb", "vctrs", "highr", "labeling", "DataExplorer", "rsconnect", "inspectdf", "ggpubr", "tableone", "knitr", "drake", "visNetwork", "rpart.plot", "RColorBrewer", "kableExtra", "kernlab", "naivebayes", "e1071", "data.table", "skimr", "naniar", "english", "mosaic", "broom", "mltools", "tidymodels", "tidyquant", "rsample", "yardstick", "parsnip", "tensorflow", "keras", "sparklyr", "dials", "cowplot", "lime", "flexdashboard", "shinyjs", "shinyWidgets", "plotly", "BH", "vip", "ezknitr", "here", "usethis", "corrgram", "BiocManager", "factoextra", "parallel", "doParallel", "GA", "PCAtools", "odbc", "RSQLite", "discrim", "doMC",  "summarytools", "remotes", "fs", "PerformanceAnalytics", "correlationfunnel", "psych", "h2o", "ranger", 'R.methodsS3'))
 
 #install.packages(pkgs,dependencies = c("Depends", "Suggests", "Imports", "LinkingTo"), repos = "https://cloud.r-project.org")  #run this first time
 lapply(pkgs, require, character.only = TRUE)
+rm(pkgs)
 doMC::registerDoMC(cores = detectCores()-1) #Use multiple cores for processing
 
 #BiocManager::install('PCAtools')
@@ -73,58 +74,14 @@ data_file <- "~/Dropbox/Nomogram/nomogram/data/All_ERAS_data_merged_output_2_1_2
 #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
 #####  Read in the data
 #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
-all_data <- 
-  #read_rds(paste0(data_folder, "/", data_file)) %>%
-  read_csv(paste0(data_file)) #%>%
-  # select(-"Gold_Humanism_Honor_Society", 
-  #        -"Sigma_Sigma_Phi", 
-  #        -"Misdemeanor_Conviction", 
-  #        -"Malpractice_Cases_Pending", 
-  #        -"Citizenship", 
-  #        -"BLS", 
-  #        -"Positions_offered") 
+
+#all_data <- all_years
+
+all_data <- data_file
+rm(all_years)
+  #read_csv(paste0(data_file))
 
 colnames(all_data)
-
-#' all_data <- 
-#'   all_data[c(
-#'     'white_non_white', 
-#'     'Age',  
-#'     #'Year', 
-#'     'Gender', 
-#'     'Couples_Match', 
-#'     'US_or_Canadian_Applicant', 
-#'     "Medical_Education_or_Training_Interrupted", 
-#'     "Alpha_Omega_Alpha",  
-#'     "Military_Service_Obligation", 
-#'     "USMLE_Step_1_Score", 
-#'     "Count_of_Poster_Presentation",  
-#'     "Count_of_Oral_Presentation", 
-#'     "Count_of_Peer_Reviewed_Journal_Articles_Abstracts", 
-#'     "Count_of_Peer_Reviewed_Book_Chapter", 
-#'     "Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published", 
-#'     "Count_of_Peer_Reviewed_Online_Publication", 
-#'     "Visa_Sponsorship_Needed", 
-#'     "Medical_Degree", 
-#'        # 'Rank',
-#'     'Match_Status')]
-
-#Rename columns with more human readable names
-# colnames(all_data)[colnames(all_data)=="Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published"] <- "Count_of_Other_than_Published"
-# 
-# colnames(all_data)[colnames(all_data)=="Count_of_Peer_Reviewed_Journal_Articles_Abstracts"] <- "Count_of_Articles_Abstracts"
-# 
-# colnames(all_data)[colnames(all_data)=="Medical_Education_or_Training_Interrupted"] <- 
-#   "Medical_Education_Interrupted"
-# 
-# colnames(all_data)[colnames(all_data)=="Count_of_Peer_Reviewed_Online_Publication"] <- 
-#   "Count_of_Online_Publications"
-# 
-# colnames(all_data)[colnames(all_data)=="Match_Status_Dichot"] <- 
-#   "Match_Status"
-
-#factor_columns <- all_data %>%  select_if(is.factor) %>% colnames()
-#factor_columns
 
 #all_data$Count_of_Online_Publications <- as.numeric(all_data$Count_of_Online_Publications)
 all_data$white_non_white <- forcats::fct_explicit_na(all_data$white_non_white, na_level="(Missing)")
@@ -144,10 +101,10 @@ all_data$Age <- as.numeric(all_data$Age)
 all_data$Count_of_Poster_Presentation <- as.numeric(all_data$Count_of_Poster_Presentation)
 all_data$USMLE_Step_1_Score <- as.numeric(all_data$USMLE_Step_1_Score)
 all_data$Count_of_Oral_Presentation <- as.numeric(all_data$Count_of_Oral_Presentation)
-all_data$Count_of_Other_than_Published <- as.numeric(all_data$Count_of_Other_than_Published)
+#all_data$Count_of_Other_than_Published <- as.numeric(all_data$Count_of_Other_than_Published)
 all_data$Count_of_Peer_Reviewed_Book_Chapter <- as.numeric(all_data$Count_of_Peer_Reviewed_Book_Chapter)
 #all_data$Count_of_Online_Publications <- as.numeric(all_data$Count_of_Online_Publications)
-all_data <- na.omit(all_data)
+#all_data <- na.omit(all_data)
 
 
 #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
@@ -303,7 +260,7 @@ calc_metrics <- function(model, new_data, truth) {
 
 #Tidymodels feature plots
 box_fun_plot = function(data, x, y) {
-  ggplot(data = data, aes(x = .data[[x]],
+  ggplot2::ggplot(data = data, ggplot2::aes(x = .data[[x]],
                           y = .data[[y]],
                           fill = .data[[x]])) +
     geom_boxplot() +
@@ -746,8 +703,8 @@ plot_hist_facet <- function(data, fct_reorder = FALSE, fct_rev = FALSE,
                             bins = 10, fill = palette_light()[[3]], color = "white", ncol = 5, scale = "free") {
   print("Function Sanity Check: Plot Histogram that is Faceted")
   data_factored <- data %>%
-    mutate_if(is.character, as.factor) %>%
-    mutate_if(is.factor, as.numeric) %>%
+    dplyr::mutate_if(is.character, as.factor) %>%
+    dplyr::mutate_if(is.factor, as.numeric) %>%
     tidyr::gather(key = key, value = value, factor_key = TRUE) 
   
   if (fct_reorder) {
@@ -761,7 +718,7 @@ plot_hist_facet <- function(data, fct_reorder = FALSE, fct_rev = FALSE,
   }
   
   g <- data_factored %>%
-    ggplot(aes(x = value, group = key)) +
+    ggplot2::ggplot(aes(x = value, group = key)) +
     geom_histogram(bins = bins, fill = fill, color = color) +
     facet_wrap(~ key, ncol = ncol, scale = scale) #+ 
     #theme_tq()
@@ -986,7 +943,7 @@ tm_ggsave <- function (object, filename, ...){  #make sure the file name has quo
 
 tm_print_save <- function (filename) {
   print("Function Sanity Check: Saving TIFF of what is in the viewer")
-  dev.print(tiff, (here::here("results", filename)), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
+  grDevices::dev.print(tiff, (here::here("results", filename)), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
   dev.off()
 }
 
@@ -1016,7 +973,7 @@ tm_t_test <- function(variable){
                           conf.level = 0.95,
                           var.equal = TRUE)
   
-  print("X is group that did not match and Y is group that did match:")
+  #print("X is group that did not match and Y is group that did match:")
   return(output)
 }
 
@@ -1068,3 +1025,21 @@ custom_theme <- function(...){   ##My ggplot theme
 pander::panderOptions("table.split.table", Inf)
 options(width = 100) # ensures skimr results fit on one line
 set.seed(123456)
+
+all_data <- all_data %>%
+  exploratory::reorder_cols(Applicant_Name, ACLS, Age, Alpha_Omega_Alpha, BLS, Citizenship, Count_of_Non_Peer_Reviewed_Online_Publication, Count_of_Oral_Presentation, Count_of_Other_Articles, Count_of_Peer_Reviewed_Book_Chapter, Count_of_Peer_Reviewed_Journal_Articles_Abstracts, Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published, Count_of_Peer_Reviewed_Online_Publication, Count_of_Poster_Presentation, Count_of_Scientific_Monograph, Couples_Match, Gender, Medical_Education_or_Training_Interrupted, Medical_Degree, Military_Service_Obligation, Misdemeanor_Conviction, PALS, Sigma_Sigma_Phi, US_or_Canadian_Applicant, USMLE_Step_1_Score, Visa_Sponsorship_Needed, white_non_white, Medical_Licensure_Problem, Type_of_medical_school, USMLE_Step_2_CK_Score, NIH_dollars, Match_Status)
+
+colnames(all_data)
+
+tm_broom <- function(model){
+  print("Function Sanity Test: Model Evaluation")
+  model_output <- broom::tidy(step_model, conf.int=TRUE) %>% 
+  dplyr::select(-statistic, -std.error) %>% 
+  dplyr::filter(term != "(Intercept)") %>%
+  dplyr::arrange(p.value) %>%
+  dplyr::select(term, estimate, conf.low, conf.high, p.value, everything())
+  return(model_output)
+  
+  glance <- broom::glance(model)
+  return(glance)
+}
