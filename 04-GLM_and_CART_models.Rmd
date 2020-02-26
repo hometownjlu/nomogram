@@ -108,7 +108,8 @@ Build both a glm (train.glm.with.lasso.variables) and a lrm model (train.lrm.wit
 ```{r, echo=TRUE, warning=FALSE}
 #It would be nice to create a character variable that we drop features from.  
 train.glm.with.lasso.variables  <- 
-  stats::glm(Match_Status ~ white_non_white + Alpha_Omega_Alpha + ACLS + BLS + PALS + Citizenship + Gold_Humanism_Honor_Society + Misdemeanor_Conviction + Sigma_Sigma_Phi + Age + Medical_Education_or_Training_Interrupted + Gender + Couples_Match + US_or_Canadian_Applicant + Alpha_Omega_Alpha + Military_Service_Obligation + USMLE_Step_1_Score + Visa_Sponsorship_Needed + Count_of_Poster_Presentation + Count_of_Oral_Presentation + Count_of_Peer_Reviewed_Book_Chapter + Count_of_Peer_Reviewed_Journal_Articles_Abstracts + Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published + Count_of_Peer_Reviewed_Online_Publication + Count_of_Non_Peer_Reviewed_Online_Publication + Count_of_Scientific_Monograph + Count_of_Other_Articles + Visa_Sponsorship_Needed + Medical_School_Type + Medical_Degree + USMLE_Step_2_CK_Score,
+  stats::glm(Match_Status ~ white_non_white + Alpha_Omega_Alpha + ACLS + BLS + PALS + Citizenship + Misdemeanor_Conviction + Sigma_Sigma_Phi + Age + Medical_Education_or_Training_Interrupted + Gender + Couples_Match + US_or_Canadian_Applicant + Alpha_Omega_Alpha + Military_Service_Obligation + USMLE_Step_1_Score + Visa_Sponsorship_Needed + Count_of_Poster_Presentation + Count_of_Oral_Presentation + Count_of_Peer_Reviewed_Book_Chapter + Count_of_Peer_Reviewed_Journal_Articles_Abstracts + Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published + Count_of_Peer_Reviewed_Online_Publication + Count_of_Non_Peer_Reviewed_Online_Publication + Count_of_Scientific_Monograph + Count_of_Other_Articles + Visa_Sponsorship_Needed + #Medical_School_Type + 
+               Medical_Degree + USMLE_Step_2_CK_Score,
       data = train, 
       family = "binomial"(link=logit))  
 
@@ -118,8 +119,8 @@ confint(train.glm.with.lasso.variables)
 
 #Zhang book page 75
 Predprob <- predict(train.glm.with.lasso.variables, type = "response")
-library(Deducer)
-plot(train.glm.with.lasso.variables, main = "ROC curve", colorize = T)
+#library(Deducer)
+#plot(train.glm.with.lasso.variables, main = "ROC curve", colorize = T)
 ```
 
 
@@ -152,10 +153,10 @@ Use Model to predict match Status for Test Data
 pred_class <- rms::Predict(train.glm.with.lasso.variables)
 
 # create confusion matrix
-confusionMatrix(
-  data = relevel(pred_class, ref = "Matched"), 
-  reference = relevel(train$Match_Status, ref = "Matched")
-)
+# caret::confusionMatrix(
+#   data = relevel(pred_class, ref = "Matched"), 
+#   reference = relevel(train$Match_Status, ref = "Matched")
+# )
 
 prob <- 
   predict(train.glm.with.lasso.variables, newdata = test, type="response")

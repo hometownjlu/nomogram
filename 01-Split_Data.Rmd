@@ -123,11 +123,9 @@ split_2 <- h2o::h2o.splitFrame(all_data.h2o, ratios = 0.8,
                           seed = 123)
 train_4 <- split_2[[1]]
 test_4  <- split_2[[2]]
-data_split
 
 rm(train_4)
 rm(test_4)
-rm(data_split)
 ```
 
 ```{r}

@@ -1,7 +1,29 @@
-  # *Objective: * We sought to construct and validate a model that predict a medical student's chances of matching into an obstetrics and gynecology residency.
+  # *Objective: * We sought to construct and validate a model that predict a medical student's chances of matching into a categorical obstetrics and gynecology residency position.
   
   # This file is needed to bring together the data from all the years of match data available.  The data comes from the AAMC from the Archives section of the Residency Program Director Work Station.  
   # https://www.dropbox.com/s/wfv7oqpdhdzjlsr/AAMC%20download.mov?dl=0
+
+#Match Status for Monday vs. for Friday
+
+#Track Allison Strauss's course:
+#An applicant applies to a categorical OBGYN position.  Variable that shows this is `Tracks Applied by Applicant_1`.  
+
+#Allison did not match so then she goes into the SOAP to apply for a preliminary residency position.  The variable that shows she did NOT match categorically and went into the SOAP is `SOAP Track applied by Applicant`.  
+
+#Then Allison applies to preliminary OBGYN residency positions.  The variable that shows she applied to preliminary residency spots was `SOAP Track Applied by Applicant`.  
+
+#Then Allison does not get into a preliminary OBGYN residency position.  There is no variable to show this.  The data does show the `SOAP Match Status` variable as "Fully Matched" so when she matched into family medicine this flag went up as "Fully Matched".  
+
+#They way we know that she is not an obgyn resident is because in the NPI database her taxonomy code shows up as "Family Medicine".  
+
+
+
+#Shiny output is text string with confidence intervals.  
+
+#Multi-collinearity?
+#Factor selection?
+#More variables?
+
   
   # Set libPaths.
   .libPaths("/Users/tylermuffly/.exploratory/R/3.6")
@@ -380,7 +402,7 @@
     dplyr::mutate(Match_Status = dplyr::recode(Match_Status, `0` = "No.Match", `1` = "Match")) %>%
     fill(ACLS, Age, Alpha_Omega_Alpha, BLS, Citizenship, Count_of_Non_Peer_Reviewed_Online_Publication, Count_of_Oral_Presentation, Count_of_Other_Articles, Count_of_Peer_Reviewed_Book_Chapter, Count_of_Peer_Reviewed_Journal_Articles_Abstracts, Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published, Count_of_Peer_Reviewed_Online_Publication, Count_of_Poster_Presentation, Count_of_Scientific_Monograph, Couples_Match, Gender, Gold_Humanism_Honor_Society, Medical_Education_or_Training_Interrupted, Malpractice_Cases_Pending, Medical_Degree, Military_Service_Obligation, Misdemeanor_Conviction, PALS, Sigma_Sigma_Phi, US_or_Canadian_Applicant, USMLE_Step_1_Score, Visa_Sponsorship_Needed, white_non_white, Match_Status, .direction = "down") %>%
     dplyr::mutate(Count_of_Non_Peer_Reviewed_Online_Publication = parse_number(Count_of_Non_Peer_Reviewed_Online_Publication), Match_Status_1 = Match_Status) %>%
-    unite(`USMLE_Step_2_CK_Score`, `Step_2_CK`, sep = "_", remove = FALSE) %>%
+    #unite(`USMLE_Step_2_CK_Score`, `Step_2_CK`, sep = "_", remove = FALSE) %>%
     #dplyr::select(-`Step_2_CK`) %>%
     dplyr::select(-ID_new_new_new, -userid, - Match_Status_1) %>%
     #as.numeric(USMLE_Step_2_CK_Score) %>%
@@ -389,8 +411,7 @@
     dplyr::filter(Match_Status %in% c("Match", "Did Not Match")) %>%
     #base::droplevels(all_years$Match_Status) %>%
     dplyr::select(- Malpractice_Cases_Pending) %>% #zero variance feature
-    dplyr::select(-Gold_Humanism_Honor_Society) %>%
-    reorder_cols(ACLS, Age, Alpha_Omega_Alpha, BLS, Citizenship, Count_of_Non_Peer_Reviewed_Online_Publication, Count_of_Oral_Presentation, Count_of_Other_Articles, Count_of_Peer_Reviewed_Book_Chapter, Count_of_Peer_Reviewed_Journal_Articles_Abstracts, Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published, Count_of_Peer_Reviewed_Online_Publication, Count_of_Poster_Presentation, Count_of_Scientific_Monograph, Couples_Match, Gender, Medical_Education_or_Training_Interrupted, Medical_Degree, Military_Service_Obligation, Misdemeanor_Conviction, PALS, Sigma_Sigma_Phi, US_or_Canadian_Applicant, USMLE_Step_1_Score, Visa_Sponsorship_Needed, white_non_white, Medical_Licensure_Problem, Medical_School_of_Graduation, Type_of_medical_school, NIH_dollars, USMLE_Step_2_CK_Score, Match_Status) %>%
+    dplyr::select(-Gold_Humanism_Honor_Society) 
   
   colnames(all_years)
   dim(all_years)
@@ -423,14 +444,32 @@
   
   # NIH dollars by OBGYN Department 2018 ----
   # I could not export working R code from exploratory so I exported the file directly from exploratory as a CSV.  
-  nih_dollars <- read_csv("data/Ob_Gyn_2018_NIH_dollars_from_blue_ridge_funding_mutate_2.csv")
+  nih_dollars <- read_csv("/Users/tylermuffly/Dropbox/Nomogram/nomogram/data/Ob_Gyn_2018_NIH_dollars_from_blue_ridge_funding_mutate_2.csv")
   
   ## http://www.brimr.org/NIH_Awards/2018/NIH_Awards_2018.htm
   all_years <- all_years %>% 
     left_join(nih_dollars, by = c("Medical_School_of_Graduation" = "Medical School of Graduation"))%>%
-    mutate(NIH_dollars = impute_na(NIH_dollars, type = "value", val = "0"))
+    mutate(NIH_dollars = impute_na(NIH_dollars, type = "value", val = "0")) 
+
   
-  all_years <- all_years %>% dplyr::select(-Medical_School_of_Graduation)
+  # Steps to produce ACOG_Districts
+  ACOG_Districts <- read_csv(file = "~/Dropbox/Nomogram/nomogram/data/ACOG_Districts.csv")
+    
+# all_years1 <- all_years %>% 
+#       readr::type_convert() %>%
+#       exploratory::clean_data_frame() %>%
+#       reorder_cols(Type_of_medical_school) %>%
+  #     dplyr::mutate(ACOG_district = Medical_School_of_Graduation) %>%
+  # 
+  # #Issue is somewhere in here...
+  #     dplyr::mutate(ACOG_district = dplyr::recode(ACOG_district, `A.T. Still University of Health Sciences-Kirksville College of Osteopathic Medicine` = "MO", `A.T. Still University–School of Osteopathic Medicine in Arizona` = "AZ", `Alabama College of Osteopathic Medicine` = "AL", `Albany Medical College` = "NY", `Albert Einstein College of Medicine` = "NY", `Albert Einstein College of Medicine of Yeshiva University` = "NY", `Baylor College of Medicine` = "TX", `Boston University School of Medicine` = "MA", `Case Western Reserve University School of Medicine` = "OH", `Central Michigan University College of Medicine` = "MI", `Charles E. Schmidt College of Medicine at Florida Atlantic University` = "FL", `Chicago College of Osteopathic Medicine of Midwestern University` = "IL", `Chicago Medical School at Rosalind Franklin University of Medicine & Science` = "IL", `Columbia University College of Physicians and Surgeons` = "NY", `Columbia University Vagelos College of Physicians and Surgeons` = "NY", `Cooper Medical School of Rowan University` = "NJ", `Creighton University School of Medicine` = "NE", `Des Moines University College of Osteopathic Medicine` = "IA", `Donald and Barbara Zucker School of Medicine at Hofstra/Northwell` = "NY", `Drexel University College of Medicine` = "PA", `Duke University School of Medicine` = "NC", `East Tennessee State University James H. Quillen College of Medicine` = "TN", `Eastern Virginia Medical School` = "VA", `Edward Via College of Osteopathic Medicine–Virginia Campus` = "VA", `Edward Via College of Osteopathic Medicine–Carolinas Campus` = "SC", `Edward Via Virginia College of Osteopathic Medicine` = "VA", `Emory University School of Medicine` = "GA", `Florida International University Herbert Wertheim College of Medicine` = "FL", `Florida State University College of Medicine` = "FL", `Florida State University College of Medicine - Daytona Beach` = "FL", `Florida State University College of Medicine - Ft. Pierce` = "FL", `Florida State University College of Medicine - Orlando` = "FL", `Florida State University College of Medicine - Pensacola` = "FL", `Florida State University College of Medicine - Sarasota` = "FL", `Frank H. Netter MD School of Medicine at Quinnipiac University` = "CT", `Geisel School of Medicine at Dartmouth` = "NH", `Geisinger Commonwealth School of Medicine` = "PA", `George Washington University School of Medicine and Health Sciences` = "DC", `Georgetown University School of Medicine` = "DC", `Georgia Regents University/The University of Georgia Medical Partnership` = "GA", `Harvard Medical School` = "MA", `Howard University College of Medicine` = "DC", `Icahn School of Medicine at Mount Sinai` = "NY", `Indiana University School of Medicine` = "IA", `Johns Hopkins University School of Medicine` = "MD", `Kansas City University of Medicine and Biosciences` = "MO", `Keck School of Medicine of the University of Southern California` = "CA", `Lake Erie College of Osteopathic Medicine` = "PA", `Loma Linda University School of Medicine` = "CA", `Louisiana State University School of Medicine in New Orleans` = "LA", `Louisiana State University School of Medicine in Shreveport` = "LA", `Loyola University Chicago Stritch School of Medicine` = "IL", `Marshall University Joan C. Edwards School of Medicine` = "WV", `Mayo Medical School` = "MN", `McGovern Medical School at the University of Texas Health Science Center at Houston` = "TX", `Medical College of Georgia at Augusta University` = "GA", `Medical College of Georgia at Georgia Regents University` = "GA", `Medical College of Wisconsin` = "WI", `Medical University of South Carolina College of Medicine` = "SC", `Meharry Medical College` = "DC", `Mercer University School of Medicine` = "TN", `Mercer University School of Medicine - Savannah` = "GA", `Mercer University School of Medicine,Ross University School of Medicine` = "GA", `Michigan State University College of Human Medicine` = "MI", `Michigan State University College of Human Medicine - Flint` = "MI", `Michigan State University College of Human Medicine - Grand Rapids` = "MI", `Michigan State University College of Human Medicine - Traverse City` = "MI", `Michigan State University College of Osteopathic Medicine` = "MI", `Morehouse School of Medicine` = "GA", `New York Institute of Technology College of Osteopathic Medicine` = "NY", `New York Medical College` = "NY", `New York Medical College,Universidad Autónoma de Guadalajara Facultad de Medicina,Virginia Commonwealth University School of Medicine` = "NY", `New York University School of Medicine` = "NY", `Northeast Ohio Medical University` = "OH", `Northwestern University The Feinberg School of Medicine` = "IL", `Nova Southeastern University College of Osteopathic Medicine` = "FL", `Oakland University William Beaumont School of Medicine` = "MI", `Ohio State University College of Medicine` = "OH", `Oklahoma State University College of Osteopathic Medicine` = "OK", `Oregon Health & Science University School of Medicine` = "OR", `Pacific Northwest University of Health Sciences College of Osteopathic Medicine` = "WA", `Pennsylvania State University College of Medicine` = "PA", `Perelman School of Medicine at the University of Pennsylvania` = "PA", `Philadelphia College of Osteopathic Medicine` = "PA", `Ponce Health Sciences University School of Medicine` = "PR", `Ponce School of Medicine and Health Sciences` = "PR", `Ponce School of Medicine and Health Sciences,American University of Antigua College of Medicine` = "PR", `Robert Larner, M.D., College of Medicine at the University of Vermont` = "VT", `Rocky Vista University College of Osteopathic Medicine` = "CO", `Rutgers New Jersey Medical School` = "NJ", `Rutgers, Robert Wood Johnson Medical School` = "NJ", `Sackler School of Medicine` = "NY", `Sackler School of Medicine - New York State American Branch` = "NY", `Saint Louis University School of Medicine` = "MO", `San Juan Bautista School of Medicine` = "PR", `Sidney Kimmel Medical College at Thomas Jefferson University` = "PA", `Southern Illinois University School of Medicine` = "IL", `Stanford University School of Medicine` = "CA", `State University of New York Downstate Medical Center College of Medicine` = "NY", `State University of New York Upstate Medical University` = "NY", `Stony Brook University School of Medicine` = "NY", `Temple University School of Medicine` = "PA", `Texas A&M Health Science Center College of Medicine` = "TX", `Texas Tech University Health Sciences Center Paul L. Foster School of Medicine` = "TX", `Texas Tech University Health Sciences Center School of Medicine` = "TX", `Texas Tech University School of Medicine - Amarillo` = "TX", `Texas Tech University School of Medicine - Odessa` = "TX", `The Brody School of Medicine at East Carolina University` = "NC", `The University of Texas School of Medicine at San Antonio` = "TX", `The University of Toledo College of Medicine` = "OH", `The Warren Alpert Medical School of Brown University` = "RI", `Touro College of Osteopathic Medicine - Middletown` = "NY", `Touro College of Osteopathic Medicine - New York` = "NY", `Touro University College of Osteopathic Medicine` = "NY", `Touro University College of Osteopathic Medicine–California` = "CA", `Touro University Nevada College of Osteopathic Medicine` = "NV", `Tufts University School of Medicine` = "MA", `Tulane University School of Medicine` = "LA", `UCLA/Drew Medical Education Program` = "CA", `University at Buffalo State University of New York School of Medicine & Biomedical Sciences` = "NY", `University of Alabama School of Medicine` = "LA", `University of Arizona College of Medicine` = "AZ", `University of Arizona College of Medicine - Phoenix` = "AZ", `University of Arizona College of Medicine – Phoenix` = "AZ", `University of Arizona College of Medicine-Phoenix` = "AZ", `University of Arkansas for Medical Sciences College of Medicine` = "AK", `University of California, Davis, School of Medicine` = "CA", `University of California, Irvine, School of Medicine` = "CA", `University of California, Los Angeles David Geffen School of Medicine` = "CA", `University of California, Riverside School of Medicine` = "CA", `University of California, San Diego School of Medicine` = "CA", `University of California, San Francisco, School of Medicine` = "CA", `University of Central Florida College of Medicine` = "FL", `University of Chicago Division of the Biological Sciences The Pritzker School of Medicine` = "IL", `University of Chicago Division of the Biological Sciences The Pritzker School of Medicine,Hofstra North Shore - LIJ School of Medicine,Sackler School of Medicine,State University of New York Downstate Medical Center College of Medicine,Albert Einstein College of Medicine of Yeshiva University` = "IL", `University of Cincinnati College of Medicine` = "OH", `University of Cincinnati College of Medicine,University of Cairo Faculty of Medicine,University of Cairo Faculty of Medicine,University of Cairo Faculty of Medicine` = "OH", `University of Colorado School of Medicine` = "CO", `University of Connecticut School of Medicine` = "CT", `University of Florida College of Medicine` = "FL", `University of Florida College of Medicine,University of California, San Francisco, School of Medicine` = "FL", `University of Hawaii, John A. Burns School of Medicine` = "HI", `University of Illinois College of Medicine` = "IL", `University of Illinois College of Medicine - Peoria` = "IL", `University of Illinois College of Medicine - Rockford` = "IL", `University of Illinois College of Medicine - Urbana` = "IL", `University of Illinois College of Medicine,St. Martinus University Faculty of Medicine` = "IL", `University of Iowa Roy J. and Lucille A. Carver College of Medicine` = "IA", `University of Iowa Roy J. and Lucille A. Carver College of Medicine,Ladoke Akintola University of Technology (LAUTECH) College of Health Sciences` = "IA", `University of Iowa Roy J. and Lucille A. Carver College of Medicine,Medical College of Wisconsin` = "IA", `University of Kansas School of Medicine` = "KS", `University of Kansas School of Medicine-Wichita` = "KS", `University of Kentucky College of Medicine` = "KY", `University of Louisville School of Medicine` = "KY", `University of Maryland School of Medicine` = "MD", `University of Massachusetts Medical School` = "MA", `University of Miami Leonard M. Miller School of Medicine` = "FL", `University of Michigan Medical School` = "MI", `University of Minnesota Medical School` = "MN", `University of Mississippi School of Medicine` = "MS", `University of Missouri-Columbia School of Medicine` = "MO", `University of Missouri-Kansas City School of Medicine` = "MO", `University of Nebraska College of Medicine` = "NE", `University of Nevada School of Medicine` = "NV", `University of New England College of Osteopathic Medicine` = "ME", `University of New Mexico School of Medicine` = "NM", `University of North Carolina at Chapel Hill School of Medicine` = "NC", `University of North Dakota School of Medicine and Health Sciences` = "ND", `University of North Texas Health Science Center - Texas College of Osteopathic Medicine` = "TX", `University of North Texas Health Science Center at Fort Worth/Texas College of Osteopathic Medicine` = "TX", `University of Oklahoma College of Medicine` = "OK", `University of Oklahoma College of Medicine - Tulsa` = "OK", `University of Oklahoma College of Medicine,Lake Erie College of Osteopathic Medicine` = "OK", `University of Oklahoma College of Medicine,University of Oklahoma College of Medicine - Tulsa` = "OK", `University of Pittsburgh School of Medicine` = "PA", `University of Puerto Rico School of Medicine` = "PR", `University of Rochester School of Medicine and Dentistry` = "NY", `University of South Alabama College of Medicine` = "AL", `University of South Carolina School of Medicine` = "SC", `University of South Carolina School of Medicine Greenville` = "SC", `University of South Dakota, Sanford School of Medicine` = "SD", `University of Tennessee Health Science Center College of Medicine` = "TN", `University of Tennessee Health Science Center College of Medicine,Texas Tech University Health Sciences Center School of Medicine` = "TN", `University of Texas Medical Branch School of Medicine` = "TX", `University of Texas Medical School at Houston` = "TX", `University of Texas School of Medicine at San Antonio` = "TX", `University of Texas Southwestern Medical Center Southwestern Medical School` = "TX", `University of Texas Southwestern Medical Center Southwestern Medical School,Faculté de Médecine Paris Descartes` = "TX", `University of Utah School of Medicine` = "UT", `University of Vermont College of Medicine` = "VT", `University of Virginia School of Medicine` = "VA", `University of Washington School of Medicine` = "WA", `University of Wisconsin School of Medicine and Public Health` = "WI", `USF Health Morsani College of Medicine` = "FL", `Vanderbilt University School of Medicine` = "TN", `Virginia Commonwealth University School of Medicine` = "VA", `Virginia Tech Carilion School of Medicine` = "VA", `Wake Forest School of Medicine of Wake Forest Baptist Medical Center` = "NC", `Washington University in St. Louis School of Medicine` = "MO", `Washington University of Health and Sciences` = "WA", `Wayne State University School of Medicine` = "MI", `Weill Cornell Medical College` = "NY", `Weill Cornell Medicine` = "NY", `West Virginia School of Osteopathic Medicine` = "WV", `West Virginia University School of Medicine` = "WV", `West Virginia University School of Medicine - Martinsburg` = "WV", `Western Michigan University Homer Stryker M.D. School of Medicine` = "MI", `Western Univ of Health Sciences/College of Osteopathic Med of the Pacific` = "CA", `Western University of Health Sciences/College of Osteopathic Medicine of the Pacific` = "CA", `Wright State University Boonshoft School of Medicine` = "MI", `Yale School of Medicine` = "CT")) %>%
+  # 
+  #     dplyr::rename(State_Abbreviation = ACOG_district) %>%
+  #     dplyr::left_join(ACOG_Districts, by = c("State_Abbreviation" = "State_Abbreviations")) %>%
+  #     dplyr::select(-State_Abbreviation, -State) %>%
+  #     dplyr::mutate(ACOG_District_of_medical_school = impute_na(ACOG_District_of_medical_school, type = "value", val = "International Medical School, no ACOG district"))
+  
+ # all_years <- all_years %>% dplyr::select(-Medical_School_of_Graduation)
                 
   all_years$NIH_dollars
   rm(nih_dollars)
@@ -443,18 +482,24 @@
   funModeling::freq(data=all_years, plot = FALSE, na.rm = FALSE)
   class(all_years$NIH_dollars)
   colnames(all_years)
+  all_years <- all_years %>% #dplyr::select(- Applicant_Name) %>%
+    reorder_cols(Medical_School_of_Graduation, Applicant_Name, ACLS, Age, Alpha_Omega_Alpha, BLS, Citizenship, Count_of_Non_Peer_Reviewed_Online_Publication, Count_of_Oral_Presentation, Count_of_Other_Articles, Count_of_Peer_Reviewed_Book_Chapter, Count_of_Peer_Reviewed_Journal_Articles_Abstracts, Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published, Count_of_Peer_Reviewed_Online_Publication, Count_of_Poster_Presentation, Count_of_Scientific_Monograph, Couples_Match, Gender, Medical_Education_or_Training_Interrupted, Medical_Degree, Military_Service_Obligation, Misdemeanor_Conviction, PALS, Sigma_Sigma_Phi, US_or_Canadian_Applicant, USMLE_Step_1_Score, USMLE_Step_2_CK_Score, Visa_Sponsorship_Needed, white_non_white, Medical_Licensure_Problem, Type_of_medical_school, NIH_dollars, Match_Status) 
+  colnames(all_years)
   
   view(summarytools::dfSummary(x = all_years, justify = "l", style = "multiline", varnumbers = FALSE, valid.col = FALSE, tmp.img.dir = "./img", max.distinct.values = 5))
   
   write_csv(x = all_years, path = "~/Dropbox/Nomogram/nomogram/data/All_ERAS_data_merged_output_2_1_2020.csv")
 
-  rm(archive2015)
-  rm(archive2016)
-  rm(archive2017)
-  rm(archive2018)
-  rm(GOBA_list_of_people_who_all_matched_into_OBGYN)
-  rm(total_number_of_applicants)
-  rm(colnamesarchive2015)
-  rm(colnamesarchive2016)
-  rm(colnamesarchive2017)
-  rm(colnamesarchive2018)
+  # rm(archive2015)
+  # rm(archive2016)
+  # rm(archive2017)
+  # rm(archive2018)
+  # rm(GOBA_list_of_people_who_all_matched_into_OBGYN)
+  # rm(total_number_of_applicants)
+  # rm(colnamesarchive2015)
+  # rm(colnamesarchive2016)
+  # rm(colnamesarchive2017)
+  # rm(colnamesarchive2018)
+  # 
+
+  

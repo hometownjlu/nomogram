@@ -3,6 +3,14 @@ title: "A Model to Predict Chances of Matching into Obstetrics and Gynecology Re
 author: "Tyler M. Muffly, MD"
 date: "Department of Obstetrics and Gynecology, Denver Health, Denver, CO"
 output:
+  pdf_document:
+    pandoc_args:
+    - --wrap=none
+    - --top-level-division=chapter
+    df_print: paged
+    fig_caption: yes
+    #keep_tex: no
+    latex_engine: xelatex
   html_document:
     toc: true
     toc_float: true
@@ -12,14 +20,6 @@ output:
     dev: svg
     df_print: paged
     theme: journal
-  pdf_document:
-    pandoc_args:
-    - --wrap=none
-    - --top-level-division=chapter
-    df_print: paged
-    fig_caption: yes
-    #keep_tex: no
-    latex_engine: xelatex
   word_document:
     toc_depth: '2'
 fontsize: 12pt
@@ -984,14 +984,17 @@ all_data <- readr::read_csv("~/Dropbox/Nomogram/nomogram/data/All_ERAS_data_merg
 
 library(magrittr)
 all_data <- all_data %>%
-  dplyr::select(-Applicant_Name)
+  dplyr::select(-Applicant_Name) #MAY KEEP THIS IN.  
 conflicts()
 ```
 
-The first few rows of the data loaded are given below:
+The data are given below:
 ```{r}
 library(magrittr)
-head(all_data) %>% knitr::kable(format = "pandoc", caption = "Example observations (rows) and the features (columns)")
+# head(all_data) %>% knitr::kable(format = "pandoc", caption = "Example observations (rows) and the features (columns)")
+
+library(DT)
+DT::datatable(all_data, options = list(pageLength = 50))
 ```
 
 

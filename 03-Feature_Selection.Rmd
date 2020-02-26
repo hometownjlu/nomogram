@@ -8,8 +8,8 @@ output:
     toc_float: true
     toc_depth: 2
     self_contained: true
-    code_folding: show
-    dev: svg
+    code_folding: hide
+    dev: tiff
     df_print: paged
     theme: journal
   pdf_document:
@@ -35,9 +35,11 @@ spacing: double
 always_allow_html: yes
 editor_options: 
   chunk_output_type: console
+number_sections: yes
+smart: yes
 ---
 # Read in the original `all_data`, `train`, and `test`
-```{r}
+```{r, include=FALSE, echo=FALSE}
 library(magrittr)
 all_data <- readr::read_csv("~/Dropbox/Nomogram/nomogram/all_data_output_of_split_correlation.csv")
 train <- readr::read_csv("~/Dropbox/Nomogram/nomogram/train_output_of_split_correlation.csv")
@@ -55,7 +57,7 @@ all_data$Match_Status <- as.numeric(all_data$Match_Status)
 
 # Review the variables
 "Malpractice_Cases_Pending", Removed because this is due to the fact that all people had 0 cases/zero variance
-```{r}
+```{r, include=TRUE, echo=FALSE}
 #https://github.com/manojmukkamala/DiabeticPatientsReadmission/blob/master/Project_V4.R
 #Just writing the names of all the variables under one term to avoid re-writing when we apply model multiple times
 
@@ -103,14 +105,19 @@ formula
 
 
 # Factor Selection using Forward/Backwards Regression via Variable Importance
-
 https://dataaspirant.com/2018/01/15/feature-selection-techniques-r/
+
 Using Regression to Calculate Variable Importance: The summary function in regression also describes features and how they affect the dependent feature through significance.
 
 Start with Stepwise Regression  
 Backwards is when you start with a model of all the predictors and then check what happens when each of the predictors is removed.  If removing a variable does not change the ability to predict then the predictor is safely deleted.  This continues step by step until only important predictors remain.  
 
 ##Try forwards stepwise regression
+https://quantifyinghealth.com/stepwise-selection/
+```{r}
+knitr::include_graphics("images/forward-stepwise-algorithm.png")
+```
+
 ```{r, echo=TRUE, include = T}
 #Forward regression!!  #https://campus.datacamp.com/courses/supervised-learning-in-r-classification/chapter-3-logistic-regression?ex=15
 # Specify a null model with no predictors
@@ -149,13 +156,13 @@ forward_drivers
 ```
 
 
-```{r, echo=TRUE, include = T}
+```{r, echo=TRUE, include = F}
 # Estimate the stepwise matching probability
 step_prob <- stats::predict(step_model, type = "response")
 ```
 
 ## Plot the ROC of the stepwise model
-```{r, echo=TRUE, include = TRUE}
+```{r, echo=TRUE, include = F}
 forwards_ROC <- pROC::roc(all_data$Match_Status, step_prob,
     levels=c("1", "0"), direction = "auto")
 plot(forwards_ROC, col = "red", main="Forwards Stepwise Regression \n for Factor Selection")
@@ -170,6 +177,10 @@ tm_print_save <- function (filename) {
 tm_print_save("forward_ROC.tiff")
 ```
 
+https://quantifyinghealth.com/stepwise-selection/
+```{r}
+knitr::include_graphics("images/backward-stepwise-algorithm.png")
+```
 
 ##Try BACKWARDS stepwise regression here:
 ```{r, echo=TRUE, include = T}
@@ -211,44 +222,37 @@ pROC::auc(backwards_ROC)
 
 
 #Factor Selection:  Principal Components Analysis
-Principal Component Analysis (PCA) is a very powerful technique that has wide applicability in data science, bioinformatics, and further afield. It was initially developed to analyse large volumes of data in order to tease out the differences/relationships between the logical entities being analysed. It extracts the fundamental structure of the data without the need to build any model to represent it. This 'summary' of the data is arrived at through a process of reduction that can transform the large number of variables into a lesser number that are uncorrelated (i.e. the ‘principal components'), whilst at the same time being capable of easy interpretation on the original data (Blighe, Lewis, and Lun 2018) (Blighe 2013).
+Principal Component Analysis (PCA)  was initially developed to analyse large volumes of data in order to tease out the differences/relationships between the logical entities being analysed. It extracts the fundamental structure of the data without the need to build any model to represent it. This 'summary' of the data is arrived at through a process of reduction that can transform the large number of variables into a lesser number that are uncorrelated (i.e. the ‘principal components'), whilst at the same time being capable of easy interpretation on the original data.
 
-In order to reduce 30 dimensions or knowing the significant impact of our reduction we will do PCA.
-
-Feature Selection: Principal Component Analysis - Use principal components analysis to pick what predictors to use 
-```{r}
-#From nomogram_matching_medical_students.R
-
-#Method 1:  Principal Component Analysis - Use principal components analysis to pick what predictors to use 
-train_pca <- caret::preProcess(dplyr::select(all_data, - Match_Status), 
+In order to reduce `r nrow(all_data) ` dimensions or knowing the significant impact of our reduction we will do PCA.
+```{r, echo=FALSE, include=TRUE}
+all_data_pca <- caret::preProcess(dplyr::select(all_data, - Match_Status), 
                         method = c("center", "scale", "nzv", "pca"))
-train_pca
-train_pca$method
-train_pca$rotation
-train_pca$method$pca
+all_data_pca
+all_data_pca$method
+head(all_data_pca$rotation,3)
+all_data_pca$method$pca
+
+knitr::kable(all_data_pca$method$pca, format = "html", caption = "Principal Components Analysis for all_data, numeric variables")
 ```
 
 
-Approach 2
+##PCA Approach 2
 ```{r}
 numeric_data <- dplyr::select_if(all_data, is.numeric)
 numeric_data <- base::scale(numeric_data, center=TRUE, scale = TRUE)
 pcaObj <- stats::princomp(numeric_data, cor = TRUE, scores = TRUE, covmat = NULL)
 summary(pcaObj)
 print(pcaObj)
-names(pcaObj)
+
 plot(pcaObj, main="Principal Component Analysis \n Reduction in Number of Variables")
 pcaObj$loadings[,1]
 #I have no idea what this plot means
 stats::biplot(pcaObj, cex = 1.0, main="Biplot of Principal Component Analysis \n Reduction in Number of Variables")
 tm_print_save("Principal_Components_for_numeric_data.tiff")
-
-final_data <- as.data.frame(pcaObj$scores)
 ```
-According to PCA,the columns that are of utmost importance are as follows:
-***
 
-```{r}
+```{r, echo=FALSE}
 #http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/118-principal-component-analysis-in-r-prcomp-vs-princomp/
 library(factoextra)
 res.pca <- prcomp(numeric_data, scale = TRUE)
@@ -281,84 +285,27 @@ factoextra::fviz_eig(res.pca)  #Visualize eigenvalues (scree plot). Show the per
 
 # Eigenvalues
 eig.val <- get_eigenvalue(res.pca)
-eig.val
+head(eig.val, 3)
 
 # Results for Variables
 res.var <- get_pca_var(res.pca)
-head(res.var$coord)          # Coordinates
-head(res.var$contrib)        # Contributions to the PCs
-head(res.var$cos2)           # Quality of representation
+head(res.var$coord, 3)          # Coordinates
+head(res.var$contrib, 3)        # Contributions to the PCs
+head(res.var$cos2, 20)           # Quality of representation
 # Results for individuals
 res.ind <- get_pca_ind(res.pca)
-head(res.ind$coord)          # Coordinates
-head(res.ind$contrib)        # Contributions to the PCs
-head(res.ind$cos2)           # Quality of representation
+head(res.ind$coord, 3)          # Coordinates
+head(res.ind$contrib, 3)        # Contributions to the PCs
+head(res.ind$cos2, 3)           # Quality of representation
 ```
 
-
-
-<!-- ```{r} -->
-<!-- #https://bradleyboehmke.github.io/HOML/pca.html -->
-
-<!-- # convert data to h2o object -->
-<!-- h2o::h2o.init() -->
-<!-- my_basket.h2o <- h2o::as.h2o(all_data) -->
-
-<!-- # run PCA -->
-<!-- my_pca <- h2o::h2o.prcomp( -->
-<!--   training_frame = my_basket.h2o, -->
-<!--   pca_method = "GramSVD", -->
-<!--   k = ncol(my_basket.h2o),  -->
-<!--   transform = "STANDARDIZE",  -->
-<!--   impute_missing = TRUE, -->
-<!--   max_runtime_secs = 1000 -->
-<!-- ) -->
-
-<!-- my_pca@model$importance -->
-<!-- ``` -->
-
-<!-- Naturally, the first PC (PC1) captures the most variance followed by PC2, then PC3, etc. We can identify which of our original features contribute to the PCs by assessing the loadings.  -->
-<!-- ```{r} -->
-<!-- #https://bradleyboehmke.github.io/HOML/pca.html -->
-<!-- my_pca@model$eigenvectors %>%  -->
-<!--   as.data.frame() %>%  -->
-<!--   mutate(feature = row.names(.)) %>% -->
-<!--   ggplot(aes(pc1, reorder(feature, pc1))) + -->
-<!--   geom_point() +  -->
-<!--   ggtitle("Principal Components 1 \n Feature Selection") -->
-<!-- ``` -->
-
-<!-- ```{r} -->
-<!-- #https://bradleyboehmke.github.io/HOML/pca.html -->
-
-<!-- # Compute eigenvalues -->
-<!-- eigen <- my_pca@model$importance["Standard deviation", ] %>% -->
-<!--   as.vector() %>% -->
-<!--   .^2 -->
-
-<!-- # Sum of all eigenvalues equals number of variables -->
-<!-- sum(eigen) -->
-<!-- ## [1] 42 -->
-
-<!-- # Find PCs where the sum of eigenvalues is greater than or equal to 1 -->
-<!-- which(eigen >= 1) -->
-<!-- #Consequently, using this criteria would have us retain the first 3 PCs in my_basket.   -->
-
-<!-- #Scree Plot -->
-<!-- data.frame( -->
-<!--   PC  = my_pca@model$importance %>% seq_along, -->
-<!--   PVE = my_pca@model$importance %>% .[2,] %>% unlist() -->
-<!-- ) %>% -->
-<!--   ggplot(aes(PC, PVE, group = 1, label = PC)) + -->
-<!--   geom_point() + -->
-<!--   geom_line() + -->
-<!--   geom_text(nudge_y = -.002) -->
-
-<!-- #Needs to be saved.   -->
-<!-- ``` -->
 So how many principal components should we use in the my_basket example? The frank answer is that there is no one best method for determining how many components to use. In this case, differing criteria suggest to retain *** (scree plot criterion), and *** (eigenvalue criterion).  
 
 # Feature Selection: MARS model (Multivariate Adaptive Regression Splines)
+```{r}
+knitr::include_graphics("images/mars.jpg")
+```
+
 ```{r}
 # https://bradleyboehmke.github.io/HOML/mars.html
 # create a tuning grid
@@ -525,9 +472,11 @@ plot(varimp_mars, main="Variable Importance with MARS") #Visual of the most impo
 ```
 The MARS model shows that *** terms were likely to improve accuracy (`model_mars`).  Variable importance shows that *** US_or_Canadian_applicants, USMLE_Step_1_Score, Age, Medial_Degree, and Visa_Sponsorship_Needed all show significant importance (`varimp_mars`).  
 
-#Feature Selection: Recursive Feature Elimination 
-So at first the model is fit on the data. Then we have coefficients of each feature or feature importance. We drop the feature with least coefficient or importance. Then the model is fit on the remaining features. The process is repeated until we have a necessary number of features (or some other criteria is fulfilled).  
+
 ```{r}
+#Feature Selection: Recursive Feature Elimination 
+# So at first the model is fit on the data. Then we have coefficients of each feature or feature importance. We drop the feature with least coefficient or importance. Then the model is fit on the remaining features. The process is repeated until we have a necessary number of features (or some other criteria is fulfilled).  
+
 #Method 2: Recursive Feature Elimination
 # train <- readr::read_csv("~/Dropbox/Nomogram/nomogram/train_output_of_split_correlation.csv")
 # test <- readr::read_csv("~/Dropbox/Nomogram/nomogram/test_output_of_split_correlation.csv")
@@ -568,6 +517,7 @@ So at first the model is fit on the data. Then we have coefficients of each feat
 # Feature Selection: Boruta wrapper around randomForest classification algo
 You can see how you can use Boruta to perform a top-down search for relevant features by comparing original attributes' importance with importance achievable at random, estimated using their permuted copies, and progressively eliminating irrelevant features.
 https://www.datacamp.com/community/tutorials/feature-selection-R-boruta 
+https://www.r-bloggers.com/venn-diagram-comparison-of-boruta-fselectorrcpp-and-glmnet-algorithms/
 
 Reference:  
 https://www.jstatsoft.org/article/view/v036i11 
@@ -580,6 +530,11 @@ Then, the algorithm checks for each of your real features if they have higher im
 At every iteration, the algorithm compares the Z-scores of the shuffled copies of the features and the original features to see if the latter performed better than the former. If it does, the algorithm will mark the feature as important. In essence, the algorithm is trying to validate the importance of the feature by comparing with random shuffled copies, which increases the robustness. This is done by simply comparing the number of times a feature did better with the shadow features using a binomial distribution.
 
 If a feature hasn't been recorded as a hit in say 15 iterations, you reject it and also remove it from the original matrix. After a set number of iterations -or if all the features have been either confirmed or rejected- you stop.
+
+```{r}
+knitr::include_graphics("images/boruta_algo.png")
+```
+
 ```{r}
 #Method:  Boruta search
 set.seed(123)
@@ -634,6 +589,10 @@ Regularization methods provide a means to constrain or regularize the estimated 
 
 The glmnet package is extremely efficient and fast, even on very large data sets (mostly due to its use of Fortran to solve the lasso problem via coordinate descent); note, however, that it only accepts the non-formula XY interface so prior to modeling we need to separate our feature and target sets.
 
+```{r}
+knitr::include_graphics("images/lassoandridge.png")
+```
+
 ```{r, echo=TRUE}
 # https://bradleyboehmke.github.io/HOML/regularized-regression.html#attrition-data
 #https://www.datacamp.com/community/tutorials/tutorial-ridge-lasso-elastic-net
@@ -681,6 +640,10 @@ Create the LASSO using glmnet within the caret package.  Here we are solely usin
 The alpha parameter tells glmnet to perform a ridge (alpha = 0), lasso (alpha = 1), or elastic net (0 < alpha < 1) model. 
 
 ```{r}
+knitr::include_graphics("images/lassoandridgeregression.png")
+```
+
+```{r}
 # https://bradleyboehmke.github.io/HOML/regularized-regression.html
 
 # Train glmnet with custom trainControl and tuning: model
@@ -723,6 +686,12 @@ tm_print_save("lasso_mod.tiff")
 ```
   
 Plot LASSO factors - Plot the individual variables by lambda.  Saves the lasso.mod to an RDS file for later use.  Coefficients for our ridge regression model as λ grows from  0 → ∞
+
+
+```{r}
+knitr::include_graphics("images/lasso_with_labels.png")
+```
+
  
 ```{r,  fig.asp=1}
 lasso.mod.plot <- plot(lasso.mod$finalModel, xvar = 'lambda', label = TRUE, main = "Plot of the LASSO factors")
@@ -906,14 +875,13 @@ So how does this compare to our previous best model for the train data set? Intr
 ```{r}
 # predict matching_status on training data
 pred <- stats::predict(cv_glmnet, x)
-head(pred)
+head(pred, 5)
 ```
 
-# Feature Selection : Magnitude Feature Interpretation
+# Feature Selection: Magnitude Feature Interpretation
 Variable importance for regularized models provides a similar interpretation as in logistic regression. Importance is determined by magnitude of the standardized coefficients and we can see in figure below.  
 
 ```{r}
-
 feature_interpretation_regularized_regression <- tm_vip(object = cv_glmnet, title = "Variable Importance for \n Regularized Regression Model")
 feature_interpretation_regularized_regression
 
@@ -950,7 +918,7 @@ plot(varimp_mars, main="Variable Importance with MARS") #Visual of the most impo
 
 
 #Principal Components Analysis foudn thhat six factors were needed to capture 95% of the variance:
-train_pca$method$pca
+all_data_pca$method$pca
 #Alternative PCA
 pcaObj$loadings[,1]
 

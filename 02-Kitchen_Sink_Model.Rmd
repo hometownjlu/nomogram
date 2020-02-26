@@ -93,43 +93,50 @@ formula
 #Messing around
 ```{r}
 #https://www.kaggle.com/ravichaubey1506/postgraduate-admission-analysis#Predective-Modeling
-regressor=lm(Match_Status~.,train)
-summary(regressor)
+
+#
+
+# library(stats)
+# train <- train %>% na.omit %>% as.matrix()
+# class(train)
+# sum(is.na(train))
+# regressor = stats::lm.fit(formula = formula, data=train, singular.ok = TRUE)
+# summary(regressor)
 ```
 
 #Run the model now with only significant variables
 ```{r}
 #https://www.kaggle.com/ravichaubey1506/postgraduate-admission-analysis#Predective-Modeling
-new_model=lm(Match_Status~Age + BLS + Citizenship + Gender + Medical_Education_or_Training_Interrupted + USMLE_Step_1_Score + USMLE_Step_2_CK_Score + white_non_white, train)
-summary(new_model)
+# new_model=lm(Match_Status~Age + BLS + Citizenship + Gender + Medical_Education_or_Training_Interrupted + USMLE_Step_1_Score + USMLE_Step_2_CK_Score + white_non_white, train)
+# summary(new_model)
 ```
 
 
 #Odd that the predictions are greater than one and less than 0.  
 ```{r}
 #https://www.kaggle.com/ravichaubey1506/postgraduate-admission-analysis#Predective-Modeling
-chance_admi_pred=predict(new_model,test)
-final_data=cbind(test,chance_admi_pred) #Combining Predicted Value to Original Data
-write.csv(final_data,"final_data.csv")
-head(final_data,6)
+# chance_admi_pred=predict(new_model,test)
+# final_data=cbind(test,chance_admi_pred) #Combining Predicted Value to Original Data
+# write.csv(final_data,"final_data.csv")
+# head(final_data,6)
 ```
 
 ```{r}
 #https://www.kaggle.com/ravichaubey1506/postgraduate-admission-analysis#Predective-Modeling
-library(ggplot2)
-ggplot(final_data,aes(x=USMLE_Step_2_CK_Score,y=chance_admi_pred))+
-geom_point(color="red")+
-stat_smooth(method="lm")+
-scale_x_continuous(name="USMLE_Step_2_CK_Score")+
-scale_y_continuous(name="Prediction of Chance of Admission")+
-ggtitle("Prediction Curve with USMLE_Step_2_CK Score")
+# library(ggplot2)
+# ggplot(final_data,aes(x=USMLE_Step_2_CK_Score,y=chance_admi_pred))+
+# geom_point(color="red")+
+# stat_smooth(method="lm")+
+# scale_x_continuous(name="USMLE_Step_2_CK_Score")+
+# scale_y_continuous(name="Prediction of Chance of Admission")+
+# ggtitle("Prediction Curve with USMLE_Step_2_CK Score")
 ```
 
 ```{r}
 #https://www.kaggle.com/ravichaubey1506/postgraduate-admission-analysis#Predective-Modeling
-residuals=as.numeric(final_data$Match_Status) - final_data$chance_admi_pred
-residuals=as.data.frame(residuals)
-head(residuals,10)
+# residuals=as.numeric(final_data$Match_Status) - final_data$chance_admi_pred
+# residuals=as.data.frame(residuals)
+# head(residuals,10)
 ```
 
 
@@ -215,20 +222,20 @@ tm_print_save("tm_nomogram_prep_kitchen_sink.tiff")
 
 Create a Confusion Matrix
 ```{r}
-test$Match_Status <- as.factor(test$Match_Status)
+# test$Match_Status <- as.factor(test$Match_Status)
 
-Predprob <- stats::predict.glm(object = kitchen.sink, newdata = train1, type = "response")
+#Predprob <- stats::predict.glm(object = kitchen.sink, newdata = train1, type = "response")  #not working with knitr or code
 #plot(Predprob, jitter(as.numeric(train$Match_Status)))
 
 # test model
 ###Not working!!!
-prediction_test <- rms::Predict(x = kitchen.sink)
-prediction_test
-prediction_categories <- ifelse(prediction_test > 0.5, 1, 0)
-nrow(prediction_categories)
-nrow(train1)
-confusion <- base::table(prediction_categories, train1$Match_Status)
-(confusion.limited.vif.model.kitchen.sink <- caret::confusionMatrix(confusion, positive = "1"))
+# prediction_test <- rms::Predict(x = kitchen.sink)
+# prediction_test
+# prediction_categories <- ifelse(prediction_test > 0.5, 1, 0)
+# nrow(prediction_categories)
+# nrow(train1)
+# confusion <- base::table(prediction_categories, train1$Match_Status)
+#(confusion.limited.vif.model.kitchen.sink <- caret::confusionMatrix(confusion, positive = "1"))
 ```
 
 Calculates the Brier score for the `kitchen.sink` model.  
@@ -349,14 +356,20 @@ test$Match_Status <- as.numeric(test$Match_Status)  -1
 
 confusion <- table(prediction_categories, test$Match_Status)
 knitr::kable(confusion, caption = "Confusion Matrix of non-colinear Variables", digits=2)
+
+# True negative is `r confusion[1]`.
+# False negative is `r confusion[1,2]`.  These people were predicted not to match but did match.  
+# True positive is `r confusion[2,2]`.  These are the people predicted to match who did match.  
+# False positive is `r confusion[2]`.  These are the people who were predicted to match and did not match.  ??
+
 ```
-True negative is `r confusion[1]`.
-False negative is `r confusion[1,2]`.  These people were predicted not to match but did match.  
-True positive is `r confusion[2,2]`.  These are the people predicted to match who did match.  
-False positive is `r confusion[2]`.  These are the people who were predicted to match and did not match.  ??
+
 
 # Calculate accuracy. 
 ```{r}
-(confusion.limited.vif.model.kitchen.sink <- caret::confusionMatrix(confusion, positive = "1"))
+#(confusion.limited.vif.model.kitchen.sink <- caret::confusionMatrix(confusion, positive = "1"))
+
+# The accuracy of the `limited.vif.model.kitchen.sink` model is `r round(confusion.limited.vif.model.kitchen.sink$overall[[1]], digit=3)`.  The sensitivity of the `limited.vif.model.kitchen.sink` model is `r round(confusion.limited.vif.model.kitchen.sink$byClass[[1]], digit=3)`. The specificity of the `limited.vif.model.kitchen.sink` model is `r round(confusion.limited.vif.model.kitchen.sink$byClass[[2]], digit=3)`.
+
+
 ```
-The accuracy of the `limited.vif.model.kitchen.sink` model is `r round(confusion.limited.vif.model.kitchen.sink$overall[[1]], digit=3)`.  The sensitivity of the `limited.vif.model.kitchen.sink` model is `r round(confusion.limited.vif.model.kitchen.sink$byClass[[1]], digit=3)`. The specificity of the `limited.vif.model.kitchen.sink` model is `r round(confusion.limited.vif.model.kitchen.sink$byClass[[2]], digit=3)`.
