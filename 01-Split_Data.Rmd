@@ -8,7 +8,7 @@ output:
     toc_float: true
     toc_depth: 2
     self_contained: true
-    code_folding: show
+    code_folding: hide
     dev: svg
     df_print: paged
     theme: journal
@@ -37,24 +37,32 @@ editor_options:
   chunk_output_type: console
 ---
 
-
-
 ```{r}
+knitr::include_graphics("images/machine-learning-splitting-datasets-3-638.jpg")
+```
+
+```{r, include=FALSE}
 all_data <- readr::read_csv("~/Dropbox/Nomogram/nomogram/all_data_end_of_EDA.csv")
 ```
 
 # Why are we using a train and test sample data set to test the model?  
 The training set contains a known output (`all_data$Match_Status`) and the model learns this data in order to be generalized to other data in the process. In this way, the model will predict values for the test data (cross validation). It is possible to determine the prediction accuracy of the model.
 
-Overfitting is one of the biggest challenges in the machine learning process. Overfitting means that the model has been trained “too well”, and as a result it learns the noise present in the training data as if it was a reliable pattern. Overfitting affects the ability of the model to perform well in unseen data, which is known as generalisation.
+Overfitting is one of the biggest challenges in the machine learning process. 
+```{r}
+knitr::include_graphics("images/overfitting.jpg")
+```
 
-Two well known strategies to overcome the problem of overfitting are the train/validation split and cross-validation.
+Overfitting means that the model has been trained “too well”, and as a result it learns the noise present in the training data as if it was a reliable pattern. Overfitting affects the ability of the model to perform well in unseen data, which is known as generalisation.  Two well known strategies to overcome the problem of overfitting are the train/validation split and cross-validation.
 
 # Identify training and test samples
+```{r}
+knitr::include_graphics("images/Train-Test-Split-Diagram.jpg")
+```
 
 
-Shows four different ways to split the data  
-```{r, train vs test, warning=FALSE, echo=TRUE, message=FALSE, include=TRUE}
+Shows the data split  
+```{r, train vs test, warning=FALSE, echo=TRUE, message=FALSE, include=FALSE}
 #http://rpubs.com/josevilardy/crossvalidation
 library(magrittr)
 
@@ -70,7 +78,7 @@ readr::write_csv(x = train,
           path = (here::here("results", "train_at_data_split_phase.csv")), 
           col_names = TRUE)
 # training_data_plot_hist_facet <- plot_hist_facet(data = train)
-# training_data_plot_hist_facet
+#  training_data_plot_hist_facet
 
 test <- data_split %>% rsample::testing() %>% dplyr::glimpse() # Extra
 readr::write_csv(x = test, 
@@ -80,9 +88,9 @@ readr::write_csv(x = test,
 # plot_hist_facet(data=test)
 ```
 
-I will call the training sample `train` and the test sample `test`.  *Creative!*  Another option is dplyr::sample_n if you want to instead specify the exact number of observations to be selected. There are `r nrow(train)` medical students in the training data set and `r nrow(test)` in the test data set.  
+I will call the training sample `train` and the test sample `test`.  *Creative!*  There are `r nrow(train)` medical students in the training data set and `r nrow(test)` in the test data set.  The two samples should have the same proportion of students who matched and did not match.   
 
-```{r, train vs test1, warning=FALSE, echo=TRUE, message=FALSE, include=TRUE}
+```{r, train vs test1, warning=FALSE, echo=TRUE, message=FALSE, include=FALSE}
 #More ways to split the data.  
 
 # Using base R
@@ -128,7 +136,7 @@ rm(train_4)
 rm(test_4)
 ```
 
-```{r}
+```{r, include=FALSE}
 #Remove applicant names from train and test.  
 
 # train <- train %>%
@@ -140,32 +148,74 @@ rm(test_4)
 
 
 Compare the datasets of `train` and `test`using arsenal package:  
-```{r, results="asis", include=FALSE, echo=FALSE}
+```{r, results="asis", include=TRUE, echo=FALSE}
 compareddf <- summary(arsenal::comparedf(train, test))
-compareddf
+#compareddf
 # tm_write2word(compareddf, "compareddf")
 # tm_write2pdf(compareddf, "compareddf")
 ```
 
-`train` data characteristics are all reported with medians and IQR.  
+# `train` data characteristics are all reported with medians and IQR.  
 ```{r, include = TRUE, results="asis"}
-# train_table_characteristics <- tm_arsenal_table(
-#   df=train, 
-#   by=train$Match_Status)
+###tableby labels
+mylabels <- list(white_non_white = "Race", Age = "Age, years", Gender = "Sex", Couples_Match = "Participating in the Couples Match", US_or_Canadian_Applicant = "US or Canadian Applicant", Medical_Education_Interrupted = "Medical Education Process was Interrupted", Alpha_Omega_Alpha = "Alpha Omega Alpha", Military_Service_Obligation = "Military Service Obligation", USMLE_Step_1_Score = "USMLE Step 1 Score", Military_Service_Obligation = "Military Service Obligations", Count_of_Poster_Presentation = "Count of Poster Presentations", Count_of_Oral_Presentation = "Count of Oral Presentations", Count_of_Articles_Abstracts = "Count of Published Abstracts", Count_of_Peer_Reviewed_Book_Chapter = "Count of Peer Reviewed Book Chapters", Count_of_Other_than_Published = "Count of Other Published Products", Count_of_Online_Publications = "Count of Online Publications", Visa_Sponsorship_Needed = "Visa Sponsorship is Needed", Medical_Degree = "Medical Degree Training")
+
+tm_arsenal_table = function(df, by){
+  print("Function Sanity Check: Create Arsenal Table using arsenal package")
+  table_variable_within_function <- arsenal::tableby(by ~ .,
+                 data=df, control = arsenal::tableby.control(test = TRUE,
+                                                                total = F,
+                                                                digits = 1L,
+                                                                digits.p = 2L,
+                                                                digits.count = 0L,
+                                                                numeric.simplify = F,
+                                                                numeric.stats =
+                                                                  c("median",
+                                                                    "q1q3"),
+                                                                cat.stats =
+                                                                  c("Nmiss",
+                                                                    "countpct"),
+                                                                stats.labels = list(Nmiss = "N Missing",
+                                                                                    Nmiss2 ="N Missing",
+                                                                                    meansd = "Mean (SD)",
+                                                                                    medianrange = "Median (Range)",
+                                                                                    median ="Median",
+                                                                                    medianq1q3 = "Median (Q1, Q3)",
+                                                                                    q1q3 = "Q1, Q3",
+                                                                                    iqr = "IQR",
+                                                                                    range = "Range",
+                                                                                    countpct = "Count (Pct)",
+                                                                                    Nevents = "Events",
+                                                                                    medSurv ="Median Survival",
+                                                                                    medTime = "Median Follow-Up")))
+  final <- summary(table_variable_within_function,
+          text=T,
+          title = 'Table: Applicant Descriptive Variables by Matched or Did Not Match from 2015 to 2018',
+          labelTranslations = mylabels, #Seen in additional functions file
+          pfootnote=TRUE)
+  return(final)
+}
+
+train_table_characteristics <- tm_arsenal_table(
+  df=train,
+  by=train$Match_Status)
+train_table_characteristics
 # 
 # tm_write2word(train_table_characteristics, "train_table_characteristics")
 # tm_write2pdf(train_table_characteristics, "train_table_characteristics")
 ```
 
-`test` data characteristics are all reported with medians and IQR. 
+# `test` data characteristics are all reported with medians and IQR. 
 ```{r, include = TRUE, results="asis"}
-# test_table_characteristics <- tm_arsenal_table(df = test, by = test$Match_Status)
-# 
+test_table_characteristics <- tm_arsenal_table(df = test, by = test$Match_Status)
+test_table_characteristics
+
 # tm_write2word(test_table_characteristics, "test_table_characteristics")
 # tm_write2pdf(test_table_characteristics, "test_table_characteristics")
 ```
 
-Check Proportions of Matched/Unmatched applicants in the test and train data sets.  Orginal response distribution and then showing consistent response ratio between train & test data sets.  
+# Check Proportions of Matched/Unmatched applicants in the test and train data sets.  
+Original response distribution and then showing consistent response ratio between `train` & `test` data sets.  
 ```{r, results="asis", echo=TRUE, include=TRUE}
 # Examine the proportions of the Match_Status class lable across the datasets.
 crude_summary <- 
@@ -175,14 +225,17 @@ base::prop.table(table(train$Match_Status)) #Train data set proportion
 
 base::prop.table(table(test$Match_Status))  #Test data set proportion
 
-knitr::kable(crude_summary, caption="2x2 Contingency Table on Matching for all_data", format="markdown")
+#knitr::kable(crude_summary, caption="2x2 Contingency Table on Matching for all_data", format="markdown")
 ```
 
-Summarize the outcome and the predictors
-Using the training sample, we will provide numerical summaries of each predictor variable and the outcome, as well as graphical summaries of the outcome variable. Our results should now show no missing values in any variable. We’ll need to determine whether there are any evident problems, such as substantial skew in the outcome variable.
+# Is feature skew present?
 
 ```{r}
-#Is feature skew present?
+knitr::include_graphics("images/skewness---mean-median-mode.jpg")
+```
+Using the training sample, we will provide numerical summaries of each predictor variable and the outcome, as well as graphical summaries of the outcome variable. Our results should now show no missing values in any variable. We’ll need to determine whether there are any evident problems, such as substantial skew in the outcome variable.
+
+```{r, include=FALSE}
 skewed_feature_names <- train %>%
   dplyr::select_if(is.numeric) %>%
   purrr::map_df(PerformanceAnalytics::skewness) %>% #returns a single row tibble 
@@ -191,11 +244,49 @@ skewed_feature_names <- train %>%
   dplyr::filter(value>2.0) %>% #eyeballed cutoff for value cut off
   dplyr::pull(key) %>%
   as.character()
+skewed_feature_names
 ```
 
+```{r}
+knitr::kable(skewed_feature_names, caption="List of skewed variables for all_data", format="html")
+```
 
 # Correlation
 Get a correlation matrix for elementary feature selection and remove highly correlated features.  
+```{r}
+knitr::include_graphics("images/correlation1.jpg")
+knitr::include_graphics("images/iu.jpg")
+```
+The values of correlation range from -1 to 1.  If there is a value of 0 there is no correlation between the variables.  Perfect correlation is 1.  Perfect negative correlation is -1.  
+
+# One way to look at correlation is with a correlation funnel.
+This is a great interactive plot that shows what variables are positively and negatively correlated with matching OBGYN.  The closer the dots to the zero line the less correlation there is to matching.  
+```{r, include=FALSE, echo=FALSE}
+all_data_binarized_tbl <- all_data %>%
+  correlationfunnel::binarize(n_bins = 4, thresh_infreq = 0.01)
+
+all_data_binarized_tbl %>% dplyr::glimpse()
+
+all_data_correlated_tbl <- all_data_binarized_tbl %>%
+  correlationfunnel::correlate(target = Match_Status__Match)
+all_data_correlated_tbl
+
+# static_correlation_funnel <- all_data_correlated_tbl %>%
+#   correlationfunnel::plot_correlation_funnel(interactive = FALSE, limits = c(-1, 1))
+# static_correlation_funnel
+
+#tm_ggsave(static_correlation_funnel, "static_correlation_funnel.tiff")
+```
+
+
+```{r, include=TRUE, echo=FALSE}
+#REALLY COOL AND INSTRUCTIVE
+all_data_correlated_tbl %>%
+  correlationfunnel::plot_correlation_funnel(interactive = TRUE, limits = c(-1, 1))
+```
+
+# Are there any highly correlated variables that can be removed?
+No.  All the numeric variables are not correlated.  
 ```{r}
 # get a correlation matrix for elementary feature selection and
 # remove highly correlated fields
@@ -207,36 +298,37 @@ highly.corr
 data.clean <- numeric_data[,-highly.corr]
 colnames(data.clean)
 ```
-None of the numeric data are correlated to each other.  So we can't remove any numeric features because they are not highly correlated.  
 
 ```{r}
 tm_t_test <- function(variable){
   print("Function Sanity Test: t-test")
-  output <- stats::t.test(y=variable[train$Match_Status == "Matched"],
-                          x=variable[train$Match_Status == "Did not match"],
+  output <- stats::t.test(y=variable[train$Match_Status == "Match"],
+                          x=variable[train$Match_Status == "Did Not Match"],
                           alternative = ("two.sided"),
                           paired = FALSE,
                           conf.level = 0.95,
                           var.equal = TRUE)
   
-  print("X is group that did not match and Y is group that did match:")
+  #print("X is group that did not match and Y is group that did match:")
   return(output)
 }
 
-# tm_t_test(train$Age)#Significant different in age for people who matched (younger) and did not match (older) shown by the t-test
-# tm_t_test(train$USMLE_Step_1_Score)#Significant different in USMLE_Step_1_Score for people who matched and did not match shown by the t-test
-# tm_t_test(train$Count_of_Poster_Presentation) #NO DIFFERENCE in Count_of_Poster_Presentation for people who matched and did not match shown by the t-test
-# tm_t_test(train$Count_of_Oral_Presentation)#NO DIFFERENCE in Count_of_Oral_Presentation for people who matched and did not match shown by the t-test
-# tm_t_test(train$Count_of_Articles_Abstracts)#NO DIFFERENCE in Count_of_Articles_Abstracts for people who matched and did not match shown by the t-test
-# tm_t_test(train$Count_of_Peer_Reviewed_Book_Chapter)#NO DIFFERENCE in Count_of_Peer_Reviewed_Book_Chapter for people who matched and did not match shown by the t-test
-# tm_t_test(train$Count_of_Other_than_Published)#NO DIFFERENCE in Count_of_Other_than_Published for people who matched and did not match shown by the t-test
+tm_t_test(train$Age)#Significant different in age for people who matched (younger) and did not match (older) shown by the t-test
+tm_t_test(train$USMLE_Step_1_Score)#Significant different in USMLE_Step_1_Score for people who matched and did not match shown by the t-test
+tm_t_test(train$Count_of_Poster_Presentation) #NO DIFFERENCE in Count_of_Poster_Presentation for people who matched and did not match shown by the t-test
+tm_t_test(train$Count_of_Oral_Presentation)#NO DIFFERENCE in Count_of_Oral_Presentation for people who matched and did not match shown by the t-test
+tm_t_test(train$Count_of_Peer_Reviewed_Journal_Articles_Abstracts)
+tm_t_test(train$Count_of_Peer_Reviewed_Book_Chapter)#NO DIFFERENCE in Count_of_Peer_Reviewed_Book_Chapter for people who matched and did not match shown by the t-test
+tm_t_test(train$Count_of_Other_Articles)
 ```
 
-After that, we got the train dataframe with categorization (`train`) and compared categorical variables through the chi-square test of independence (used to analyze the frequency table). The chi-squared test is a statistical test used to discover whether there is a relationship between categorical variables.
+# We compared categorical variables through the chi-square test 
+The chi-squared test is a statistical test used to discover whether there is a relationship between categorical variables.
 ```{r}
 tm_chi_square_test <- function (variable) {
   print("Function Sanity Test: chi-square test")
   chisq <- stats::chisq.test(variable, train$Match_Status, correct = FALSE)
+  print(c("First five rows of variable compared to Match_Status:",(head(variable,5))))
   return(chisq)
 }
 
@@ -254,94 +346,45 @@ tm_chi_square_test(train$Medical_Degree)#Medical Degree is significant
 
 
 ```{r}
+
+# In this correlation plot we want to look for the bright, large circles which immediately show the strong correlations 
+
+# (size and shading depends on the absolute values of the coefficients; color depends on direction).  
+# This shows whether two features are connected so that one changes with a predictable trend if you change the other. The closer this coefficient is to zero the weaker is the correlation. Anything that you would have to squint to see is usually not worth seeing! 
 tm_print_save <- function (filename) {
   print("Function Sanity Check: Saving TIFF of what is in the viewer")
   dev.print(tiff, (here::here("results", filename)), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
   dev.off()
 }
 
-cnum <- train[,c("Age", "USMLE_Step_1_Score")]
-cormat <- stats::cor(cnum) # Select only numeric variables that are significant on univariate testing.  
+cnum <- train[,c("Age", "Count_of_Non_Peer_Reviewed_Online_Publication", "Count_of_Oral_Presentation", "Count_of_Other_Articles", "Count_of_Peer_Reviewed_Book_Chapter", "Count_of_Peer_Reviewed_Journal_Articles_Abstracts", "Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published", "Count_of_Peer_Reviewed_Online_Publication", "Count_of_Poster_Presentation", "Count_of_Scientific_Monograph", "USMLE_Step_1_Score", "USMLE_Step_2_CK_Score", "NIH_dollars" )]
+cormat <- stats::cor(cnum) # Select only numeric variables that are significant on univariate testing.
 pairs <- graphics::pairs(cnum)
+pairs
 #tm_print_save("significant_numeric_variable_correlation.tiff")
-
-corrplot::corrplot(cormat, method="circle")
-corrplot::corrplot(cormat, method="circle", addCoef.col="black") # With correlation 
-tm_print_save("corrplot.tiff")
-rm(cnum)
-rm(cormat)
-
+# 
+#corrplot::corrplot(cormat, method="circle")
+#corrplot::corrplot(cormat, method="circle", addCoef.col="black") # With correlation
+# tm_print_save("corrplot.tiff")
+# rm(cnum)
+# rm(cormat)
 ```
 
-In this correlation plot we want to look for the bright, large circles which immediately show the strong correlations (size and shading depends on the absolute values of the coefficients; color depends on direction).  This shows whether two features are connected so that one changes with a predictable trend if you change the other. The closer this coefficient is to zero the weaker is the correlation. Anything that you would have to squint to see is usually not worth seeing! 
 
-Observations:  Match_Status is most correlated to US_or_Canadian_Applicant and then to Age.  Visa_Sponsorship_Needed, Medical_Education_or_Training_Interrupted, and white_non_white are all variables that might play a secondary role.  The other features are pretty weak.  
-
-```{r, echo=TRUE, include = TRUE}
+```{r, echo=TRUE, include = TRUE, fig.width=12, fig.height=12}
 tm_ggsave <- function (object, filename, ...){  #make sure the file name has quotation marks around it.  
   print("Function Sanity Check: Saving a ggplot image as a TIFF")
-  ggplot2::ggsave(here::here("results", filename), object, device = "tiff", width = 10, height = 7, dpi = 200)
+  ggplot2::ggsave(here::here("results", filename), object, device = "tiff", width = 12, height = 10, dpi = 200)
 }
-
 
 inspect_cor_plot <- inspectdf::inspect_cor(train, method = "pearson", alpha = 0.05) %>% inspectdf::show_plot()  
 inspect_cor_plot
 
 tm_ggsave(inspect_cor_plot, "inspect_cor_plot.tiff")
 ```
-Correlation was found with Count_of_Poster_Presentation, Age, and USMLE_Step_1_Score to Match_Status in the train data set.  The lower the age (correlation -0.33)  the patient the more likely they are to match.  The higher the USMLE_Step_1 scores the more likely they are to match (correlation 0.344).  The younger you are the more likely that you get a higher USMLE_Step_1 score.  The number of posters and the number of abstract articles are positively correleated as well.  The strongest positive correlation was between the count of articles and the count of posters.  No shocker there.  Strong negative correlations were between Age and USMLE step 1 score.  Also match status and age were negatively correlated (the younger you are the more likely you are to match).   
-
-Take a brief look at potential collinearity. We want to see strong correlations between our outcome and the predictors, but modest correlations between the predictors.  There are no correlations between predictors according to the above scatterplots.  If we did see signs of meaningful collinearity, we might rethink our selected set of predictors.
-
-You can see that there is a natural separation between the Match status and USMLE socres.  See bottom row that is second from the left.  Same thing for Age and same thing for Count of posters.  Samne with article abstracts and number of peer-reviewed journals.  ALL COUNT VARIABLES SHOWED SEPARATION IN MATCHED VS. NOT MATCHED.  
-
-The values of correlation range from -1 to 1.  If there is a value of 0 there is no correlation between the variables.  Perfect correlation is 1.  Perfect negative correlation is -1.  
-
-Another way to look at correlation is with a correlation funnel.
-```{r, include=TRUE, echo=FALSE}
-all_data_binarized_tbl <- all_data %>%
-  correlationfunnel::binarize(n_bins = 4, thresh_infreq = 0.01)
-
-all_data_binarized_tbl %>% dplyr::glimpse()
-
-all_data_correlated_tbl <- all_data_binarized_tbl %>%
-  correlationfunnel::correlate(target = Match_Status__Match)
-all_data_correlated_tbl
-
-static_correlation_funnel <- all_data_correlated_tbl %>%
-  correlationfunnel::plot_correlation_funnel(interactive = FALSE, limits = c(-1, 1))
-static_correlation_funnel
-
-tm_ggsave(static_correlation_funnel, "static_correlation_funnel.tiff")
-
-#REALLY COOL AND INSTRUCTIVE
-all_data_correlated_tbl %>%
-  correlationfunnel::plot_correlation_funnel(interactive = TRUE, limits = c(-1, 1))
-```
-
-Another way to look at correlation is with pairs of variables plotted.   
-```{r, include = TRUE, fig.width=8, fig.height=4, fig.cap="Figure: Evaluation of the variable interactions in the train data set."}
-#https://jamesmarquezportfolio.com/correlation_matrices_in_r.html
-colnames(train)
-train_psych <- train %>%
-  dplyr::select_if(is.numeric)
-
-psych_correlation <- psych::pairs.panels(train_psych, bg=c("red","blue")[as.factor(train$Match_Status)], pch=22, jiggle = TRUE, scale = TRUE)
-psych_correlation
-rm(train_psych)
-
-tm_ggsave(psych_correlation, "psych_correlation.tiff")
-```
-
-Billizionth way to review correlation.  
-```{r}
-#Correlation plot
-M <- corrgram::corrgram(all_data)
-M
-```
 
 
-```{r}
+```{r, include=FALSE}
 readr::write_csv(all_data, "~/Dropbox/Nomogram/nomogram/all_data_output_of_split_correlation.csv")
 readr::write_csv(train, "~/Dropbox/Nomogram/nomogram/train_output_of_split_correlation.csv")
 readr::write_csv(test, "~/Dropbox/Nomogram/nomogram/test_output_of_split_correlation.csv")

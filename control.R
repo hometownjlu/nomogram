@@ -6,13 +6,13 @@ print("Sanity check:  The all_years file exists:")
 file.exists("~/Dropbox/Nomogram/nomogram/data/All_ERAS_data_merged_output_2_1_2020.csv")
 
 #Creates the custom functions
-source("~/Dropbox/Nomogram/nomogram/Code/Additional_functions_nomogram.R")
+source("~/Dropbox/Nomogram/nomogram/Code/Additional_functions_nomogram.R", echo=TRUE)  #may need to run by hand
 
 #Exploratory Data Analysis
 #rmarkdown::render()
 rmarkdown::render(input = "~/Dropbox/Nomogram/nomogram/00-Exploratory_Data_Analysis.Rmd")
 pander::openFileInOS("00-Exploratory_Data_Analysis.html")
-
+pander::openFileInOS("00-Exploratory_Data_Analysis.pdf")
 
 #Split the Data
 #rmarkdown::render()

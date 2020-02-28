@@ -3,6 +3,15 @@ title: "A Model to Predict Chances of Matching into Obstetrics and Gynecology Re
 author: "Tyler M. Muffly, MD"
 date: "Department of Obstetrics and Gynecology, Denver Health, Denver, CO"
 output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 2
+    self_contained: true
+    code_folding: hide
+    dev: svg
+    df_print: paged
+    theme: journal
   pdf_document:
     pandoc_args:
     - --wrap=none
@@ -11,15 +20,6 @@ output:
     fig_caption: yes
     #keep_tex: no
     latex_engine: xelatex
-  html_document:
-    toc: true
-    toc_float: true
-    toc_depth: 2
-    self_contained: true
-    code_folding: show
-    dev: svg
-    df_print: paged
-    theme: journal
   word_document:
     toc_depth: '2'
 fontsize: 12pt
@@ -58,7 +58,18 @@ editor_options:
 *Objective:  *
 *We sought to construct and validate a model that predict a medical student's chances of matching into an obstetrics and gynecology residency.*
 
-The Electronic Residency Application Service (ERAS) is a centralized solution to the medical residency application and documents distribution process. The data source to be used for the project is the Electronic Residency Application Service data that was in discrete fields in the application.  No hand-searching of data was done. The data was exported from the ERAS Program Director Work Station under the Archives menu.The data is collected by the University of Colorado OBGYN residency that has both a categorical and a preliminary position.  Medical students who applied to the preliminary position were considered to be unmatched. The data set of years 2015, 2016, 2017, and 2018 applicants to the University of Colorado OBGYN residency. The data is contained in a data frame called 'all_data'. In advance, we might anticipate that USMLE Step 1 Score and US or Canadian Applicant will be key predictors.  Match Status is the dependent Variable and shows the medical students who applied to the OBGYN residency. 
+The Electronic Residency Application Service (ERAS) is a centralized solution to the medical residency application and documents distribution process. The data is contained in a data frame called 'all_data'. In advance, we might anticipate that USMLE Step 1 Score and US or Canadian Applicant will be key predictors.  Match Status is the dependent Variable and shows the medical students who applied to the OBGYN residency. 
+
+The list of applicants and their match status was a compilation from multiple sources.  Ultimately the primary sources listing residents are ACGME and ABOG.  Neither organization will likely share their rosters due to privacy concerns.  Therefore we had over 95% agreement between these three sources:  
+
+1)  The data source to be used for the project is the Electronic Residency Application Service data that was in discrete fields in the application.  No hand-searching of data was done. The data was exported from the ERAS Program Director Work Station under the Archives menu.The data is collected by the University of Colorado OBGYN residency that has both a categorical and a preliminary position.  Medical students who applied to the preliminary position were considered to be unmatched. The data set of years 2015, 2016, 2017, and 2018 applicants to the University of Colorado OBGYN residency. 2019 data includes SOAP participation.   https://apps.aamc.org/account/#/login?gotoUrl=http:%2F%2Fapps.aamc.org%2Feras-pdws-web%2F&allowInternal=false 
+
+2)  A second set of data is the NPI database.  Every physician needs an NPI number to practice and a specialty designation called the taxonomy code.  Residents are required to have this as well.  NPI data distinguishes between specialties so can tell if people applied to OBGYN but failed to match and scrambled into another field.  
+https://npiregistry.cms.hhs.gov 
+
+3)  Lasty, medical schools often publish a list of where their students will be matriculating to.  This is public information and often posted online.  https://www.dropbox.com/sh/ugtgclo02zcv48n/AAC7QWUUSsEdP6gcW6LRY74ta?dl=0 
+
+I would like to create a Venn diagram dmeonstrating the overlap in the data sources.  
 
 # Codebook
 A codebook is a technical description of the data that was collected for a particular purpose. It describes how the data are arranged in the computer file or files, what the various numbers and letters mean, and any special instructions on how to use the data properly.
@@ -1020,8 +1031,8 @@ We can see that these data have `r nrow(all_data)` observations of `r ncol(all_d
 
 # Description of the Data
 * A summary of the variables are listed below:
-1. Eleven of the variables were a factor.  All factors had two levels except for Alpha_Omega_Alpha had three levels.  The target variable is `all_data$Match_Status`.  
-2. Eight of the variables were integers. 
+1. All factors had two levels except for Alpha_Omega_Alpha had three levels.  The target variable is `all_data$Match_Status`.  
+2. The remainder of the variables were integers. 
 
 ```{r structure of data, include=TRUE, echo=TRUE, out.width="75%"}
 # examine the structure of the initial data frame
@@ -1087,7 +1098,7 @@ formula <- paste(dependentVar, "~", paste(drivers, collapse = " + "))
 formula
 ```
 
-```{r Describe data, include=FALSE}
+```{r Describe data, include=TRUE}
 Hmisc::describe(all_data)
 ```
 A nice data summary is available from the `skim` package.   
@@ -1126,8 +1137,6 @@ na_pattern
 
 sum(is.na(all_data))
 ```
-
-
 
 
 # Exploratory data analysis
@@ -1213,7 +1222,7 @@ create_plot_num <-
 
 ```{r funModeling1, echo=TRUE, message=FALSE, warning=TRUE, results='asis', include=FALSE}
 df_status_output <- funModeling::df_status(all_data)
-#desc_groups(data=all_data, group_var="Match_Status")  #Breaks the knitr for some reason
+#desc_groups(data=all_data, group_var="Match_Status")  
 df_status_output
 readr::write_csv(df_status_output, (here::here("results", "df_status_output.csv")))
 ```
@@ -1227,67 +1236,68 @@ readr::write_csv(create_profiling_num_output, (here::here("results", "create_pro
 
 
 # Cross plots of predictors by outcome
-```{r funModeling4, echo=TRUE, message=FALSE, warning=TRUE, include=TRUE, out.width="75%"}
+```{r funModeling4, echo=TRUE, message=TRUE, warning=TRUE, include=TRUE, out.width="75%"}
 #Not working with markdown
 
-#DataExplorer::plot_boxplot(all_data, by = "Match_Status", nrow = 2L, ncol = 2L)
+DataExplorer::plot_boxplot(all_data, by = "Match_Status", nrow = 2L, ncol = 2L)
 #Shows the variable frequency charted by matching status
-#create_plot_cross_plot(all_data)   
+#create_plot_cross_plot(all_data)
 ```
 
 
 # Table: Applicant Descriptive Variables by Matched or Did Not Match from 2015 to 2018
-```{r, echo=TRUE, warning=FALSE, message=FALSE, include=TRUE, results="asis"}
+```{r, echo=TRUE, warning=FALSE, message=TRUE, include=TRUE, results="asis"}
 #Added for Rmarkdown, NOT WORKING NOW!!!
 # Draws a nice table one plot
 
 # Draws a nice table one plot
-# tm_arsenal_table = function(df, by){
-#   print("Function Sanity Check: Create Arsenal Table using arsenal package")
-#   table_variable_within_function <- arsenal::tableby(by ~ .,
-#                  data=df, control = tableby.control(test = TRUE,
-#                                                                 total = F,
-#                                                                 digits = 1L,
-#                                                                 digits.p = 2L,
-#                                                                 digits.count = 0L,
-#                                                                 numeric.simplify = F,
-#                                                                 numeric.stats =
-#                                                                   c("median",
-#                                                                     "q1q3"),
-#                                                                 cat.stats =
-#                                                                   c("Nmiss",
-#                                                                     "countpct"),
-#                                                                 stats.labels = list(Nmiss = "N Missing",
-#                                                                                     Nmiss2 ="N Missing",
-#                                                                                     meansd = "Mean (SD)",
-#                                                                                     medianrange = "Median (Range)",
-#                                                                                     median ="Median",
-#                                                                                     medianq1q3 = "Median (Q1, Q3)",
-#                                                                                     q1q3 = "Q1, Q3",
-#                                                                                     iqr = "IQR",
-#                                                                                     range = "Range",
-#                                                                                     countpct = "Count (Pct)",
-#                                                                                     Nevents = "Events",
-#                                                                                     medSurv ="Median Survival",
-#                                                                                     medTime = "Median Follow-Up")))
-#   final <- summary(table_variable_within_function,
-#           text=T,
-#           title = 'Table: Applicant Descriptive Variables by Matched or Did Not Match from 2015 to 2018',
-#           labelTranslations = mylabels, #Seen in additional functions file
-#           pfootnote=TRUE)
-#   return(final)
-# }
-# 
-# tm_arsenal_table_output <- tm_arsenal_table(df = all_data, by = all_data$Match_Status)
-# tm_arsenal_table_output
-# 
-# tm_write2word(tm_arsenal_table_output, "tm_arsenal_table_output1")
-# tm_write2pdf(tm_arsenal_table_output, "tm_arsenal_table_output1")
+tm_arsenal_table = function(df, by){
+  print("Function Sanity Check: Create Arsenal Table using arsenal package")
+  table_variable_within_function <- arsenal::tableby(by ~ .,
+                 data=df, control = arsenal::tableby.control(test = TRUE,
+                                                                total = F,
+                                                                digits = 1L,
+                                                                digits.p = 2L,
+                                                                digits.count = 0L,
+                                                                numeric.simplify = F,
+                                                                numeric.stats =
+                                                                  c("median",
+                                                                    "q1q3"),
+                                                                cat.stats =
+                                                                  c("Nmiss",
+                                                                    "countpct"),
+                                                                stats.labels = list(Nmiss = "N Missing",
+                                                                                    Nmiss2 ="N Missing",
+                                                                                    meansd = "Mean (SD)",
+                                                                                    medianrange = "Median (Range)",
+                                                                                    median ="Median",
+                                                                                    medianq1q3 = "Median (Q1, Q3)",
+                                                                                    q1q3 = "Q1, Q3",
+                                                                                    iqr = "IQR",
+                                                                                    range = "Range",
+                                                                                    countpct = "Count (Pct)",
+                                                                                    Nevents = "Events",
+                                                                                    medSurv ="Median Survival",
+                                                                                    medTime = "Median Follow-Up")))
+  final <- summary(table_variable_within_function,
+          text=T,
+          title = 'Table: Applicant Descriptive Variables by Matched or Did Not Match from 2015 to 2018',
+          #labelTranslations = mylabels, #Seen in additional functions file
+          pfootnote=TRUE)
+  return(final)
+}
+
+tm_arsenal_table_output <- tm_arsenal_table(df = all_data, by = all_data$Match_Status)
+tm_arsenal_table_output
+
+tm_write2word(tm_arsenal_table_output, "tm_arsenal_table_output1")
+tm_write2pdf(tm_arsenal_table_output, "tm_arsenal_table_output1")
 ```
 
 ```{r}
 readr::write_csv(all_data, "~/Dropbox/Nomogram/nomogram/all_data_end_of_EDA.csv")
 file.exists("~/Dropbox/Nomogram/nomogram/all_data_end_of_EDA.csv")
+#test
 ```
 
 
