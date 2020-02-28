@@ -53,10 +53,16 @@ class(train$Match_Status)
 all_data <- all_data %>%
 dplyr::mutate(Match_Status = dplyr::recode(Match_Status, `Did Not Match` = "0", Match = "1"))
 all_data$Match_Status <- as.numeric(all_data$Match_Status)
+
+tm_print_save <- function (filename) {
+  print("Function Sanity Check: Saving TIFF of what is in the viewer")
+  grDevices::dev.print(tiff, (here::here("results", filename)), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
+  dev.off()
+}
 ```
 
 # Review the variables
-"Malpractice_Cases_Pending", Removed because this is due to the fact that all people had 0 cases/zero variance
+"Malpractice_Cases_Pending", Removed because this is due to the fact that all people had 0 cases/zero variance variable.  
 ```{r, include=TRUE, echo=FALSE}
 #https://github.com/manojmukkamala/DiabeticPatientsReadmission/blob/master/Project_V4.R
 #Just writing the names of all the variables under one term to avoid re-writing when we apply model multiple times
@@ -102,7 +108,76 @@ dependentVar <- "Match_Status"
 formula <- paste(dependentVar, "~", paste(drivers, collapse = " + "))
 formula
 ```
+I spent a lot of time getting the feature selection right because of the possible complaints of discrimination when saying that gender and age and other stuff matters.  This is specifically to address NS's complaints while creating a parisimonious and fast model.  
 
+# Feature Selection: Boruta wrapper around randomForest classification algo
+You can see how you can use Boruta to perform a top-down search for relevant features by comparing original attributes' importance with importance achievable at random, estimated using their permuted copies, and progressively eliminating irrelevant features.
+https://www.datacamp.com/community/tutorials/feature-selection-R-boruta 
+https://www.r-bloggers.com/venn-diagram-comparison-of-boruta-fselectorrcpp-and-glmnet-algorithms/
+
+Reference:  
+https://www.jstatsoft.org/article/view/v036i11 
+DOI:  10.18637/jss.v036.i11
+
+First, Boruta  duplicates the dataset, and shuffle the values in each column. These values are called shadow features. * Then, it trains a classifier, such as a Random Forest Classifier, on the dataset. By doing this, you ensure that you can an idea of the importance -via the Mean Decrease Accuracy or Mean Decrease Impurity- for each of the features of your data set. The higher the score, the better or more important.
+
+Then, the algorithm checks for each of your real features if they have higher importance. That is, whether the feature has a higher Z-score than the maximum Z-score of its shadow features than the best of the shadow features. If they do, it records this in a vector. These are called a hits. Next,it will continue with another iteration. After a predefined set of iterations, you will end up with a table of these hits. Remember: a Z-score is the number of standard deviations from the mean a data point is.
+
+At every iteration, the algorithm compares the Z-scores of the shuffled copies of the features and the original features to see if the latter performed better than the former. If it does, the algorithm will mark the feature as important. In essence, the algorithm is trying to validate the importance of the feature by comparing with random shuffled copies, which increases the robustness. This is done by simply comparing the number of times a feature did better with the shadow features using a binomial distribution.
+
+If a feature hasn't been recorded as a hit in say 15 iterations, you reject it and also remove it from the original matrix. After a set number of iterations -or if all the features have been either confirmed or rejected- you stop.
+
+```{r}
+knitr::include_graphics("images/boruta_algo.png")
+```
+
+```{r, include=FALSE, echo=FALSE, cache=TRUE, warning=FALSE}
+#Method:  Boruta search
+set.seed(123)
+boruta_output <- Boruta::Boruta(Match_Status ~ ., 
+                                data=na.omit(all_data), 
+                                pValue = 0.01,
+                                maxRuns = 1000,
+                                doTrace=2,  #show the models as it works
+                                ntree=500)  
+names(boruta_output)
+Boruta::getConfirmedFormula(boruta_output)
+Boruta::attStats(boruta_output)
+```
+
+## Get significant variables including tentatives from Boruta.
+Boruta gives a call on the significance of features in a data set. Many of them are already classified as important and unimportant but you see that there are some who have been assigned in tentative category.
+
+But what does this mean?
+Tentative features have an importance that is so close to their best shadow features that Boruta is not able to make a decision with the desired confidence in the default number of Random Forest runs.  I increased the number of maxRuns and the number of trees to decrease the number of tentatives.  
+
+```{r, warning=FALSE}
+# Get significant variables including tentatives
+boruta_signif <-Boruta::getSelectedAttributes(boruta_output, withTentative = TRUE)
+print(boruta_signif)  
+boruta_signif1 <- tibble::as_tibble(boruta_signif)
+boruta_signif1
+readr::write_csv(boruta_signif1, (here::here("results", "boruta_signif.csv")))
+
+roughFixMod <- Boruta::TentativeRoughFix(boruta_output)  # Do a tentative rough fix
+boruta_signif <- Boruta::getSelectedAttributes(roughFixMod)
+
+imps <- Boruta::attStats(roughFixMod)
+imps2 = imps[imps$decision != 'Rejected', c('meanImp', 'decision')] #filter out the Rejects
+boruta_confirmed_variables <- imps2[order(-imps2$meanImp), ]  # sort all the confirmed variables in descending sort
+
+knitr::kable(boruta_confirmed_variables, caption = "Boruta Confirmed Variables")
+```
+
+## Plot Boruta variables by importance
+The y axis label Importance represents the Z score of every feature in the shuffled dataset.  The blue boxplots correspond to minimal, average and maximum Z score of a shadow feature, while the red and green boxplots represent Z scores of rejected and confirmed features, respectively. As you can see the red boxplots have lower Z score than that of maximum Z score of shadow feature which is precisely the reason they were put in unimportant category.
+```{r, warning = FALSE}
+BorutaImportance <- plot(boruta_output, cex.axis=0.35, las=2, xlab="", main="Boruta Variable Importance")  # Plot variable importance
+#plot(BorutaImportance)
+#plot(BorutaImportance,las=3)
+
+tm_print_save("Boruta_Variable_Importance.tiff")
+```
 
 # Factor Selection using Forward/Backwards Regression via Variable Importance
 https://dataaspirant.com/2018/01/15/feature-selection-techniques-r/
@@ -118,7 +193,7 @@ https://quantifyinghealth.com/stepwise-selection/
 knitr::include_graphics("images/forward-stepwise-algorithm.png")
 ```
 
-```{r, echo=TRUE, include = T}
+```{r, echo=TRUE, include = F}
 #Forward regression!!  #https://campus.datacamp.com/courses/supervised-learning-in-r-classification/chapter-3-logistic-regression?ex=15
 # Specify a null model with no predictors
 null_model <- stats::glm(formula = Match_Status ~ 1, data = all_data, family = "binomial")
@@ -131,14 +206,14 @@ step_model <- stats::step(null_model, scope = list(lower = null_model, upper = f
 ```
 
 The output by logistic model gives us the estimates and probability values for each of the features. It also marks the important features with stars based on p-values.
-```{r, echo=TRUE, include = T}
+```{r, echo=TRUE, include = T, warning=FALSE}
 tm_broom <- function(model){
   print("Function Sanity Test: Model Evaluation")
   model_output <- broom::tidy(step_model, conf.int=TRUE) %>% 
   dplyr::select(-statistic, -std.error) %>% 
   dplyr::filter(term != "(Intercept)") %>%
   dplyr::arrange(p.value) %>%
-  dplyr::select(term, estimate, conf.low, conf.high, p.value, everything())
+  dplyr::select(term, estimate, conf.low, conf.high, p.value, tidyselect::everything())
   return(model_output)
 }
 
@@ -183,7 +258,7 @@ knitr::include_graphics("images/backward-stepwise-algorithm.png")
 ```
 
 ##Try BACKWARDS stepwise regression here:
-```{r, echo=TRUE, include = T}
+```{r, echo=TRUE, include = F}
 #BACKWARDS regression!!  #https://campus.datacamp.com/courses/supervised-learning-in-r-classification/chapter-3-logistic-regression?ex=15
 # Specify a null model with no predictors
 null_model <- glm(formula = formula, data = all_data, family = "binomial")
@@ -221,34 +296,34 @@ pROC::auc(backwards_ROC)
 ```
 
 
-#Factor Selection:  Principal Components Analysis
+# Factor Selection:  Principal Components Analysis
 Principal Component Analysis (PCA)  was initially developed to analyse large volumes of data in order to tease out the differences/relationships between the logical entities being analysed. It extracts the fundamental structure of the data without the need to build any model to represent it. This 'summary' of the data is arrived at through a process of reduction that can transform the large number of variables into a lesser number that are uncorrelated (i.e. the ‘principal components'), whilst at the same time being capable of easy interpretation on the original data.
 
 In order to reduce `r nrow(all_data) ` dimensions or knowing the significant impact of our reduction we will do PCA.
 ```{r, echo=FALSE, include=TRUE}
 all_data_pca <- caret::preProcess(dplyr::select(all_data, - Match_Status), 
                         method = c("center", "scale", "nzv", "pca"))
-all_data_pca
-all_data_pca$method
-head(all_data_pca$rotation,3)
-all_data_pca$method$pca
+# all_data_pca
+# all_data_pca$method
+# head(all_data_pca$rotation,3)
+# all_data_pca$method$pca
 
 knitr::kable(all_data_pca$method$pca, format = "html", caption = "Principal Components Analysis for all_data, numeric variables")
 ```
 
 
-##PCA Approach 2
+## PCA Approach 2
 ```{r}
 numeric_data <- dplyr::select_if(all_data, is.numeric)
 numeric_data <- base::scale(numeric_data, center=TRUE, scale = TRUE)
 pcaObj <- stats::princomp(numeric_data, cor = TRUE, scores = TRUE, covmat = NULL)
-summary(pcaObj)
-print(pcaObj)
+#summary(pcaObj)
+#print(pcaObj)
 
 plot(pcaObj, main="Principal Component Analysis \n Reduction in Number of Variables")
 pcaObj$loadings[,1]
 #I have no idea what this plot means
-stats::biplot(pcaObj, cex = 1.0, main="Biplot of Principal Component Analysis \n Reduction in Number of Variables")
+#stats::biplot(pcaObj, cex = 1.0, main="Biplot of Principal Component Analysis \n Reduction in Number of Variables")
 tm_print_save("Principal_Components_for_numeric_data.tiff")
 ```
 
@@ -306,7 +381,7 @@ So how many principal components should we use in the my_basket example? The fra
 knitr::include_graphics("images/mars.jpg")
 ```
 
-```{r}
+```{r, include=FALSE}
 # https://bradleyboehmke.github.io/HOML/mars.html
 # create a tuning grid
 hyper_grid <- expand.grid(
@@ -317,8 +392,7 @@ hyper_grid <- expand.grid(
 head(hyper_grid)
 ```
 
-
-```{r}
+```{r, include = FALSE}
 all_data <- readr::read_csv("~/Dropbox/Nomogram/nomogram/all_data_output_of_split_correlation.csv")
 train <- readr::read_csv("~/Dropbox/Nomogram/nomogram/train_output_of_split_correlation.csv")
 test <- readr::read_csv("~/Dropbox/Nomogram/nomogram/test_output_of_split_correlation.csv")
@@ -339,19 +413,27 @@ all_data$Match_Status<- as.factor(all_data$Match_Status)
 ```
 
 MARS allows for non-linear models.  The MARS method and algorithm can be extended to handle classification problems and GLMs in general.
+
 https://bradleyboehmke.github.io/HOML/mars.html
+
 http://uc-r.github.io/mars
-```{r}
+```{r, include = TRUE}
 tuned_mars <- caret::train(Match_Status~.,
   data = all_data,
   method = "earth",
   trControl = caret::trainControl(method = "cv", number = 10, classProbs = TRUE),
   tuneGrid = hyper_grid
 )
+```
 
+
+```{r, include = F}
 tuned_mars
 tm_print_save("Degree_of_products.tiff")
+```
 
+
+```{r, include = T}
 # best model
 tuned_mars$bestTune
 
@@ -360,14 +442,12 @@ summary(tuned_mars) %>% .$coefficients
 ```
 
 ```{r}
-plot(tuned_mars, which = 1, , main="Model summary capturing GCV  R2 (left-hand y-axis and solid black line) based on the number of terms retained (x-axis) which is based on the number of predictors used to make those terms (right-hand side y-axis). For this model, 11 non-intercept terms were retained which are based on 18 predictors. Any additional terms retained in the model, over and above these 11, result in less than 0.001 improvement in the GCV R2")
+plot(tuned_mars, which = 1, , main="Model summary capturing GCV  R2 \n (left-hand y-axis and solid black line) based on the number of terms retained (x-axis) \n which is based on the number of predictors used to make those terms (right-hand side y-axis). \nFor this model, 11 non-intercept terms were retained which are based on 18 predictors. \nAny additional terms retained in the model, over and above these 11, result in less than \n 0.001 improvement in the GCV R2")
 tm_print_save(filename = "mars1_model_selection.tiff")
 ```
 
-In addition to pruning the number of knots, earth::earth() allows us to also assess potential interactions between different hinge functions. The following illustrates this by including a degree = 2 argument. 
-
-You can see that now our model includes interaction terms between a maximum of two hinge functions (e.g., h(Age-34.1890410958904)*US_or_Canadian_Applicantinternational represents an interaction effect for those applicants less than 34 and was not a US_or_Canadian_Applicant).
-```{r}
+In addition to pruning the number of knots, earth::earth() allows us to also assess potential interactions between different hinge functions. 
+```{r, include=TRUE}
 # Fit a basic MARS model
 mars2 <- earth(
   Match_Status ~ .,  
@@ -413,7 +493,7 @@ GCV = Generalized cross-validation (GCV) procedure,
 RSS = residual sums of squares
 
 Variable importance based on impact to GCV (left) and RSS (right) values as predictors are added to the model. Both variable importance measures will usually give you very similar results.
-```{r}
+```{r, warning=FALSE, include=FALSE}
 # variable importance plots
 # https://bradleyboehmke.github.io/HOML/mars.html
 #Variable Importance Function
@@ -443,7 +523,7 @@ p2
 ```
 
 Its important to realize that variable importance will only measure the impact of the prediction error as features are included; however, it does not measure the impact for particular hinge functions created for a given feature.
-```{r}
+```{r, warning=FALSE}
 # extract coefficients, convert to tidy data frame, and
 # filter for interaction terms
 # https://bradleyboehmke.github.io/HOML/mars.html
@@ -452,26 +532,9 @@ optimal_combinations <- cv_mars$finalModel %>%
   broom::tidy() %>%  
   dplyr::filter(stringr::str_detect(names, "\\*")) 
 optimal_combinations
+
+#Interaction between features show that younger Age and international/US_or_Canadian_Applicant interact positively.  A medical education interruption and USMLE Step 1 score are negative interaction.  There is a three way interaction between (Age-34.6), international applicants (US_or_Canadian_Applicantinternational), Visa_Sponsorship_needed_yes (Visa_Sponsorship_NeededYes) that is negative.  
 ```
-Interaction between features show that younger Age and international/US_or_Canadian_Applicant interact positively.  A medical education interruption and USMLE Step 1 score are negative interaction.  There is a three way interaction between (Age-34.6), international applicants (US_or_Canadian_Applicantinternational), Visa_Sponsorship_needed_yes (Visa_Sponsorship_NeededYes) that is negative.  
-
-```{r}
-#Method 5:  Variable important from ML algorithm 
-# Train the model using randomForest and predict on the training data itself.
-model_mars = caret::train(Match_Status ~ ., data=all_data, method='earth')
-model_mars
-#fitted <- stats::predict(model_mars)
-#fitted
-
-plot(model_mars, main="Model Accuracies based on \n the number of terms with MARS") 
-#tm_print_save(filename = "model_mars_plot.tiff")
-
-varimp_mars <- caret::varImp(model_mars)
-plot(varimp_mars, main="Variable Importance with MARS") #Visual of the most important factors
-#tm_print_save("varimp_mars.tiff")
-```
-The MARS model shows that *** terms were likely to improve accuracy (`model_mars`).  Variable importance shows that *** US_or_Canadian_applicants, USMLE_Step_1_Score, Age, Medial_Degree, and Visa_Sponsorship_Needed all show significant importance (`varimp_mars`).  
-
 
 ```{r}
 #Feature Selection: Recursive Feature Elimination 
@@ -514,76 +577,6 @@ The MARS model shows that *** terms were likely to improve accuracy (`model_mars
 
 ```
 
-# Feature Selection: Boruta wrapper around randomForest classification algo
-You can see how you can use Boruta to perform a top-down search for relevant features by comparing original attributes' importance with importance achievable at random, estimated using their permuted copies, and progressively eliminating irrelevant features.
-https://www.datacamp.com/community/tutorials/feature-selection-R-boruta 
-https://www.r-bloggers.com/venn-diagram-comparison-of-boruta-fselectorrcpp-and-glmnet-algorithms/
-
-Reference:  
-https://www.jstatsoft.org/article/view/v036i11 
-DOI:  10.18637/jss.v036.i11
-
-First, Boruta  duplicates the dataset, and shuffle the values in each column. These values are called shadow features. * Then, it trains a classifier, such as a Random Forest Classifier, on the dataset. By doing this, you ensure that you can an idea of the importance -via the Mean Decrease Accuracy or Mean Decrease Impurity- for each of the features of your data set. The higher the score, the better or more important.
-
-Then, the algorithm checks for each of your real features if they have higher importance. That is, whether the feature has a higher Z-score than the maximum Z-score of its shadow features than the best of the shadow features. If they do, it records this in a vector. These are called a hits. Next,it will continue with another iteration. After a predefined set of iterations, you will end up with a table of these hits. Remember: a Z-score is the number of standard deviations from the mean a data point is.
-
-At every iteration, the algorithm compares the Z-scores of the shuffled copies of the features and the original features to see if the latter performed better than the former. If it does, the algorithm will mark the feature as important. In essence, the algorithm is trying to validate the importance of the feature by comparing with random shuffled copies, which increases the robustness. This is done by simply comparing the number of times a feature did better with the shadow features using a binomial distribution.
-
-If a feature hasn't been recorded as a hit in say 15 iterations, you reject it and also remove it from the original matrix. After a set number of iterations -or if all the features have been either confirmed or rejected- you stop.
-
-```{r}
-knitr::include_graphics("images/boruta_algo.png")
-```
-
-```{r}
-#Method:  Boruta search
-set.seed(123)
-boruta_output <- Boruta::Boruta(Match_Status ~ ., 
-                                data=na.omit(all_data), 
-                                pValue = 0.01,
-                                maxRuns = 1000,
-                                doTrace=2,  #show the models as it works
-                                ntree=500)  
-names(boruta_output)
-Boruta::getConfirmedFormula(boruta_output)
-Boruta::attStats(boruta_output)
-```
-
-## Get significant variables including tentatives from Boruta.
-Boruta gives a call on the significance of features in a data set. Many of them are already classified as important and unimportant but you see that there are some who have been assigned in tentative category.
-
-But what does this mean?
-Tentative features have an importance that is so close to their best shadow features that Boruta is not able to make a decision with the desired confidence in the default number of Random Forest runs.  I increased the number of maxRuns and the number of trees to decrease the number of tentatives.  
-
-I am selecting variables with `all_data`.
-
-```{r}
-# Get significant variables including tentatives
-boruta_signif <-Boruta::getSelectedAttributes(boruta_output, withTentative = TRUE)
-print(boruta_signif)  
-boruta_signif1 <- tibble::as_tibble(boruta_signif)
-boruta_signif1
-readr::write_csv(boruta_signif1, (here::here("results", "boruta_signif.csv")))
-
-roughFixMod <- Boruta::TentativeRoughFix(boruta_output)  # Do a tentative rough fix
-boruta_signif <- Boruta::getSelectedAttributes(roughFixMod)
-
-imps <- Boruta::attStats(roughFixMod)
-imps2 = imps[imps$decision != 'Rejected', c('meanImp', 'decision')] #filter out the Rejects
-boruta_confirmed_variables <- imps2[order(-imps2$meanImp), ]  # sort all the confirmed variables in descending sort
-boruta_confirmed_variables
-```
-
-## Plot Boruta variables by importance
-The y axis label Importance represents the Z score of every feature in the shuffled dataset.  The blue boxplots correspond to minimal, average and maximum Z score of a shadow feature, while the red and green boxplots represent Z scores of rejected and confirmed features, respectively. As you can see the red boxplots have lower Z score than that of maximum Z score of shadow feature which is precisely the reason they were put in unimportant category.
-```{r}
-BorutaImportance <- plot(boruta_output, cex.axis=0.35, las=2, xlab="", main="Boruta Variable Importance")  # Plot variable importance
-#plot(BorutaImportance)
-#plot(BorutaImportance,las=3)
-
-tm_print_save("Boruta_Variable_Importance.tiff")
-```
-
 # Feature Selection: GLMNet to do factor selection with the previously made LASSO model
 Regularization methods provide a means to constrain or regularize the estimated coefficients, which can reduce the variance and decrease out of sample error.
 
@@ -593,7 +586,7 @@ The glmnet package is extremely efficient and fast, even on very large data sets
 knitr::include_graphics("images/lassoandridge.png")
 ```
 
-```{r, echo=TRUE}
+```{r, echo=TRUE, include=FALSE, warning=FALSE}
 # https://bradleyboehmke.github.io/HOML/regularized-regression.html#attrition-data
 #https://www.datacamp.com/community/tutorials/tutorial-ridge-lasso-elastic-net
 
@@ -643,7 +636,7 @@ The alpha parameter tells glmnet to perform a ridge (alpha = 0), lasso (alpha = 
 knitr::include_graphics("images/lassoandridgeregression.png")
 ```
 
-```{r}
+```{r, include=TRUE}
 # https://bradleyboehmke.github.io/HOML/regularized-regression.html
 
 # Train glmnet with custom trainControl and tuning: model
@@ -686,10 +679,8 @@ tm_print_save("lasso_mod.tiff")
 ```
   
 Plot LASSO factors - Plot the individual variables by lambda.  Saves the lasso.mod to an RDS file for later use.  Coefficients for our ridge regression model as λ grows from  0 → ∞
-
-
 ```{r}
-knitr::include_graphics("images/lasso_with_labels.png")
+knitr::include_graphics("images/lasso_with_labels.jpg")
 ```
 
  
@@ -732,9 +723,8 @@ glmnet1 <-
             alpha=.5, 
             family="binomial")
 
+plot(glmnet1,main = "Misclassification Error")
 misclassification_error <- plot(glmnet1,main = "Misclassification Error")
-misclassification_error
-
 tm_ggsave(misclassification_error, "misclassification_error.tiff")
 ```
 The left vertical line represents the minimum error, and the right vertical line represents the cross-validated error within 1 standard error of the minimum. LASSO, least absolute shrinkage and selection operator
@@ -875,7 +865,7 @@ So how does this compare to our previous best model for the train data set? Intr
 ```{r}
 # predict matching_status on training data
 pred <- stats::predict(cv_glmnet, x)
-head(pred, 5)
+#head(pred, 5)
 ```
 
 # Feature Selection: Magnitude Feature Interpretation
@@ -890,101 +880,7 @@ tm_ggsave(object = feature_interpretation_regularized_regression, filename = "fe
 Penalized regression model shows that USMLE Step 1 Score is the most important followed by IMG and followed by Age.  
 
 
-# Review of all feature Selection Results
-```{r}
-#Forward regression
-forward_drivers
-
-#Backward regression
-backward_drivers
-
-#List of boruta variables
-boruta_confirmed_variables
-
-#MARS
-plot(tuned_mars)
-summary(tuned_mars) %>% .$coefficients 
-gridExtra::grid.arrange(p1, p2, ncol = 2)
-
-cv_mars$bestTune
-##    nprune degree
-## 22     12      3  #The model that provides the optimal combination includes third degree interaction effects and retains 12 terms.
-plot(model_mars, main="Model Accuracies based on \n the number of terms with MARS")  # Number of terms to use to optimize accuracy
-
-optimal_combinations
-
-plot(varimp_mars, main="Variable Importance with MARS") #Visual of the most important factors
-
-
-
-#Principal Components Analysis foudn thhat six factors were needed to capture 95% of the variance:
-all_data_pca$method$pca
-#Alternative PCA
-pcaObj$loadings[,1]
-
-#Using recursive feature eliminiation found eight variables were needed:
-#lmProfile
-
-#Boruta
-boruta_output
-boruta_signif
-
-#Variable Importance of Each Variable in the Regularized Regression Model
-feature_interpretation_regularized_regression
-
-#Boruta is nice because it tells you what is rejected and what was included.  
-boruta_output
-boruta_output$finalDecision
-plot(BorutaImportance)
-boruta_signif
-
-# plot results, create grid of all importance graphs?
-par(mfrow = c(1, 2))
-plot(ridge, main = "Ridge penalty\n\n")
-plot(lasso, main = "Lasso penalty\n\n")
-```
-
-
-
-Comparing logistic regression model with penalized regression model. 
-```{r}
-# train logistic regression model
-set.seed(123)
-glm_mod <- caret::train(
-  Match_Status ~ ., 
-  data = train, 
-  method = "glm",
-  family = "binomial",
-  preProc = c("zv", "center", "scale"),
-  trControl = trainControl(method = "cv", number = 10)
-  )
-
-# train regularized logistic regression model
-set.seed(123)
-penalized_mod <- caret::train(
-  Match_Status ~ ., 
-  data = train, 
-  method = "glmnet",
-  family = "binomial",
-  preProc = c("zv", "center", "scale"),
-  trControl = trainControl(method = "cv", number = 10),
-  tuneLength = 10
-  )
-```
-
-
-```{r}
-# extract out of sample performance measures
-summary(resamples(list(
-  logistic_model = glm_mod, 
-  penalized_model = penalized_mod, 
-  mars_model = tuned_mars
-  )))$statistics$Accuracy
-```
-The output shows minimal improvement with the penalized model (median accuracy = 0.809) compared to the logistic model (median accuracy = 0.803). 
-
-
-#Factor Selection: LASSO (Least Absolute Shrinkage and Selection Operator)
+# Factor Selection: LASSO (Least Absolute Shrinkage and Selection Operator)
 Also, I like lasso because some people will find that using predictors of age, race, gender as predictors will be discriminatory.  In short, LASSO eliminates the need for an author to be a subject expert on matching when selecting variables.  
 
 Here, we use Lasso for simplicity and interpretability. The aim is to avoid over-parametrization and unnecessary model bias by carrying feature selection on-the-go. Key to this task will be cross-validation.  Start by creating a custom train control providing the number of cross-validations and setting the classProbs to TRUE for logistic regression. 
@@ -1007,9 +903,9 @@ Factor Selection: Variable selection using LASSO in the train dataset
 ```
  This feature selection with LASSO was not very helpful because it eliminated zero features (see `variables`).  See VIP figure above (`feature_interpretation_regularized_regression`) for a clearer answer as to what features to select.
 
- ```{r, results="asis"}
-# knitr::kable(variables, caption = "Variables Chosen by LASSO to Predict Matching into OBGYN based on the Train Data")
- ```
+```{r}
+knitr::kable(variables, caption = "Variables Chosen by LASSO to Predict Matching into OBGYN based on the Train Data")
+```
   
 ## Factor Selection: Revise GLM Model with factors selected by LASSO
 Creating a more parsiomonious model using the variables selected by LASSO in the train dataset. 
@@ -1091,5 +987,87 @@ oddsratios <-
 knitr::kable(oddsratios, digits = 2)
 ```
 
+# Review of all feature Selection Results
 
+## Variables select by Boruta
+These are the variables that I would like to proceed with.  
+```{r}
+#List of boruta variables
+boruta_signif
+knitr::kable(boruta_confirmed_variables, caption = "Variables chosen from Boruta/Random Forest")
+```
+
+## Variables selected by forward regression
+```{r}
+#Forward regression
+knitr::kable(forward_drivers, caption = "Variables chosen from forward regression")
+```
+
+## Variables selected by backward regression
+```{r}
+#Backward regression
+knitr::kable(backward_drivers, caption = "Variables chosen from backwards regression")
+```
+
+## Variables selected by MARS
+```{r}
+knitr::kable(optimal_combinations, caption = "Variables chosen from MARS")
+# #MARS
+# plot(tuned_mars)
+# summary(tuned_mars) %>% .$coefficients 
+# gridExtra::grid.arrange(p1, p2, ncol = 2)
+# 
+# cv_mars$bestTune
+# ##    nprune degree
+# ## 22     12      3  #The model that provides the optimal combination includes third degree interaction effects and retains 12 terms.
+# plot(model_mars, main="Model Accuracies based on \n the number of terms with MARS")  # Number of terms to use to optimize accuracy
+# plot(varimp_mars, main="Variable Importance with MARS") #Visual of the most important factors
+```
+
+## Variables selecte by Principal Components Analysis
+```{r}
+knitr::kable(all_data_pca$method$pca, caption = "Principal Components Analysis")
+```
+
+# Final selection of variables
+```{r, include=TRUE}
+boruta_drivers <- c("ACLS",
+                                                                     "Age",
+                                                       "Alpha_Omega_Alpha",
+                                                                    "ACLS",
+                                                                     "BLS",
+                                                             "Citizenship",
+                           #"Count_of_Non_Peer_Reviewed_Online_Publication",
+                                      #        "Count_of_Oral_Presentation",
+                                     #            "Count_of_Other_Articles",
+                                    #"Count_of_Peer_Reviewed_Book_Chapter",
+                      "Count_of_Peer_Reviewed_Journal_Articles_Abstracts",
+ #"Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published",
+  #                            "Count_of_Peer_Reviewed_Online_Publication",
+                                           "Count_of_Poster_Presentation",
+   #                                       "Count_of_Scientific_Monograph",
+                                                          "Couples_Match",
+                                                                 "Gender",
+                                                         #"Medical_Degree",
+                              "Medical_Education_or_Training_Interrupted",
+                                              #"Medical_Licensure_Problem",
+                                            #"Military_Service_Obligation",
+                                                 #"Misdemeanor_Conviction",
+                                                            "NIH_dollars",
+                                                                   "PALS",
+                                                        #"Sigma_Sigma_Phi",
+                                                 "Type_of_medical_school",
+                                               "US_or_Canadian_Applicant",
+                                                     "USMLE_Step_1_Score",
+                                                  "USMLE_Step_2_CK_Score",
+                                                "Visa_Sponsorship_Needed",
+                                                        "white_non_white")
+
+#Writing the name of dependent variable seperately
+dependentVar <- "Match_Status"
+
+#Bringing all the column names under one term
+final_formula <- paste(dependentVar, "~", paste(boruta_drivers, collapse = " + "))
+final_formula
+```
 

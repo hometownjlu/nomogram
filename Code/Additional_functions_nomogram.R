@@ -190,7 +190,7 @@ tm_rpart_plot = function(df){
 tm_arsenal_table = function(df, by){
   print("Function Sanity Check: Create Arsenal Table using arsenal package")
   table_variable_within_function <- arsenal::tableby(by ~ .,
-                 data=df, control = tableby.control(test = TRUE,
+                 data=df, control = arsenal::tableby.control(test = TRUE,
                                                                 total = F,
                                                                 digits = 1L,
                                                                 digits.p = 2L,

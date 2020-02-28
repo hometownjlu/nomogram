@@ -38,7 +38,7 @@ editor_options:
 ---
 
 # Read in the original `all_data`, `train`, and `test`
-```{r}
+```{r, include = FALSE}
 library(magrittr)
 all_data <- readr::read_csv("~/Dropbox/Nomogram/nomogram/all_data_output_of_split_correlation.csv")
 train <- readr::read_csv("~/Dropbox/Nomogram/nomogram/train_output_of_split_correlation.csv")
@@ -51,78 +51,41 @@ train$Match_Status <- as.numeric(train$Match_Status)
 class(train$Match_Status)
 ```
 
-# Review the variables
-"Malpractice_Cases_Pending", Removed because this is due to the fact that all people had 0 cases/zero variance
+# Review the final variables from Boruta
 ```{r}
-#https://github.com/manojmukkamala/DiabeticPatientsReadmission/blob/master/Project_V4.R
-#Just writing the names of all the variables under one term to avoid re-writing when we apply model multiple times
-
-#"Malpractice_Cases_Pending", Removed because this is due to the fact that all people had 0 cases/zero variance
-
-drivers <- c("ACLS",
-                                                                     "Age",
-                                                       "Alpha_Omega_Alpha",
-                                                         # "Applicant_Name",
-                                                                     "BLS",
-                                                             "Citizenship",
-                           "Count_of_Non_Peer_Reviewed_Online_Publication",
-                                              "Count_of_Oral_Presentation",
-                                                 "Count_of_Other_Articles",
-                                    "Count_of_Peer_Reviewed_Book_Chapter",
-                      "Count_of_Peer_Reviewed_Journal_Articles_Abstracts",
- "Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published",
-                              "Count_of_Peer_Reviewed_Online_Publication",
-                                           "Count_of_Poster_Presentation",
-                                          "Count_of_Scientific_Monograph",
-                                                          "Couples_Match",
-                                                                 "Gender",
-                                                         "Medical_Degree",
-                              "Medical_Education_or_Training_Interrupted",
-                                              "Medical_Licensure_Problem",
-                                            "Military_Service_Obligation",
-                                                 "Misdemeanor_Conviction",
-                                                            "NIH_dollars",
-                                                                   "PALS",
-                                                        "Sigma_Sigma_Phi",
-                                                 "Type_of_medical_school",
-                                               "US_or_Canadian_Applicant",
-                                                     "USMLE_Step_1_Score",
-                                                  "USMLE_Step_2_CK_Score",
-                                                "Visa_Sponsorship_Needed",
-                                                        "white_non_white")
-
-#Writing the name of dependent variable seperately
-dependentVar <- "Match_Status"
-
-#Bringing all the column names under one term
-formula <- paste(dependentVar, "~", paste(drivers, collapse = " + "))
-formula
+print(final_formula)
 ```
 
-
 # 1) Model: General logistic regression model Use Model to predict match for Test Data
-Shift Gears: Test Accuracy of Model on Training Data, Use glmnet model on 207 and 2018 `test` data.   Run the 2017, 2018 data through the train model.  
+Shift Gears: Test Accuracy of Model on Training Data, Use glmnet model on 207 and 2018 `test` data.    
 
 Build both a glm (train.glm.with.lasso.variables) and a lrm model (train.lrm.with.lasso.variables) here with the same predictor variables.  
 
 ```{r, echo=TRUE, warning=FALSE}
+train <- train %>%
+dplyr::mutate(Match_Status = dplyr::recode(Match_Status, `Did Not Match` = "0", Match = "1"))
+train$Match_Status <- as.numeric(train$Match_Status)
+class(train$Match_Status)
+
 #It would be nice to create a character variable that we drop features from.  
-train.glm.with.lasso.variables  <- 
-  stats::glm(Match_Status ~ white_non_white + Alpha_Omega_Alpha + ACLS + BLS + PALS + Citizenship + Misdemeanor_Conviction + Sigma_Sigma_Phi + Age + Medical_Education_or_Training_Interrupted + Gender + Couples_Match + US_or_Canadian_Applicant + Alpha_Omega_Alpha + Military_Service_Obligation + USMLE_Step_1_Score + Visa_Sponsorship_Needed + Count_of_Poster_Presentation + Count_of_Oral_Presentation + Count_of_Peer_Reviewed_Book_Chapter + Count_of_Peer_Reviewed_Journal_Articles_Abstracts + Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published + Count_of_Peer_Reviewed_Online_Publication + Count_of_Non_Peer_Reviewed_Online_Publication + Count_of_Scientific_Monograph + Count_of_Other_Articles + Visa_Sponsorship_Needed + #Medical_School_Type + 
-               Medical_Degree + USMLE_Step_2_CK_Score,
+train.glm.with.boruta.variables  <- 
+  stats::glm(Match_Status ~ ACLS + Age + Alpha_Omega_Alpha + ACLS + BLS + Citizenship + Count_of_Peer_Reviewed_Journal_Articles_Abstracts + Count_of_Poster_Presentation + Couples_Match + Gender + Medical_Education_or_Training_Interrupted + NIH_dollars + PALS + Type_of_medical_school + US_or_Canadian_Applicant + USMLE_Step_1_Score + USMLE_Step_2_CK_Score + Visa_Sponsorship_Needed + white_non_white,
       data = train, 
       family = "binomial"(link=logit))  
 
-summary(train.glm.with.lasso.variables)  #check the model
-exp(train.glm.with.lasso.variables$coefficients)
-confint(train.glm.with.lasso.variables)
+summary(train.glm.with.boruta.variables)  #check the model
+#exp(train.glm.with.boruta.variables$coefficients)
+confint(train.glm.with.boruta.variables)
 
 #Zhang book page 75
-Predprob <- predict(train.glm.with.lasso.variables, type = "response")
-#library(Deducer)
-#plot(train.glm.with.lasso.variables, main = "ROC curve", colorize = T)
+Predprob <- predict(train.glm.with.boruta.variables, type = "response")
 ```
 
+
+```{r, echo=TRUE, warning=FALSE, include=FALSE}
+#library(Deducer)
+plot(train.glm.with.boruta.variables, main = "ROC curve", colorize = T)
+```
 
 ```{r, echo=TRUE, warning=FALSE}
 train.lrm.with.lasso.variables <- 
@@ -368,6 +331,45 @@ Using vip::vip() we can extract our top 10 influential variables. The figures il
 # pseudo R-squared for logistic regression model
 logisticPseudoR2s(train.glm.with.lasso.variables)
 ```
+
+###take a look at this
+
+Comparing logistic regression model with penalized regression model. 
+```{r, include=FALSE}
+# train logistic regression model
+set.seed(123)
+glm_mod <- caret::train(
+  Match_Status ~ ., 
+  data = train, 
+  method = "glm",
+  family = "binomial",
+  preProc = c("zv", "center", "scale"),
+  trControl = trainControl(method = "cv", number = 10)
+  )
+
+# train regularized logistic regression model
+set.seed(123)
+penalized_mod <- caret::train(
+  Match_Status ~ ., 
+  data = train, 
+  method = "glmnet",
+  family = "binomial",
+  preProc = c("zv", "center", "scale"),
+  trControl = trainControl(method = "cv", number = 10),
+  tuneLength = 10
+  )
+```
+
+
+```{r}
+# extract out of sample performance measures
+summary(resamples(list(
+  logistic_model = glm_mod, 
+  penalized_model = penalized_mod, 
+  mars_model = tuned_mars
+  )))$statistics$Accuracy
+```
+The output shows minimal improvement with the penalized model (median accuracy = 0.809) compared to the logistic model (median accuracy = 0.803). 
 
 
 **(2) Regression Tree model**
