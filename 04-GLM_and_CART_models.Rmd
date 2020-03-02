@@ -8,7 +8,7 @@ output:
     toc_float: true
     toc_depth: 2
     self_contained: true
-    code_folding: show
+    code_folding: hide
     dev: svg
     df_print: paged
     theme: journal
@@ -37,41 +37,209 @@ editor_options:
   chunk_output_type: console
 ---
 
-# Read in the original `all_data`, `train`, and `test`
-```{r, include = FALSE}
+Read in the original `all_data`, `train`, and `test`
+```{r, include = FALSE, echo=FALSE}
 library(magrittr)
-all_data <- readr::read_csv("~/Dropbox/Nomogram/nomogram/all_data_output_of_split_correlation.csv")
-train <- readr::read_csv("~/Dropbox/Nomogram/nomogram/train_output_of_split_correlation.csv")
-test <- readr::read_csv("~/Dropbox/Nomogram/nomogram/test_output_of_split_correlation.csv")
+all_data <- readr::read_csv("~/Dropbox/Nomogram/nomogram/all_data_output_of_split_correlation.csv") %>%
+  dplyr::select("ACLS", "Age", "Alpha_Omega_Alpha",  "BLS", "Citizenship",  "Count_of_Peer_Reviewed_Journal_Articles_Abstracts", "Count_of_Poster_Presentation", "Couples_Match", "Gender", "Medical_Education_or_Training_Interrupted", "NIH_dollars", "PALS",  "Type_of_medical_school", "US_or_Canadian_Applicant", "USMLE_Step_1_Score", "USMLE_Step_2_CK_Score", "Visa_Sponsorship_Needed", "white_non_white", "Match_Status")
+
+train <- readr::read_csv("~/Dropbox/Nomogram/nomogram/train_output_of_split_correlation.csv") %>%
+  dplyr::select("ACLS", "Age", "Alpha_Omega_Alpha",  "BLS", "Citizenship",  "Count_of_Peer_Reviewed_Journal_Articles_Abstracts", "Count_of_Poster_Presentation", "Couples_Match", "Gender", "Medical_Education_or_Training_Interrupted", "NIH_dollars", "PALS",  "Type_of_medical_school", "US_or_Canadian_Applicant", "USMLE_Step_1_Score", "USMLE_Step_2_CK_Score", "Visa_Sponsorship_Needed", "white_non_white", "Match_Status")
+
+test <- readr::read_csv("~/Dropbox/Nomogram/nomogram/test_output_of_split_correlation.csv") %>%
+  dplyr::select("ACLS", "Age", "Alpha_Omega_Alpha",  "BLS", "Citizenship",  "Count_of_Peer_Reviewed_Journal_Articles_Abstracts", "Count_of_Poster_Presentation", "Couples_Match", "Gender", "Medical_Education_or_Training_Interrupted", "NIH_dollars", "PALS",  "Type_of_medical_school", "US_or_Canadian_Applicant", "USMLE_Step_1_Score", "USMLE_Step_2_CK_Score", "Visa_Sponsorship_Needed", "white_non_white", "Match_Status")
 
 train <- train %>%
 dplyr::mutate(Match_Status = dplyr::recode(Match_Status, `Did Not Match` = "0", Match = "1"))
 
+test <- test %>%
+dplyr::mutate(Match_Status = dplyr::recode(Match_Status, `Did Not Match` = "0", Match = "1"))
+
 train$Match_Status <- as.numeric(train$Match_Status)
-class(train$Match_Status)
+
+# https://rpubs.com/TELOVE/project1_demo_2019-432
+#See section 11
 ```
 
-# Review the final variables from Boruta
+# Final selection of variables from Boruta
+```{r, include=TRUE}
+boruta_drivers <- c(
+                                                                     "Age",
+                                                       "Alpha_Omega_Alpha",
+                                                                    "ACLS",
+                                                                     "BLS",
+                                                             "Citizenship",
+                           #"Count_of_Non_Peer_Reviewed_Online_Publication",
+                                      #        "Count_of_Oral_Presentation",
+                                     #            "Count_of_Other_Articles",
+                                    #"Count_of_Peer_Reviewed_Book_Chapter",
+                      "Count_of_Peer_Reviewed_Journal_Articles_Abstracts",
+ #"Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published",
+  #                            "Count_of_Peer_Reviewed_Online_Publication",
+                                           "Count_of_Poster_Presentation",
+   #                                       "Count_of_Scientific_Monograph",
+                                                          "Couples_Match",
+                                                                 "Gender",
+                                                         #"Medical_Degree",
+                              "Medical_Education_or_Training_Interrupted",
+                                              #"Medical_Licensure_Problem",
+                                            #"Military_Service_Obligation",
+                                                 #"Misdemeanor_Conviction",
+                                                            "NIH_dollars",
+                                                                   "PALS",
+                                                        #"Sigma_Sigma_Phi",
+                                                 "Type_of_medical_school",
+                                               "US_or_Canadian_Applicant",
+                                                     "USMLE_Step_1_Score",
+                                                  "USMLE_Step_2_CK_Score",
+                                                "Visa_Sponsorship_Needed",
+                                                        "white_non_white")
+
+#Writing the name of dependent variable seperately
+dependentVar <- "Match_Status"
+
+#Bringing all the column names under one term
+final_formula <- paste(dependentVar, "~", paste(boruta_drivers, collapse = " + "))
+final_formula
+```
+
+**(1) Generalized Linear Models**
+# 1) Model: Caret for Fitting Generalized Linear Models
+
+It is important to know what type of modeling a particular model supports. This can be done using the caret function getModelInfo.  This tells us that gbm supports both regression and classification. As this is a binary classification, we need to force glm into using the classification mode. We do this by changing the outcome variable to a factor. 
+
 ```{r}
-print(final_formula)
+knitr::include_graphics("images/caret.png")
 ```
 
-# 1) Model: General logistic regression model Use Model to predict match for Test Data
-Shift Gears: Test Accuracy of Model on Training Data, Use glmnet model on 207 and 2018 `test` data.    
+```{r, echo=TRUE, warning=FALSE, include=TRUE}
+#https://www.viralml.com/video-content.html?v=-nai4NBx5zI
+caret::getModelInfo()$glm$type
+train$Match_Status <- as.factor(train$Match_Status)
+```
 
-Build both a glm (train.glm.with.lasso.variables) and a lrm model (train.lrm.with.lasso.variables) here with the same predictor variables.  
+##Model: Caret, trainControl
+Caret offers many tuning functions to help you get as much as possible out of your models; the trainControl function allows you to control the resampling of your data. This will split the training data set internally and do it’s own train/test runs to figure out the best settings for your model. In this case, we’re going to cross-validate the data 10 times, therefore training it 10 times on different portions of the data before settling on the best tuning parameters. 
+```{r}
+#https://topepo.github.io/caret/model-training-and-tuning.html#an-example
+#https://www.viralml.com/video-content.html?v=-nai4NBx5zI
+set.seed(123)
+train$Match_Status <- as.factor(train$Match_Status)
 
-```{r, echo=TRUE, warning=FALSE}
+fitControl <- caret::trainControl(## 10-fold CV
+                           method = "repeatedcv",
+                           number = 10,
+                           ## repeated ten times
+                           repeats = 10, 
+                           classProbs = TRUE, 
+                           savePredictions=TRUE) 
+
 train <- train %>%
-dplyr::mutate(Match_Status = dplyr::recode(Match_Status, `Did Not Match` = "0", Match = "1"))
-train$Match_Status <- as.numeric(train$Match_Status)
-class(train$Match_Status)
+dplyr::mutate(Match_Status = dplyr::recode(Match_Status, `1` = "Match", `0` = "Did.not.match"))
 
-#It would be nice to create a character variable that we drop features from.  
+test <- test %>%
+dplyr::mutate(Match_Status = dplyr::recode(Match_Status, `1` = "Match", `0` = "Did.not.match"))
+
+train$ACLS <- as.factor(train$ACLS)
+train$Alpha_Omega_Alpha <- as.factor(train$Alpha_Omega_Alpha)
+train$BLS <- as.factor(train$BLS)
+train$Citizenship <- as.factor(train$Citizenship)
+train$Couples_Match <- as.factor(train$Couples_Match)
+train$Gender <- as.factor(train$Gender)
+train$Medical_Education_or_Training_Interrupted <- as.factor(train$Medical_Education_or_Training_Interrupted)
+train$PALS <- as.factor(train$PALS)
+train$Type_of_medical_school <- as.factor(train$Type_of_medical_school)
+train$US_or_Canadian_Applicant <- as.factor(train$US_or_Canadian_Applicant)
+train$Visa_Sponsorship_Needed <- as.factor(train$Visa_Sponsorship_Needed)
+train$white_non_white <- as.factor(train$white_non_white)
+```
+
+## Model: Caret, Teaching the Model
+This is the heart of our modeling adventure, time to teach our model how to recognize applicants who match. Because this is a classification model, we’re requesting that our metrics use ROC instead of the default RMSE:
+```{r}
+#https://www.viralml.com/video-content.html?v=-nai4NBx5zI
+cv_model3 <- caret::train(
+  Match_Status ~ ., 
+  data = train, 
+  method = "glm",
+  family = "binomial",
+  metric = "Accuracy",
+  preProc = c("center", "scale", "nzv"), 
+  trControl = fitControl
+)
+
+cv_model3
+summary(cv_model3)
+```
+
+## Model: Caret, Evaluate the cv_model3
+There are two types of evaluation we can do here, raw or prob. Raw gives you a class prediction, in our case Match and Did.Not.Match, while prob gives you the probability on how sure the model is about it’s choice. I always use prob, as I like to be in control of the threshold and also like to use AUC score which requires probabilities, not classes. 
+
+We now call the predict function and pass it our trained model and our testing data. Let’s start by looking at class predictions and using the caret postResample function to get an accuracy score:
+
+```{r}
+#https://www.viralml.com/video-content.html?v=-nai4NBx5zI
+predictions <- stats::predict(object=cv_model3, #Model we want to use to predict
+                              newdata = test, 
+                              type='raw')
+head(predictions)
+
+a<- (postResample(pred=predictions, obs=as.factor(test$Match_Status)))
+print(a)
+#  Accuracy     Kappa 
+# 0.8631415 0.5426890 
+```
+The accuracy tells us that our model is correct `r a[[1]]` of the time - not bad
+
+```{r}
+knitr::include_graphics("images/predictions.png")
+```
+
+Now let’s look at probabilities:
+```{r}
+#https://www.viralml.com/video-content.html?v=-nai4NBx5zI
+# probabilites 
+library(pROC)
+predictions <- stats::predict(object=cv_model3, 
+                              newdata = test, 
+                              type='prob')
+head(predictions)
+```
+
+## Model: Caret, The Receiver Operating Characteristic (ROC) 
+The Receiver Operating Characteristic (ROC) curve is plotted below for false positive rate (FPR) in the x-axis vs. the true positive rate (TPR) in the y-axis. It shows the detection of true positive while avoiding the false positive. This is the same as measuring the unspecificity (1 - specificity) in x-axis, against the sensitivity in y-axis. This ROC curve in particular shows that its very closed to the perfect classifier meaning that its better at identifying the positive values. 
+```{r}
+knitr::include_graphics("images/ROC_curve.png")
+```
+
+To get the AUC score, you need to pass the yes column to the roc function (each row adds up to 1 but we’re interested in the yes, the survivors):
+```{r}
+#https://www.viralml.com/video-content.html?v=-nai4NBx5zI
+
+auc <- pROC::roc(ifelse(test$Match_Status=="Match",1,0), predictions[[2]])  #Prediction vs. actual
+print(auc$auc)
+pROC::plot.roc(auc, add = FALSE, identity = TRUE, reuse.auc=TRUE,
+axes=TRUE, legacy.axes=FALSE)
+```
+The AUC is telling us that our model has a `r auc$auc [[1]]` AUC score (remember that an AUC ranges between 0.5 and 1, where 0.5 is random and 1 is perfect).
+
+# Model: Base General logistic regression model Use Model to predict match for Test Data
+Shift Gears.
+
+We need to build the model using the generic or base packages in R because that is what will allow us to create a nomogram.  This will also serve as a confirmation of the cv_model3 from the caret package.  
+
+```{r}
+knitr::include_graphics("images/R logo.png")
+```
+
+## Model: Base, GLM Model fit with base glm package
+```{r, echo=TRUE, warning=FALSE, include=TRUE}
 train.glm.with.boruta.variables  <- 
-  stats::glm(Match_Status ~ ACLS + Age + Alpha_Omega_Alpha + ACLS + BLS + Citizenship + Count_of_Peer_Reviewed_Journal_Articles_Abstracts + Count_of_Poster_Presentation + Couples_Match + Gender + Medical_Education_or_Training_Interrupted + NIH_dollars + PALS + Type_of_medical_school + US_or_Canadian_Applicant + USMLE_Step_1_Score + USMLE_Step_2_CK_Score + Visa_Sponsorship_Needed + white_non_white,
+  stats::glm(Match_Status ~ .,
       data = train, 
-      family = "binomial"(link=logit))  
+      family = "binomial"(link=logit),
+      x = TRUE, y= TRUE,#Must have this line to use with DynNom later
+      weights = NULL)  
 
 summary(train.glm.with.boruta.variables)  #check the model
 #exp(train.glm.with.boruta.variables$coefficients)
@@ -81,53 +249,28 @@ confint(train.glm.with.boruta.variables)
 Predprob <- predict(train.glm.with.boruta.variables, type = "response")
 ```
 
-
 ```{r, echo=TRUE, warning=FALSE, include=FALSE}
 #library(Deducer)
 plot(train.glm.with.boruta.variables, main = "ROC curve", colorize = T)
 ```
 
-```{r, echo=TRUE, warning=FALSE}
-train.lrm.with.lasso.variables <- 
-  rms::lrm(formula = Match_Status ~ 
-                                    white_non_white + 
-                                    Age +
-                                    Gender +
-                                    Couples_Match +
-                                    US_or_Canadian_Applicant +
-                                    Medical_Education_or_Training_Interrupted + 
-                                    Alpha_Omega_Alpha + 
-                                    USMLE_Step_1_Score + 
-                                    Count_of_Oral_Presentation + 
-                                    Visa_Sponsorship_Needed,
-                                    #Medical_Degree, #Removed due to VIF issues of collinearity
-              data = train,
-           x=TRUE, y=TRUE)
-```
-
-First, we need to fit lrm.with.lasso.variables in GLM, rather than rms, to get the AUC.  There is probably a better way to do this.  Using the test data set.  Also built the same model in lrm.  
-
-The Receiver Operating Characteristic (ROC) curve is plotted below for false positive rate (FPR) in the x-axis vs. the true positive rate (TPR) in the y-axis. It shows the detection of true positive while avoiding the false positive. This is the same as measuring the unspecificity (1 - specificity) in x-axis, against the sensitivity in y-axis. This ROC curve in particular shows that its very closed to the perfect classifier meaning that its better at identifying the positive values. 
-Use Model to predict match Status for Test Data
+## Model: Base, Use Model to predict `test$Match_Status` for `test` Data
 ```{r}
 #Use Model to predict match Status for Test Data
-##For prediction
-# predict class
-pred_class <- rms::Predict(train.glm.with.lasso.variables)
-
-# create confusion matrix
-# caret::confusionMatrix(
-#   data = relevel(pred_class, ref = "Matched"), 
-#   reference = relevel(train$Match_Status, ref = "Matched")
-# )
+pred_class <- rms::Predict(train.glm.with.boruta.variables)
 
 prob <- 
-  predict(train.glm.with.lasso.variables, newdata = test, type="response")
-dim(test)
+  predict(train.glm.with.boruta.variables, newdata = test, type="response")
+#dim(test)
 plot(prob, main = "Probability of Matching based on \n train.glm.with.lasso.variables model")
 
 pred <- 
-  prediction(prob, test$Match_Status)  #removed na.omit
+  ROCR::prediction(prob, test$Match_Status)  #removed na.omit
+```
+
+## Model: Base, Accuracy of Model
+```{r}
+knitr::include_graphics("images/accuracy.png")
 ```
 
 ```{r}
@@ -136,49 +279,27 @@ pred <-
 # Accuracy of Model
 GLM_Pred <- ifelse(prob > 0.5, 1, 0)
 pred2 <- ifelse(GLM_Pred == 1, "Match", "No.Match")
-#Number True and Number False
 table(pred2)["Match"]
 
-# test$Match_Status1 <- as.numeric(test$Match_Status) - 1
-#In GLM_Pred == test$Match_Status1 :
-  # longer object length is not a multiple of shorter object length
+#Number True and Number False
+#table(pred2)["TRUE"]
 
 #Accuracy Equation
-# GLM_Accuracy <- ifelse(GLM_Pred == test$Match_Status1,1,0) #Not working
+GLM_Accuracy <- ifelse(GLM_Pred == test$Match_Status,"Match", "No.Match")
 
 #table for accuracy
-#table(GLM_Accuracy)
-
-#Calculating True vs. total
-# Accuracy_GLM <- (sum(GLM_Accuracy)/count(test))*100
-# Accuracy_GLM
-
-#confusion matrix  #Not working from here
-#confusionMatrix(as.factor(GLM_Pred),as.factor(test$Match_Status1), positive = "1")  ##????NOT WORKING
-
-#ROC curve for GLM
-library(ROCR)
-#pred_glm <- prediction(as.numeric(as.character(prob)),  ###NOT WORKING??? as.numeric(as.character(test$Match_Status)))
-#perf_glm <- performance(pred, "tpr", 'fpr')    ###NOT WORKING???
-# plot(perf_glm, main = "ROC curve", colorize = T)
-# abline(0,1, col='gray60')
-# 
-# summary(perf_glm)
-
-#auc_ROCR <- performance(pred_glm, measure = "auc") ###NOT WORKING???
-# auc_ROCR <- auc_ROCR@y.values[[1]]
-# auc_ROCR
+table(GLM_Accuracy)
 ```
 
 
-ROC: ROC ggplot with nice controls
+## Model: Base, Receiver-Operator Curve ggplot with nice controls
 ```{r, include = TRUE}
 # rest of this doesn't need much adjustment except for titles
 perf <-
-  performance(pred, measure = "tpr", x.measure = "fpr")
+  ROCR::performance(pred, measure = "tpr", x.measure = "fpr")
 
 auc <- 
-  performance(pred, measure="auc")
+  ROCR::performance(pred, measure="auc")
 
 auc <- 
   round(auc@y.values[[1]],3)
@@ -187,154 +308,22 @@ roc.data <-
   data.frame(fpr=unlist(perf@x.values),
              tpr=unlist(perf@y.values),
              model="GLM")
-
-roc_plot <- ggplot(roc.data, aes(x=fpr, ymin=0, ymax=tpr)) +
-  geom_ribbon(alpha=0.2) +
-  geom_line(aes(y=tpr)) +
-  labs(title = paste0("ROC Curve with area under the curve = ", auc),
-       subtitle = "Model: train.glm.with.lasso.variables")
+auc
+roc_plot <- ggplot2::ggplot(data = roc.data,
+                            mapping = ggplot2::aes(x=fpr, ymin=0, ymax=tpr)) +
+  ggplot2::geom_ribbon(alpha=0.2) +
+  ggplot2::geom_line(aes(y=tpr)) +
+  ggplot2::labs(title = paste0("ROC Curve with area under the curve = ", auc),
+       subtitle = "Model: train.glm.with.boruta.variables")
 roc_plot
 
-tm_ggsave(roc_plot, "roc_plot.tiff")
+#tm_ggsave(roc_plot, "roc_plot.tiff")
 ```
 
-ROC: ROC with nice labels on the x and y
-```{r, include = TRUE}
-pred <- 
-  prediction(prob, test$Match_Status)
 
-perf <- 
-  performance(pred, measure = "tpr", x.measure = "fpr")
+# Comparing logistic regression model with penalized regression model. 
 
-plot(perf)
-
-auc <- 
-  performance(pred, measure = "auc")
-
-auc <- 
-  auc@y.values[[1]]
-
-auc  
-```
-
-ROC: ROC in color
-```{r, include = TRUE}
-perf <- 
-  performance(pred, 'tpr','fpr')
-
-plot(perf, colorize = TRUE, text.adj = c(-0.2,1.7), main="Receiver-Operator Curve for Model A")
-
-#Plots of Sensitivity and Specificity
-perf1 <- 
-  performance(pred, "sens", "spec")
-
-plot(perf1, colorize = TRUE, text.adj = c(-0.2,1.7), main="Sensitivity and Specificity for Model A")
-
-## precision/recall curve (x-axis: recall, y-axis: precision)
-perf2 <- 
-  performance(pred, "prec", "rec")
-
-plot(perf2, colorize = TRUE, text.adj = c(-0.2,1.7), main="Precision and Recall for Model A")
-```
-
-Exploratory random forest was also performed. The variable importance for the random forest model was summarized in the figure below. 
-```{r}
-#https://bradleyboehmke.github.io/HOML/logistic-regression.html
-
-model3 <- glm(
-  formula = formula,
-  family = "binomial", 
-  data = train
-  )
-
-tidy(model3)
-```
-
-```{r}
-set.seed(123)
-cv_model3 <- caret::train(
-  Match_Status ~ ., 
-  data = train, 
-  method = "glm",
-  family = "binomial",
-  trControl = trainControl(method = "cv", number = 10)
-)
-```
-
-```{r}
-#Error in resamples.default(list(model3 = cv_model3)) : 
-  #at least two train objects are needed
-
-# summary(
-#   resamples(
-#     list(
-#       model3 = cv_model3
-#     )
-#   )
-# )$statistics$Accuracy
-```
-
-```{r}
-# predict class
-pred_class <- stats::predict(cv_model3, train)
-pred_class
-
-
-factor(train$Match_Status, levels= c("Matched", "Did not match"))
-levels(train$Match_Status)
-class(train$Match_Status)
-
-pred_class
-levels(pred_class)
-
-#create confusion matrix
-caret::confusionMatrix(
-  data = stats::relevel(pred_class, ref = "Matched"),
-  reference = stats::relevel(train$Match_Status, ref = "Matched")
-)
-```
-
-We can perform a partial least squares (PLS) logistic regression to assess if reducing the dimension of our numeric predictors helps to improve accuracy. There are 17 numeric features in our data set so the following code performs a 10-fold cross-validated PLS model while tuning the number of principal components to use from 1–17. The optimal model uses 1 or 5 principal components, which is not reducing the dimension. However, the mean accuracy of 0.876 is no better than the average CV accuracy of cv_model3 (0.876).
-```{r}
-# Perform 10-fold CV on a PLS model tuning the number of PCs to 
-# use as predictors
-set.seed(123)
-cv_model_pls <- caret::train(
-  Match_Status ~ ., 
-  data = train, 
-  method = "pls",
-  family = "binomial",
-  trControl = trainControl(method = "cv", number = 10),
-  preProcess = c("zv", "center", "scale"),
-  tuneLength = 10
-)
-
-# Model with lowest AUC
-cv_model_pls$bestTune
-
-# Plot cross-validated AUC
-cv_model_pls_plot <- ggplot2::ggplot(cv_model_pls) + ggtitle(label = "The 10-fold cross-validation AUC \n obtained using PLS with \n 1–10 principal components.")
-cv_model_pls_plot
-
-tm_ggsave(cv_model_pls_plot, "cv_model_pls_plot.tiff")
-```
-The 10-fold cross-validation AUC obtained using partial least squares with 1–10 principal components.
-
-```{r}
-tm_vip(object = cv_model3, title = "CV_model3")
-tm_print_save("cv_model3.tiff")
-```
-Using vip::vip() we can extract our top 10 influential variables. The figures illustrates that 'USMLE_Step_1_Score' is the most influential followed by 'US_or_Canadian_Applicant - International', and 'Age'.
-
-```{r}
-# https://github.com/tobiolatunji/Readmission_Prediction/blob/master/diabetes_readmission.R
-# pseudo R-squared for logistic regression model
-logisticPseudoR2s(train.glm.with.lasso.variables)
-```
-
-###take a look at this
-
-Comparing logistic regression model with penalized regression model. 
+## Caret Logistic Regression model vs. Penalized Model
 ```{r, include=FALSE}
 # train logistic regression model
 set.seed(123)
@@ -346,7 +335,18 @@ glm_mod <- caret::train(
   preProc = c("zv", "center", "scale"),
   trControl = trainControl(method = "cv", number = 10)
   )
+```
 
+## Penalized Model
+The standard linear model performs poorly in a situation, where you have a large multivariate data set containing a number of variables superior to the number of samples.  A better alternative is the penalized regression allowing to create a linear regression model that is penalized, for having too many variables in the model, by adding a constraint in the equation (James et al. 2014,P. Bruce and Bruce (2017)). This is also known as shrinkage or regularization methods.
+
+The consequence of imposing this penalty, is to reduce (i.e. shrink) the coefficient values towards zero. This allows the less contributive variables to have a coefficient close to zero or equal zero.
+
+```{r}
+knitr::include_graphics("images/regularized logistic regression model.png")
+```
+
+```{r, include=FALSE}
 # train regularized logistic regression model
 set.seed(123)
 penalized_mod <- caret::train(
@@ -360,32 +360,258 @@ penalized_mod <- caret::train(
   )
 ```
 
-
+## Evaluate the logistic regression models side-by-side
 ```{r}
 # extract out of sample performance measures
-summary(resamples(list(
-  logistic_model = glm_mod, 
-  penalized_model = penalized_mod, 
-  mars_model = tuned_mars
-  )))$statistics$Accuracy
+# summary(resamples(list(
+#   caret_logistic_model = cv_model3,
+#   logistic_model = glm_mod, 
+#   penalized_model = penalized_mod
+#   #pls = cv_model_pls
+#   )))$statistics$Accuracy
 ```
 The output shows minimal improvement with the penalized model (median accuracy = 0.809) compared to the logistic model (median accuracy = 0.803). 
 
+\pagebreak
+# 2) Draw a Nomogram Representing a Regression Fit
+One problem is that the `rms:nomogram` function only accepts an `lrm` model.  The package `hdnom` only plots survival analysis for nomograms.  
+
+```{r, include = TRUE, , fig.width = 8, dpi = 1200}
+#Using rmarkdown with images and outputing at different sizes and resolutions
+#https://yihui.org/knitr/options
+#https://www.zevross.com/blog/2017/06/19/tips-and-tricks-for-working-with-images-and-figures-in-r-markdown-documents/
+
+library(rms)
+dd <- datadist(test)
+options(datadist = "dd")
+lrm.version.of.cv_model3 <- 
+  rms::lrm(formula = Match_Status ~ Age + Alpha_Omega_Alpha + ACLS + BLS + Citizenship + Count_of_Peer_Reviewed_Journal_Articles_Abstracts + Count_of_Poster_Presentation + Couples_Match + Gender + Medical_Education_or_Training_Interrupted + NIH_dollars + PALS + Type_of_medical_school  + US_or_Canadian_Applicant  + USMLE_Step_1_Score  + USMLE_Step_2_CK_Score + Visa_Sponsorship_Needed + white_non_white, 
+      data = train, #Does this need to be centered and scaled?
+      penalty = 0.0,
+      #method = "lrm.fit",
+      tol = 1e-9,
+      x = T, 
+      y = T,
+      maxit=10000)
+#singular information matrix in lrm.fit (rank= 16 ).  Offending variable(s):
+#USMLE_Step_1_Score US_or_Canadian_Applicant=US senior 
+#Only thing that fixed this was decreasing the singularity criteria set by tol, tol = 1e-9 works
+#https://grokbase.com/t/r/r-help/08a9xjk7rk/r-singular-information-matrix-in-lrm-fit
+#https://stats.stackexchange.com/questions/70699/qualitative-variable-coding-in-regression-leads-to-singularities#70700
+
+lrm.version.of.cv_model3
+```
+
+
+```{r NOMOGRAM1,  fig.width=7, fig.asp=1}
+#https://www.kaggle.com/pjmcintyre/titanic-first-kernel#final-checks
+# https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5451623/
+#https://rpubs.com/TELOVE/project1_demo_2019-432
+tm_print_save <- function (filename) {
+  print("Function Sanity Check: Saving TIFF of what is in the viewer")
+  grDevices::dev.print(tiff, (here::here("results", filename)), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
+  dev.off()
+}
+
+nomo <- rms::nomogram(lrm.version.of.cv_model3,  #requires an lrm model from rms package
+                #lp.at = seq(-3,4,by=0.5),
+                fun = plogis,
+                fun.at = c(0.001, 0.01, 0.05, seq(0.2, 0.8, by = 0.2), 0.95, 0.99, 0.999),
+                funlabel = "Chance of Matching in OBGYN",
+                lp =FALSE,
+                #conf.int = c(0.1,0.7),
+                abbrev = F,
+                minlength = 9)
+```
+
+
+```{r NOMOGRAM2,  fig.width=7, fig.asp=1}
+plot(anova(lrm.version.of.cv_model3))
+```
+From the ANOVA plot, it looks like a model with Step 1, Step 2 scores, and citizenship might be sufficient.  
+
+```{r NOMOGRAM3,  fig.width=7, fig.asp=1}
+#https://rpubs.com/TELOVE/project1_demo_2019-432
+plot(nomo, lplabel="Linear Predictor",
+       cex.sub = 0.3, cex.axis=0.4, cex.main=1, cex.lab=0.2, ps=10, xfrac=1,
+       col.conf=c('red','green'),
+       conf.space=c(0.1,0.5),
+       label.every=1,
+       col.grid = gray(c(0.8, 0.95)),
+       which="Match_Status")
+
+tm_print_save("train_lrm_with_lrm_version_of_cv_model3.tiff")
+```
+Annotation:  Manuscript Figure 1:  The first row called points assigned to each variable's measurement from rows 2-12, which are variables included in predictive model.  Assigned points for all variables are then summed and total can be located on line 13 (total points).  Once total points are located, draw a vertical line down to the bottom line to obtain the predicted probability of matching.  For non-linear variables (count of oral presentations, etc.) values should be erad from left to right.
+
+
+```{r}
+#https://rpubs.com/TELOVE/project1_demo_2019-432
+plot(rms::calibrate(fit = lrm.version.of.cv_model3,
+                    method=c("boot","crossvalidation",".632","randomization"),
+                    B=1000, #Upper limit of resamples
+                    bw=FALSE, 
+                    rule=c("aic","p"),
+                    add=FALSE,
+                    legend = TRUE))
+
+
+tm_print_save("train_lrm_with_lrm_version_of_cv_model3_calibration_plot.tiff")
+```
+`cv_model3` appears to overpredict a bit, especially at the lower and the higher predicted values.
+
+## Validation of `lrm.version.of.cv_model3`, with backwards elimination
+What if we try a validation step, with a stepwise backwards elimination approach?
+```{r}
+set.seed(432)
+a <- rms::validate(lrm.version.of.cv_model3, bw = TRUE, B = 1000)
+a
+#https://rpubs.com/TELOVE/project1_demo_2019-432
+```
+Note that the cross-validated Somers’ Dxy statistic is `r a[[1,5]]`. To calculate the cross-validated area under the ROC curve, called C, we use
+
+C=0.5+Dxy2=0.5+.44542=0.5+0.2227=0.722
+
+which is a cross-validated estimate of the value of the C statistic we might reasonably expect using this model. Compare this to the nominal C = 0.86 (`r lrm.version.of.cv_model3[[3]]`) shown in the initial `lrm.version.of.cv_model3` summary
+
+So, it looks like this model is pretty seriously overfitting the data. The next model to try involves (see "Factors in Final Model" from rms::validate(lrm....)) only:  
+`Age`, 
+`Citizenship`, 
+`Medical_Education_or_Training_Interrupted`, 
+`Type_of_medical_school`, 
+`USMLE_Step_1_Score`, 
+`USMLE_Step_2_CK_Score`, and 
+`white_non_white.`
+
+# Model 2 (a smaller model with promising predictors)
+
+
+We’ll start with a model motivated by the Spearman ρ2 plot developed above, and repeated below.
+```{r}
+dd <- datadist(train)
+options(datadist = "dd")
+m.2 <- lrm(Match_Status ~ Age + Citizenship + Medical_Education_or_Training_Interrupted + Type_of_medical_school + USMLE_Step_1_Score + USMLE_Step_2_CK_Score + white_non_white,
+           data = train, x = T, y = T)
+m.2
+```
+
+##ANOVA for model 2
+```{r}
+anova(m.2)
+plot(anova(m.2))
+tm_print_save("model_2_fewers_variables_plot.tiff")
+```
+
+##Effects summary for m.2
+```{r}
+summary(m.2)
+plot(summary(m.2))
+tm_print_save("model_2_fewers_odds_ratio_plot.tiff")
+```
+
+The calibration plot does not look much different.  
+```{r}
+plot(rms::calibrate(m.2))
+tm_print_save("model_2_fewers_calibration_plot.tiff")
+```
+
+##Nomogram for m.2
+```{r}
+plot(nomogram(m.2))
+tm_print_save("model_2_nomogram.tiff")
+```
+
+## Making predictions with m.2
+Let’s make a mean prediction for two subjects, each with `USMLE_Step_1_Score` = 230 but one with `Citizenship` = “US Citizen” and the other with `Citizenship` = “Not A Citizen”, using a 90% confidence interval.
+
+```{r}
+rms::Predict(m.2, Citizenship = c("US_Citizen", "Not_A_Citizen"), USMLE_Step_1_Score = 230, conf.int = 0.90, fun = plogis)
+```
+
+##Plotting Model 2 Predictions
+Here is a plot of the predictions across the two levels of `Citizenship` for patients with USMLE_Step_1_Score ranging from 220 to 280.
+
+```{r}
+ggplot(rms::Predict(m.2, USMLE_Step_1_Score = 220:280, 
+               Citizenship = c("US_Citizen", "Not_A_Citizen"), fun=plogis)) +
+    theme_bw() +
+    labs(x = "USMLE Step 1 Score of Applicants to OBGYN",
+         y = "Pr(matching into OBGYN residency)",
+         title = "Model 2 Predictions")
+```
+
+## Plotting the ROC curve for Model 2
+Again, we need to fit Model 2 in glm, rather than rms.
+```{r}
+model.2 <- stats::glm(Match_Status ~ Age + Citizenship + Medical_Education_or_Training_Interrupted + Type_of_medical_school + USMLE_Step_1_Score + USMLE_Step_2_CK_Score + white_non_white, 
+                      data = train, 
+               family = binomial(link = logit))
+```
+
+
+```{r}
+# requires ROCR package
+train <- train %>%
+dplyr::mutate(Match_Status = dplyr::recode(Match_Status, "Did.not.match"= "0",  "Match" = "1"))
+
+test <- test %>%
+dplyr::mutate(Match_Status = dplyr::recode(Match_Status, "Did.not.match"= "0",  "Match" = "1"))
+
+train$Match_Status
+
+prob <- stats::predict(model.2, data = train, type="response")
+pred <- ROCR::prediction(prob, train$Match_Status)
+# rest of this doesn't need much adjustment except for titles
+perf <- ROCR::performance(pred, measure = "tpr", x.measure = "fpr")
+auc <- ROCR::performance(pred, measure="auc")
+auc <- round(auc@y.values[[1]],3)
+roc.data <- data.frame(fpr=unlist(perf@x.values),
+                       tpr=unlist(perf@y.values),
+                       model="GLM")
+ggplot2::ggplot(roc.data, aes(x=fpr, ymin=0, ymax=tpr)) +
+    geom_ribbon(alpha=0.2) +
+    geom_line(aes(y=tpr)) +
+    labs(title = paste0("ROC Curve w/ AUC=", auc),
+         subtitle = "Model 2 for train data")
+```
+
+
+#Nomogram using lrm: lrm package train.glm.with.boruta.variables
+# DynNom Model
+```{r DynNom logistic regression model}
+# DynNom::DynNom(model = train.glm.with.boruta.variables, 
+#                clevel = 0.95,
+#                m.summary = c("raw", "formatted"),
+#                DNtitle = "A Model to Predict Chances of Matching into Obstetrics and Gynecology Residency",
+#                DNxlab = "Probability of Matching into OBGYN Residency")
+```
+
+
+```{r generalized logistic regression, include=FALSE, echo=TRUE, cache=FALSE}
+#### Turn this on to start the shiny model.  
+# DynNom::DNbuilder(model = DynNom.model.glm, data = test, clevel = 0.95, DNtitle = "DRAFT: A Model to Predict Chances of Matching into Obstetrics and Gynecology Residency")
+```
 
 **(2) Regression Tree model**
-# 2)  Model: A CART model was fit using the rpart package. 
 
-Trees can handle both factors and continuous variables and do not need to create dummy variables.   Use the divide-and-conquer (aka recursive partinioning e.g. rpart) technique to create two homogenous groups.  Leaf nodes are at the bottom and denote final decisions on matching success. Random Forest is a more powerful algorithm over just a single tree. However, the Decision Tree classification preserve the interpretability which the random forest algorithm lacks.  A simple decision tree model was used for exploration. The Decision Tree does not require feature scaling but can overfit data by fitting the noise instead of the whole data.  It is very important to evaluate decision trees on data it has not seen before.
+# 3)  Model: A CART model was fit using the rpart package. 
 
-Here we intentionally grow a large and complex tree then prune it to be smaller and more efficient later on.
+```{r}
+knitr::include_graphics("images/Decision Tree.gif")
+```
+
+## Trees can handle both factors and continuous variables 
+Use the divide-and-conquer (aka recursive partinioning e.g. rpart) technique to create two homogenous groups.  Leaf nodes are at the bottom and denote final decisions on matching success. Random Forest is a more powerful algorithm over just a single tree. However, the Decision Tree classification preserve the interpretability which the random forest algorithm lacks.  A simple decision tree model was used for exploration. The Decision Tree does not require feature scaling but can overfit data by fitting the noise instead of the whole data.  It is very important to evaluate decision trees on data it has not seen before.
+
+##Here we intentionally grow a large and complex tree then prune it to be smaller and more efficient later on.
 ```{r rpart EDA}
 #https://bradleyboehmke.github.io/HOML/DT.html
 #https://www.datacamp.com/community/tutorials/decision-trees-R 
 t.model <-
-  rpart(as.factor(Match_Status) ~.,
+  rpart::rpart(as.factor(Match_Status) ~.,
         data = train,     
         method = "class", #Builds a classification tree
-        control = rpart.control(cp = 0, maxdepth = 6), #Decreaseing this CP control made the tree much more complicated
+        control = rpart::rpart.control(cp = 0, maxdepth = 6), #Decreasing this CP control made the tree much more complicated
         minsplit = 20) 
 
 t.model$variable.importance
@@ -393,9 +619,23 @@ t.model$variable.importance
 
 ```{r fancyR plot rpart EDA, include=TRUE}
 # Tree visualization
+tm_rpart_plot = function(df){
+  print("Function Sanity Check: Plot Decision Trees using package rpart with Leaves")
+  tm_rpart_plot_leaves <- rpart.plot::rpart.plot(df, yesno = 2, type = 5, extra = +100, fallen.leaves = TRUE, varlen = 0, faclen = 0, roundint = TRUE, clip.facs = TRUE, shadow.col = "gray", main = "Tree Model of Medical Students Matching into OBGYN Residency\n(Matched or Unmatched)", box.palette = c("red", "green"))  
+  tm_fancy_rpart <- rattle::fancyRpartPlot(df)
+  return(c(tm_rpart_plot_leaves, tm_fancy_rpart))
+}
+
 tm_rpart_plot(t.model)
+
+tm_print_save <- function (filename) {
+  print("Function Sanity Check: Saving TIFF of what is in the viewer")
+  grDevices::dev.print(tiff, (here::here("results", filename)), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
+  dev.off()
+}
 tm_print_save(filename = "tm_rpart_plot.tiff")
 ```
+
 Using the model to make Match_Status predictions on the test dataframe
 ```{r}
 #using the model to make Match_Status predictions on the test dataframe
@@ -411,28 +651,28 @@ The accuracy or correct classification rate of the decision tree called `t.model
 
 Look at pruning the tree branches to determine the optimal complexity vs. accuracy point for stopping branch growth.  Pruning complexity parameter (cp) plot illustrating the relative cross validation error (y-axis) for various cp values (lower x-axis). Smaller cp values lead to larger trees (upper x-axis). Using the 1-SE rule, a tree size of 10-12 provides optimal cross validation results.
 ```{r}
-plotcp(t.model)
+rpart::plotcp(t.model)
 tm_print_save(filename = "plotcp.tiff")
 
-printcp(t.model)
-tm_print_save(filename = "tree_sizes.tiff")
+rpart::printcp(t.model)
 ```
+##The figure shows the pruning complexity parameter plot for a fully grown tree. Significant reduction in the cross validation error is achieved with tree sizes 88-100 and then the cross validation error levels off with minimal or no additional improvements.
 
-The figure shows the pruning complexity parameter plot for a fully grown tree. Significant reduction in the cross validation error is achieved with tree sizes 88-100 and then the cross validation error levels off with minimal or no additional improvements.
 ```{r}
-t.model2 <- rpart(
-    formula = formula,
+t.model2 <- rpart::rpart(
+    formula = final_formula,
     data    = train,
     method  = "anova", 
     control = list(cp = 0, xval = 10)
 )
 
-plotcp(t.model2)
-abline(v = 34, lty = "dashed")  #Not sure if 11 is ideal.  
+rpart::plotcp(t.model2)
+abline(v = 34, lty = "dashed")  #Not sure whhat number is ideal.  
 #https://bradleyboehmke.github.io/HOML/DT.html
 tm_print_save("plotcp_for_t_model2.tiff")
 ```
 
+##Graph the complexity parameter
 ```{r}
 # rpart cross validation results
 t.model2$cptable
@@ -449,32 +689,16 @@ t.model3 <- caret::train(
 t.model3.plot <- ggplot(t.model3)
 t.model3.plot
 
+tm_ggsave <- function (object, filename, ...){  #make sure the file name has quotation marks around it.  
+  print("Function Sanity Check: Saving a ggplot image as a TIFF")
+  ggplot2::ggsave(here::here("results", filename), object, device = "tiff", width = 10, height = 7, dpi = 200)
+}
+
 tm_ggsave(t.model3.plot, "t_model3_plot.tiff")
 ```
 
-Feature interpretation of Decision Trees
-Variable importance based on the total reduction in accuracy for the Match_Status decision tree.
-```{r}
-tm_vip(t.model3)
-tm_print_save("vip_for_t.model3.plot.tiff")
-```
-
-```{r}
-#########NOT WORKING
-
-
-# # Construct partial dependence plots
-# p1 <- pdp::partial(t.model3, pred.var = "Age") %>% autoplot() #Not working
-# p2 <- pdp::partial(t.model3, pred.var = "USMLE_Step_1_Score") %>% autoplot()
-# p3 <- partial(t.model3, pred.var = c("Gr_Liv_Area", "Year_Built")) %>% 
-#   plotPartial(levelplot = FALSE, zlab = "yhat", drape = TRUE, 
-#               colorkey = TRUE, screen = list(z = -20, x = -60))
-# 
-# # Display plots side by side
-# gridExtra::grid.arrange(p1, p2, p3, ncol = 3)
-```
-
-
+## Prune the decision tree down based on complexity graph above
+Based on the complexity plot, prune the tree to a complexity of 0.005 using the prune() function with the tree and the complexity parameter.  Now Compute the accuracy of the pruned tree. 
 ```{r}
 pruned.t.model <- rpart::prune(t.model, cp = 0.005) #Set the cp where the complexity to accuraty rate plateaued.  
 tm_rpart_plot(pruned.t.model)
@@ -482,20 +706,15 @@ tm_print_save("pruned_t_model.tiff")
 
 summary(pruned.t.model)
 ```
-Based on the complexity plot, prune the tree to a complexity of 0.005 using the prune() function with the tree and the complexity parameter.  Now Compute the accuracy of the pruned tree.  
-
+ 
+## Validate the results on a test dataset
 ```{r}
-pred = predict(pruned.t.model, test, type = "class")
 
-caret::confusionMatrix(as.factor(test$Match_Status), pred)  #In Ops.factor(predictedScores, threshold) : ‘<’ not meaningful for factors
 
+pred = stats::predict(pruned.t.model, test, type = "class")
+
+caret::confusionMatrix(as.factor(test$Match_Status), pred)
 (pruned.t.model)
-
-#Not working
-# pred_ct <- prediction(as.numeric(as.character(pred)), as.numeric(as.character(test$Match_Status)))
-# perf_ct <- performance(pred_ct, "tpr", 'fpr')
-# plot(perf_ct, main = "ROC curve", colorize = T)
-# abline(0,1, col='gray60')
 ```
 
 ```{r}
@@ -504,3 +723,46 @@ solution_tree <- predict(pruned.t.model, newdata = test, type = "class")
 mean(solution_tree == test$Match_Status)
 ```
 The accuracy or correct classification rate of the PRUNED decision tree called `pruned.t.model` is `r round(mean(solution_tree == test$Match_Status), digits = 3)`.  Not a huge benefit in accuracy but the model will be more understandable and be faster to run now that it is pruned.  
+
+
+Abstract
+===========================================================================================
+Background:  A model that predicts a medical student's chances of matching into an obstetrics and gynecology residency may facilitate improved counseling and fewer unmatched medical students.
+
+Objective:  We sought to construct and validate a model that predicts a medical student's chance of matching into obstetrics and gynecology residency.
+
+Study Design:  In all, `r nrow(all_data)` medical students applied to a residency in Obstetrics and Gynecology at the University of Colorado from 2015 to 2018 were analyzed.  The data set was splint into a model training cohort of `r nrow(train)` who applied in 2015 to 2018 and a separate random validation cohort of `r nrow(test)`.    In all, `r ncol(all_data)` candidate predictors for matching were collected.  Multiple logistic models were fit onto the training cohort to predict matching.  Variables were removed using random forest iterative models to find the best parsimonious model.  Model discrimination was measured using the concordance index.  The model was internally valideated using 1,000 bootstrapped samples and temporarly validated by testing the model's performance in the validation cohort.  Calibration curves were plotted to inform educators about the accuracy of predicted probabilities.
+
+Results:  The match rate in the training cohort was `r round((prop.table(table(train$Match_Status))[[2]]*100),1)`% (I need help getting 95% CI).  The model had excellent discrimination and calibration during internal validation (bias-corrected concordance index,`r round((lrm.version.of.cv_model3$stats[6]),2)`) and maintained accuracy during temportal validation using the separate validation cohort (concordance index,`r round((lrm.version.of.cv_model3$stats[6]),2)`).
+
+Introduction
+===========================================================================================
+To add in.  
+
+Materials and Methods
+===========================================================================================
+This was an institutional review board exempt retrospective cohort analysis of medical students who applied to Obstetrics and Gynecology (OBGYN) residency from 2015 to 2018.  Guidelines for transparent reporting of a multivariable prediction model for individual outcomes were used in this study.(https://www.equator-network.org/reporting-guidelines/tripod-statement/).  Eligible participants were identified if they applied to OBGYN residency during the study period of 2015 to 2018.  The outcome of the model was defined as matching or not matching into residency for the specific application year.  Individual predictors of successfully* matching were compiled from a literature review, expert opinion, and judgment then collected from the Electronic Residency Application Service materials.
+
+Once the data set was complete it was divided into a model training and test set.  *When an external validation data set is unavailable to test a new model but an existing modeling data set is sufficiently large, as in this case, it is recommended to split by time and develop the model using data from one period and evaluate its performance from data from a future period.  There was a large case imbalance with matching rates split by year therefore we split the data randomly.
+
+In all, 18 candidate risk factors were considered for fitting on the training data set (supplmental table).  Variable selection was done using a penalized logistic regression called least absolute shrinkage and selection operator (LASSO).  The LASSO model is a regression analysis method that performs both variable selection and regularization in order to enhance the prediction accuracy and interpretability of the statistical model it produces.  We elected to use LASSO to choose which covariates to include over stepwise selection because the latter only improves prediction accuracy in certain cases, such as when only a few covariates have a strong relationship with the outcome.
+
+The logistic model’s discriminative ability was measured by the area under the curve (AUC) for the receiver operating characteristic curve based on the sensitivity and specificity of the model.  An AUC value closer to 1 indicates a better prediction of the outcome and an AUC value of 0.5 indicates that the model predicts no better than chance. The AUC is also a representation of the concordance index and measures the model’s ability to generate a higher predicted probability of a successful match* occurring in a medical student who has a ????.   For example, if we have a pair of medical students, in which one medical student matches and the other does not, the concordance index measures the model’s ability to assign a higher risk of not matching to the medical student who successfully matches. All concordance indices and receiver operating characteristic curves were internally validated using a 1,000 bootstrap resample to correct for bias and overfitting within the model. The bootstrapping method of validation has been shown to be superior to other approaches to estimate internal validity. Calibration curves were also plotted to depict the relationship between the model’s predicted outcomes against the cohort’s observed outcome, where a perfectly calibrated model follows a 45° line.
+
+After the best model was selected and internally validated, the model was compared with the best currently available method of estimating risk, that is, an expert medical educator’s predictions. To perform these comparisons, a subset of 50 participants was randomly selected for comparing the probability of matching between the model and the panel of experts. These ?? participants were used to compare predictions of the models with experts’ predictions and not as a true independent validation subset. The model was rebuilt using the remaining participants in the data set excluding the 50 randomly selected participants. The candidate risk factors of these 50 participants were given to 20 “expert” medical educators with representation from each of the *** for review resulting in 1,000 expert predictions and 50 model predictions for each outcome. All medical educators were considered to be experienced in counseling medical students regarding OBGYN matching. Each of the 20 experts were asked to consider each medical student’s data from all ??? variables among the 50 randomly selected students and provide their best estimated outcome by answering the following question: “Out of 100 medical students with these exact characteristics, estimate the number of medical students who would not matching into OBGYN during the 2019 application year.” Individual medical educators’ predictions were not averaged to yield a single value because incorporating each medical educator’s predictions substantially increased statistical power. The model’s predictions were compared with the experts’ predictions, which included all risk factors, to determine which was most accurate. The difference in accuracy was determined by using a bootstrap method from their respective receiver operating characteristic curves. Change.  
+
+All analyses were performed using R 3.6.1.  However, considering the large amount of data, processing the data was taking too long and that was compromising the efficiency of the study. So, the platform h2o.ai was used, integrated with R, to explore the grid mode and parallel processing models. The grid allowed to combine different parameters to build different models. The parallel processing allowed those models to be built at the same time. This efficiency increase made it possible to build more models, with better tuning parameters.
+
+Results
+===========================================================================================
+A total of `r nrow(all_data)` applied to obstetrics and gynecology residency at the University of Colorado from 2015 to 2018.  The overall mean rate of matching in the training cohort was `r table(train$Match_Status)[[2]]` of `r nrow(train)` was (`r round((prop.table(table(train$Match_Status))[[2]]*100),1)`%).
+The unadjusted comparison of the `r ncol(all_data)` candidate predictors in the training cohort are presented in Supplemental Table 1.  To identify predictors from the candidates we employed least absolute shrinkage and selection operator (LASSO).  Regularisation techniques change how the model is fit by adding a penalty for every additional parameter you have in the model.
+`r length(final_formula[2])` variables were included within the final model.  Applicants from the United States or Canada, high USMLE Step 1 scores, female gender, White race, no visa sponsorship needed, membership in Alpha Omega Alpha, no interruption of medical training, couples matching, and allopathic medical training increased the chances of matching into OBGYN.  In contrast, more oral presentations, increasing age, a higher number of peer-reviewed online publications, an increased number of authored book chapters, and a higher count of poster presentations all decreased the probability of matching into OBGYN (table 2).  The nomogram illustrates the strength of association of the predictors to the outcome as well as the nonlinear associations between age, count of Oral Presentations, count of peer−reviewed book chapters and the chances of matching (Figure 1).
+
+Discussion
+===========================================================================================
+Needed
+
+
+References
+===============================================================================

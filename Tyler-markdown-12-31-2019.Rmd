@@ -791,8 +791,8 @@ train$Match_Status <- as.factor(train$Match_Status)
 class(train$Match_Status)  
 #train <- train %>% select(-Match_Status1)
 require(rms)
-
-train1 <- train %>% select(-Type_of_medical_school, -USMLE_Step_2_CK_Score, -USMLE_Step_1_Score, -US_or_Canadian_Applicant, -Medical_Degree)
+library(magrittr)
+train1 <- train %>% dplyr::select(-Type_of_medical_school, -USMLE_Step_2_CK_Score, -USMLE_Step_1_Score, -US_or_Canadian_Applicant)
 
 d <- 
   rms::datadist(train1)

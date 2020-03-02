@@ -1031,7 +1031,7 @@ knitr::kable(all_data_pca$method$pca, caption = "Principal Components Analysis")
 
 # Final selection of variables
 ```{r, include=TRUE}
-boruta_drivers <- c("ACLS",
+boruta_drivers <- c(
                                                                      "Age",
                                                        "Alpha_Omega_Alpha",
                                                                     "ACLS",
@@ -1071,3 +1071,36 @@ final_formula <- paste(dependentVar, "~", paste(boruta_drivers, collapse = " + "
 final_formula
 ```
 
+
+## Partial least squares (PLS) logistic regression
+We can perform a partial least squares (PLS) logistic regression to assess if reducing the dimension of our numeric predictors helps to improve accuracy. There are 17 numeric features in our data set so the following code performs a 10-fold cross-validated PLS model while tuning the number of principal components.  
+
+```{r, include = FALSE}
+# Perform 10-fold CV on a PLS model tuning the number of PCs to 
+# use as predictors
+set.seed(123)
+cv_model_pls <- caret::train(
+  Match_Status ~ ., 
+  data = train, 
+  method = "pls",
+  family = "binomial",
+  trControl = trainControl(method = "cv", number = 10),
+  preProcess = c("zv", "center", "scale"),
+  tuneLength = 10
+)
+
+# Model with lowest AUC
+cv_model_pls$bestTune
+
+# Plot cross-validated AUC
+cv_model_pls_plot <- ggplot2::ggplot(cv_model_pls) + ggtitle(label = "The 10-fold cross-validation AUC \n obtained using PLS with \n 1–10 principal components.")
+cv_model_pls_plot
+
+tm_ggsave <- function (object, filename, ...){  #make sure the file name has quotation marks around it.  
+  print("Function Sanity Check: Saving a ggplot image as a TIFF")
+  ggplot2::ggsave(here::here("results", filename), object, device = "tiff", width = 10, height = 7, dpi = 200)
+}
+
+tm_ggsave(cv_model_pls_plot, "cv_model_pls_plot.tiff")
+```
+The 10-fold cross-validation AUC obtained using partial least squares with 1–10 principal components.
