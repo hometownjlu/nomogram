@@ -314,7 +314,7 @@ tm_t_test <- function(variable){
 }
 
 tm_t_test(train$Age)#Significant different in age for people who matched (younger) and did not match (older) shown by the t-test
-tm_t_test(train$USMLE_Step_1_Score)#Significant different in USMLE_Step_1_Score for people who matched and did not match shown by the t-test
+#tm_t_test(train$USMLE_Step_1_Score)#Significant different in USMLE_Step_1_Score for people who matched and did not match shown by the t-test
 tm_t_test(train$Count_of_Poster_Presentation) #NO DIFFERENCE in Count_of_Poster_Presentation for people who matched and did not match shown by the t-test
 tm_t_test(train$Count_of_Oral_Presentation)#NO DIFFERENCE in Count_of_Oral_Presentation for people who matched and did not match shown by the t-test
 tm_t_test(train$Count_of_Peer_Reviewed_Journal_Articles_Abstracts)
@@ -357,7 +357,8 @@ tm_print_save <- function (filename) {
   dev.off()
 }
 
-cnum <- train[,c("Age", "Count_of_Non_Peer_Reviewed_Online_Publication", "Count_of_Oral_Presentation", "Count_of_Other_Articles", "Count_of_Peer_Reviewed_Book_Chapter", "Count_of_Peer_Reviewed_Journal_Articles_Abstracts", "Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published", "Count_of_Peer_Reviewed_Online_Publication", "Count_of_Poster_Presentation", "Count_of_Scientific_Monograph", "USMLE_Step_1_Score", "USMLE_Step_2_CK_Score", "NIH_dollars" )]
+cnum <- train[,c("Age", "Count_of_Non_Peer_Reviewed_Online_Publication", "Count_of_Oral_Presentation", "Count_of_Other_Articles", "Count_of_Peer_Reviewed_Book_Chapter", "Count_of_Peer_Reviewed_Journal_Articles_Abstracts", "Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published", "Count_of_Peer_Reviewed_Online_Publication", "Count_of_Poster_Presentation", "Count_of_Scientific_Monograph", #"USMLE_Step_1_Score", 
+                 "USMLE_Step_2_CK_Score", "NIH_dollars" )]
 cormat <- stats::cor(cnum) # Select only numeric variables that are significant on univariate testing.
 pairs <- graphics::pairs(cnum)
 pairs

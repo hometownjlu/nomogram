@@ -84,7 +84,7 @@ A codebook is a technical description of the data that was collected for a parti
 7. `all_data$Medical_Education_or_Training_Interrupted` - Taking breaks, 2 level categorical
 8. `all_data$Alpha_Omega_Alpha` - Membership in AOA, 3 level categorical.  Yes means elected in their junior year or elections are early.  Could combine with Sigma Sigma Phi?  Passing minimum score is 194 and theoretical maximum score is 300.  
 9. `all_data$Military_Service_Obligation`
-10. `all_data$USMLE_Step_1_Score` - I did not use Step 2 score because most students will not have those numbers at the time they apply, numerical variable
+10. `all_data$USMLE_Step_1_Score` - I did not use Step 1 score because it will be pass/fail starting in 2020, numerical variable
 11. `all_data$Count_of_Poster_Presentation` - numerical variable
 12. `all_data$Count_of_Oral_Presentation` - numerical variable
 13. `all_data$Count_of_Articles_Abstracts` - numerical variable
@@ -270,7 +270,8 @@ recipe_simple <- function(dataset) {
   recipes::step_string2factor(all_nominal(), -all_outcomes()) %>%
     add_role(Match_Status, new_role = "outcome") %>% 
     add_role(starts_with("Count_of_"), new_role = "predictor") %>% 
-    add_role(white_non_white, Age, Gender, Couples_Match, US_or_Canadian_Applicant, Medical_Education_Interrupted, Alpha_Omega_Alpha, Military_Service_Obligation, USMLE_Step_1_Score, Visa_Sponsorship_Needed, Medical_Degree, new_role = "predictor") %>%
+    add_role(white_non_white, Age, Gender, Couples_Match, US_or_Canadian_Applicant, Medical_Education_Interrupted, Alpha_Omega_Alpha, Military_Service_Obligation, #USMLE_Step_1_Score, 
+             Visa_Sponsorship_Needed, Medical_Degree, new_role = "predictor") %>%
   recipes::step_corr(all_numeric(), method = "pearson", threshold = 0.9)
   }   #Cool looks for correlation
     # Add dummy variables for "class" variables
@@ -1085,7 +1086,7 @@ drivers <- c("ACLS",
                                                         "Sigma_Sigma_Phi",
                                                  "Type_of_medical_school",
                                                "US_or_Canadian_Applicant",
-                                                     "USMLE_Step_1_Score",
+                                                    # "USMLE_Step_1_Score",
                                                   "USMLE_Step_2_CK_Score",
                                                 "Visa_Sponsorship_Needed",
                                                         "white_non_white")

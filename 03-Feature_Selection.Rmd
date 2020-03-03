@@ -3,6 +3,14 @@ title: "A Model to Predict Chances of Matching into Obstetrics and Gynecology Re
 author: "Tyler M. Muffly, MD"
 date: "Department of Obstetrics and Gynecology, Denver Health, Denver, CO"
 output:
+  pdf_document:
+    pandoc_args:
+    - --wrap=none
+    - --top-level-division=chapter
+    df_print: paged
+    fig_caption: yes
+    #keep_tex: no
+    latex_engine: xelatex
   html_document:
     toc: true
     toc_float: true
@@ -12,14 +20,6 @@ output:
     dev: tiff
     df_print: paged
     theme: journal
-  pdf_document:
-    pandoc_args:
-    - --wrap=none
-    - --top-level-division=chapter
-    df_print: paged
-    fig_caption: yes
-    #keep_tex: no
-    latex_engine: xelatex
   word_document:
     toc_depth: '2'
 fontsize: 12pt
@@ -901,10 +901,10 @@ Factor Selection: Variable selection using LASSO in the train dataset
 #
 # variables
 ```
- This feature selection with LASSO was not very helpful because it eliminated zero features (see `variables`).  See VIP figure above (`feature_interpretation_regularized_regression`) for a clearer answer as to what features to select.
+
 
 ```{r}
-knitr::kable(variables, caption = "Variables Chosen by LASSO to Predict Matching into OBGYN based on the Train Data")
+# knitr::kable(variables, caption = "Variables Chosen by LASSO to Predict Matching into OBGYN based on the Train Data")
 ```
   
 ## Factor Selection: Revise GLM Model with factors selected by LASSO
@@ -1000,18 +1000,18 @@ knitr::kable(boruta_confirmed_variables, caption = "Variables chosen from Boruta
 ## Variables selected by forward regression
 ```{r}
 #Forward regression
-knitr::kable(forward_drivers, caption = "Variables chosen from forward regression")
+#knitr::kable(as.data.frame(forward_drivers), caption = "Variables chosen from forward regression")
 ```
 
 ## Variables selected by backward regression
 ```{r}
 #Backward regression
-knitr::kable(backward_drivers, caption = "Variables chosen from backwards regression")
+#knitr::kable(as.data.frame(backward_drivers), caption = "Variables chosen from backwards regression")
 ```
 
 ## Variables selected by MARS
 ```{r}
-knitr::kable(optimal_combinations, caption = "Variables chosen from MARS")
+#knitr::kable(optimal_combinations, caption = "Variables chosen from MARS")
 # #MARS
 # plot(tuned_mars)
 # summary(tuned_mars) %>% .$coefficients 
@@ -1076,6 +1076,8 @@ final_formula
 We can perform a partial least squares (PLS) logistic regression to assess if reducing the dimension of our numeric predictors helps to improve accuracy. There are 17 numeric features in our data set so the following code performs a 10-fold cross-validated PLS model while tuning the number of principal components.  
 
 ```{r, include = FALSE}
+library(pls)
+
 # Perform 10-fold CV on a PLS model tuning the number of PCs to 
 # use as predictors
 set.seed(123)
