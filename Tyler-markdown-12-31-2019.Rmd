@@ -2905,6 +2905,9 @@ gc()
 ```{r Load and split the data}
 # Load and split the data
 set.seed(123)  # for reproducibility
+all_data <- all_data %>% select(-USMLE_Step_1_Score, -USMLE_Step_2_CK_Score) #%>%
+#dplyr::mutate(Match_Status = dplyr::recode(Match_Status, "0" = "Did.not.match",  "1" = "Match"))
+
 split <- initial_split(all_data, strata = "Match_Status")
 train <- training(split)
 test <- testing(split)
@@ -2930,11 +2933,11 @@ X <- setdiff(names(train), Y)  #Why are we using ames_train ???????
 
 ```{r Train & cross-validate mutliple models}
 # Train & cross-validate a GLM model
- best_glm <- h2o.glm(
-   x = X, y = Y, training_frame = train_h2o, alpha = 0.1,
-   remove_collinear_columns = TRUE, nfolds = 10, fold_assignment = "Modulo",  #nfolds was 10 originally
-   keep_cross_validation_predictions = TRUE, seed = 123
- )
+ # best_glm <- h2o.glm(
+ #   x = X, y = Y, training_frame = train_h2o, alpha = 0.1,
+ #   remove_collinear_columns = TRUE, nfolds = 10, fold_assignment = "Modulo",  #nfolds was 10 originally
+ #   keep_cross_validation_predictions = TRUE, seed = 123
+ # )
 
 # Train & cross-validate a RF model
 best_rf <- h2o.randomForest(
@@ -3047,7 +3050,7 @@ h2o.getGrid(
 
 ```{r Grab the model_id for the top model, chosen by validation error}
 # Grab the model_id for the top model, chosen by validation error
-#best_model_id <- random_grid_perf@model_ids[[1]]
+best_model_id <- random_grid@model_ids[[1]]
 best_model <- h2o.getModel(best_model_id)
 h2o.performance(best_model, newdata = test_h2o)
 ```

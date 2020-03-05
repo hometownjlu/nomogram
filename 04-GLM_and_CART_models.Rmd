@@ -1,5 +1,5 @@
 ---
-title: "A Model to Predict Chances of Matching into Obstetrics and Gynecology Residency"
+title: "04-GLM_and_CART_models: A Model to Predict Chances of Matching into Obstetrics and Gynecology Residency"
 author: "Tyler M. Muffly, MD"
 date: "Department of Obstetrics and Gynecology, Denver Health, Denver, CO"
 output:
@@ -36,17 +36,35 @@ always_allow_html: yes
 editor_options: 
   chunk_output_type: console
 ---
+I removed the `USMLE_Step_1_Score` given the impending pass/fail in 2020.  I also removed `USMLE_Step_2_CK_Score` because most students do not have this test completed by the time that they apply.  
+
+```{r, fig.align="center"}
+knitr::include_graphics("images/pass.jpg")
+```
 
 Read in the original `all_data`, `train`, and `test`
-```{r, include = FALSE, echo=FALSE}
+```{r, include = FALSE, echo=FALSE, warning=FALSE}
+rm(list = ls())
+
 library(magrittr)
-all_data <- readr::read_csv("~/Dropbox/Nomogram/nomogram/all_data_output_of_split_correlation.csv") 
+all_data <- readr::read_csv("~/Dropbox/Nomogram/nomogram/all_data_output_of_split_correlation.csv") %>%
+  dplyr::select(-USMLE_Step_1_Score,
+                -USMLE_Step_2_CK_Score)
+readr::write_csv(all_data, "~/Dropbox/Nomogram/nomogram/all_data_no_usmle.csv")
 
 train <- readr::read_csv("~/Dropbox/Nomogram/nomogram/train_output_of_split_correlation.csv") %>%
-  dplyr::select("ACLS", "Age", "Alpha_Omega_Alpha",  "BLS", "Citizenship",  "Count_of_Peer_Reviewed_Journal_Articles_Abstracts", "Count_of_Poster_Presentation", "Couples_Match", "Gender", "Medical_Education_or_Training_Interrupted", "NIH_dollars", "PALS",  "Type_of_medical_school", "US_or_Canadian_Applicant", "USMLE_Step_1_Score", "USMLE_Step_2_CK_Score", "Visa_Sponsorship_Needed", "white_non_white", "Match_Status")
+  dplyr::select("ACLS", "Age", "Alpha_Omega_Alpha",  "BLS", "Citizenship",  "Count_of_Peer_Reviewed_Journal_Articles_Abstracts", "Count_of_Poster_Presentation",
+                "Count_of_Peer_Reviewed_Book_Chapter",
+                "Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published","Couples_Match", "Gender", "Medical_Education_or_Training_Interrupted", "Medical_Degree", "NIH_dollars", "PALS",  "Type_of_medical_school", "US_or_Canadian_Applicant", #"USMLE_Step_1_Score",
+                #"USMLE_Step_2_CK_Score", 
+                "Visa_Sponsorship_Needed", "white_non_white", "Match_Status")
 
 test <- readr::read_csv("~/Dropbox/Nomogram/nomogram/test_output_of_split_correlation.csv") %>%
-  dplyr::select("ACLS", "Age", "Alpha_Omega_Alpha",  "BLS", "Citizenship",  "Count_of_Peer_Reviewed_Journal_Articles_Abstracts", "Count_of_Poster_Presentation", "Couples_Match", "Gender", "Medical_Education_or_Training_Interrupted", "NIH_dollars", "PALS",  "Type_of_medical_school", "US_or_Canadian_Applicant", "USMLE_Step_1_Score", "USMLE_Step_2_CK_Score", "Visa_Sponsorship_Needed", "white_non_white", "Match_Status")
+ dplyr::select("ACLS", "Age", "Alpha_Omega_Alpha",  "BLS", "Citizenship",  "Count_of_Peer_Reviewed_Journal_Articles_Abstracts", "Count_of_Poster_Presentation",
+                "Count_of_Peer_Reviewed_Book_Chapter",
+                "Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published","Couples_Match", "Gender", "Medical_Education_or_Training_Interrupted", "Medical_Degree", "NIH_dollars", "PALS",  "Type_of_medical_school", "US_or_Canadian_Applicant", #"USMLE_Step_1_Score",
+                #"USMLE_Step_2_CK_Score", 
+                "Visa_Sponsorship_Needed", "white_non_white", "Match_Status")
 
 train <- train %>%
 dplyr::mutate(Match_Status = dplyr::recode(Match_Status, `Did Not Match` = "0", Match = "1"))
@@ -60,8 +78,8 @@ train$Match_Status <- as.numeric(train$Match_Status)
 #See section 11
 ```
 
-# Final selection of variables from Boruta
-```{r, include=TRUE}
+# Final selection of variables from Boruta - I removed the variables that Boruta threw out.  
+```{r, include=TRUE, warning=FALSE}
 boruta_drivers <- c(
                                                                      "Age",
                                                        "Alpha_Omega_Alpha",
@@ -71,15 +89,15 @@ boruta_drivers <- c(
                            #"Count_of_Non_Peer_Reviewed_Online_Publication",
                                       #        "Count_of_Oral_Presentation",
                                      #            "Count_of_Other_Articles",
-                                    #"Count_of_Peer_Reviewed_Book_Chapter",
+                                    "Count_of_Peer_Reviewed_Book_Chapter",
                       "Count_of_Peer_Reviewed_Journal_Articles_Abstracts",
- #"Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published",
+ "Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published",
   #                            "Count_of_Peer_Reviewed_Online_Publication",
                                            "Count_of_Poster_Presentation",
    #                                       "Count_of_Scientific_Monograph",
                                                           "Couples_Match",
                                                                  "Gender",
-                                                         #"Medical_Degree",
+                                                         "Medical_Degree",
                               "Medical_Education_or_Training_Interrupted",
                                               #"Medical_Licensure_Problem",
                                             #"Military_Service_Obligation",
@@ -89,8 +107,8 @@ boruta_drivers <- c(
                                                         #"Sigma_Sigma_Phi",
                                                  "Type_of_medical_school",
                                                "US_or_Canadian_Applicant",
-                                                     "USMLE_Step_1_Score",
-                                                  "USMLE_Step_2_CK_Score",
+                                                     #"USMLE_Step_1_Score",
+                                                 # "USMLE_Step_2_CK_Score",
                                                 "Visa_Sponsorship_Needed",
                                                         "white_non_white")
 
@@ -107,16 +125,23 @@ final_formula
 # 1) lrm Model 1 (m.1):  Draw a Nomogram Representing a Regression Fit
 One problem is that the `rms:nomogram` function only accepts an `lrm` model.  The package `hdnom` only plots survival analysis for nomograms.  
 
-```{r, include = TRUE, , fig.width = 15, fig.height = 15, dpi = 1200}
+```{r, include = FALSE, , fig.width = 15, fig.height = 15, dpi = 1200}
 #Using rmarkdown with images and outputing at different sizes and resolutions
 #https://yihui.org/knitr/options
 #https://www.zevross.com/blog/2017/06/19/tips-and-tricks-for-working-with-images-and-figures-in-r-markdown-documents/
 
 library(rms)
+```
+
+
+```{r, include = TRUE, , fig.width = 15, fig.height = 15, dpi = 1200}
 dd <- datadist(test)
 options(datadist = "dd")
 m.1 <- 
-  rms::lrm(formula = Match_Status ~ Age + Alpha_Omega_Alpha + ACLS + BLS + Citizenship + Count_of_Peer_Reviewed_Journal_Articles_Abstracts + Count_of_Poster_Presentation + Couples_Match + Gender + Medical_Education_or_Training_Interrupted + NIH_dollars + PALS + Type_of_medical_school  + US_or_Canadian_Applicant  + USMLE_Step_1_Score  + USMLE_Step_2_CK_Score + Visa_Sponsorship_Needed + white_non_white, 
+  rms::lrm(formula = Match_Status ~ Age + Alpha_Omega_Alpha + ACLS + BLS + Citizenship + Count_of_Peer_Reviewed_Book_Chapter + Count_of_Peer_Reviewed_Journal_Articles_Abstracts + Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published + Count_of_Poster_Presentation + Couples_Match + Gender + Medical_Degree + Medical_Education_or_Training_Interrupted + NIH_dollars + PALS + #Type_of_medical_school + 
+#singular information matrix in lrm.fit (rank= 18 ).  Offending variable(s):
+#Type_of_medical_school=Osteopathic School 
+        US_or_Canadian_Applicant + Visa_Sponsorship_Needed + white_non_white, 
       data = train, #Does this need to be centered and scaled?
       penalty = 0.0,
       #method = "lrm.fit",
@@ -125,19 +150,19 @@ m.1 <-
       y = T,
       maxit=10000)
 #singular information matrix in lrm.fit (rank= 16 ).  Offending variable(s):
-#USMLE_Step_1_Score US_or_Canadian_Applicant=US senior 
+#Type of Medical school
 #Only thing that fixed this was decreasing the singularity criteria set by tol, tol = 1e-9 works
 #https://grokbase.com/t/r/r-help/08a9xjk7rk/r-singular-information-matrix-in-lrm-fit
 #https://stats.stackexchange.com/questions/70699/qualitative-variable-coding-in-regression-leads-to-singularities#70700
 
-m.1
+summary(m.1)
 ```
 
 
 ```{r NOMOGRAM1,  fig.width=7, fig.asp=1}
 #https://www.kaggle.com/pjmcintyre/titanic-first-kernel#final-checks
-# https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5451623/
-#https://rpubs.com/TELOVE/project1_demo_2019-432
+#https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5451623/
+# #https://rpubs.com/TELOVE/project1_demo_2019-432
 tm_print_save <- function (filename) {
   print("Function Sanity Check: Saving TIFF of what is in the viewer")
   grDevices::dev.print(tiff, (here::here("results", filename)), compression = "lzw",width=2000, height=2000, bg="transparent", res = 200, units = "px" )
@@ -156,7 +181,7 @@ nomo <- rms::nomogram(m.1,  #requires an lrm model from rms package
 ```
 
 
-```{r NOMOGRAM2,  fig.width=7, fig.asp=1}
+```{r NOMOGRAM2,  fig.width=15, fig.asp=1.5}
 plot(anova(m.1))
 ```
 From the ANOVA plot, it looks like a model with Step 1, Step 2 scores, and citizenship might be sufficient.  
@@ -205,32 +230,31 @@ C=0.5+Dxy2=0.5+.44542=0.5+0.2227=0.722
 
 which is a cross-validated estimate of the value of the C statistic we might reasonably expect using this model. Compare this to the nominal C = 0.86 (`r m.1[[3]]`) shown in the initial `m.1` summary
 
-So, it looks like this model is pretty seriously overfitting the data. The next model to try involves (see "Factors in Final Model" from rms::validate(lrm....)) only:  
-`Age`, 
-`Citizenship`, 
-`Medical_Education_or_Training_Interrupted`, 
-`Type_of_medical_school`, 
-`USMLE_Step_1_Score`, 
-`USMLE_Step_2_CK_Score`, and 
-`white_non_white.`
 
 # 2) Model 2 (m.2): a smaller model with promising predictors
 
 We’ll start with a model motivated by the Spearman ρ2 plot developed above, and repeated below.
 ```{r}
 train <- readr::read_csv("~/Dropbox/Nomogram/nomogram/train_output_of_split_correlation.csv") %>%
-  dplyr::select("Age", "Citizenship",  "Medical_Education_or_Training_Interrupted",  "Type_of_medical_school",  "USMLE_Step_1_Score", "USMLE_Step_2_CK_Score", "white_non_white", "Match_Status")
+  dplyr::select("Age", "Alpha_Omega_Alpha", "BLS","Citizenship", "Gender", "Medical_Degree", "Medical_Education_or_Training_Interrupted",  "US_or_Canadian_Applicant",  #"USMLE_Step_1_Score", 
+                #"USMLE_Step_2_CK_Score", 
+                "white_non_white", "Match_Status")
 
 
 test <- readr::read_csv("~/Dropbox/Nomogram/nomogram/test_output_of_split_correlation.csv") %>%
-  dplyr::select("Age", "Citizenship",  "Medical_Education_or_Training_Interrupted",  "Type_of_medical_school",  "USMLE_Step_1_Score", "USMLE_Step_2_CK_Score", "white_non_white", "Match_Status")
+  dplyr::select("Age", "Alpha_Omega_Alpha", "BLS","Citizenship", "Gender", "Medical_Degree", "Medical_Education_or_Training_Interrupted",  "US_or_Canadian_Applicant",  #"USMLE_Step_1_Score", 
+                #"USMLE_Step_2_CK_Score", 
+                "white_non_white", "Match_Status")
 ```
 
 
 ```{r}
 dd <- datadist(train)
 options(datadist = "dd")
-m.2 <- lrm(Match_Status ~ Age + Citizenship + Medical_Education_or_Training_Interrupted + Type_of_medical_school + USMLE_Step_1_Score + USMLE_Step_2_CK_Score + white_non_white,
+m.2 <- lrm(Match_Status ~ Age +  Alpha_Omega_Alpha + BLS +Citizenship + Gender + Medical_Degree + Medical_Education_or_Training_Interrupted + US_or_Canadian_Applicant +
+             #USMLE_Step_1_Score + 
+             #USMLE_Step_2_CK_Score + 
+             white_non_white,
            data = train, x = T, y = T)
 m.2
 ```
@@ -238,6 +262,7 @@ m.2
 ##ANOVA for model 2
 ```{r}
 anova(m.2)
+
 plot(anova(m.2))
 tm_print_save("model_2_fewers_variables_plot.tiff")
 ```
@@ -246,6 +271,7 @@ tm_print_save("model_2_fewers_variables_plot.tiff")
 ```{r}
 summary(m.2)
 plot(summary(m.2))
+
 tm_print_save("model_2_fewers_odds_ratio_plot.tiff")
 ```
 
@@ -273,20 +299,20 @@ tm_print_save("nomo_model_2_nomogram.tiff")
 ```
 
 ## Making predictions with m.2
-Let’s make a mean prediction for two subjects, each with `USMLE_Step_1_Score` = 230 but one with `Citizenship` = “US Citizen” and the other with `Citizenship` = “Not A Citizen”, using a 90% confidence interval.
+Let’s make a mean prediction for two subjects, each with `Age` = 26 but one with `Citizenship` = “US Citizen” and the other with `Citizenship` = “Not A Citizen”, using a 90% confidence interval.
 
 ```{r}
-rms::Predict(m.2, Citizenship = c("US_Citizen", "Not_A_Citizen"), USMLE_Step_1_Score = 230, conf.int = 0.90, fun = plogis)
+rms::Predict(m.2, Citizenship = c("US_Citizen", "Not_A_Citizen"), Age = 26, conf.int = 0.90, fun = plogis)
 ```
 
 ##Plotting Model 2 Predictions
-Here is a plot of the predictions across the two levels of `Citizenship` for patients with USMLE_Step_1_Score ranging from 220 to 280.
+Here is a plot of the predictions across the two levels of `Citizenship` for patients with Age ranging from 26 to 50
 
 ```{r}
-ggplot(rms::Predict(m.2, USMLE_Step_1_Score = 220:280, 
+ggplot(rms::Predict(m.2, Age = 26:50, 
                Citizenship = c("US_Citizen", "Not_A_Citizen"), fun=plogis)) +
     theme_bw() +
-    labs(x = "USMLE Step 1 Score of Applicants to OBGYN",
+    labs(x = "Age",
          y = "Pr(matching into OBGYN residency)",
          title = "Model 2 Predictions")
 ```
@@ -295,7 +321,17 @@ ggplot(rms::Predict(m.2, USMLE_Step_1_Score = 220:280,
 Again, we need to fit Model 2 in `glm`, rather than `rms.`
 ```{r, include=TRUE}
 #https://rpubs.com/TELOVE/project1_demo_2019-432
-model.2 <- stats::glm(Match_Status ~ Age + Citizenship + Medical_Education_or_Training_Interrupted + Type_of_medical_school + USMLE_Step_1_Score + USMLE_Step_2_CK_Score + white_non_white, 
+train <- train %>%
+dplyr::mutate(Match_Status = dplyr::recode(Match_Status, `Did Not Match` = 0L, Match = 1L))
+
+
+test <- test %>%
+dplyr::mutate(Match_Status = dplyr::recode(Match_Status, `Did Not Match` = 0L, Match = 1L))
+
+model.2 <- stats::glm(Match_Status ~ Age +  Alpha_Omega_Alpha + BLS +Citizenship + Gender + Medical_Degree + Medical_Education_or_Training_Interrupted + US_or_Canadian_Applicant +
+             #USMLE_Step_1_Score + 
+             #USMLE_Step_2_CK_Score + 
+             white_non_white,
                       data = train, 
                family = binomial(link = logit))
 ```
@@ -374,6 +410,71 @@ ggplot2::ggplot(roc.data, aes(x=fpr, ymin=0, ymax=tpr)) +
 # DynNom::DNbuilder(model = DynNom.model.glm, data = test, clevel = 0.95, DNtitle = "DRAFT: A Model to Predict Chances of Matching into Obstetrics and Gynecology Residency")
 ```
 
+# Model without Step_2
+```{r}
+train <- readr::read_csv("~/Dropbox/Nomogram/nomogram/train_output_of_split_correlation.csv") %>%
+  dplyr::select("Age", "Citizenship",  "Medical_Education_or_Training_Interrupted",  "Type_of_medical_school",  #"USMLE_Step_1_Score", 
+                #"USMLE_Step_2_CK_Score", 
+                "white_non_white", "Match_Status")
+
+test <- readr::read_csv("~/Dropbox/Nomogram/nomogram/train_output_of_split_correlation.csv") %>%
+  dplyr::select("Age", "Citizenship",  "Medical_Education_or_Training_Interrupted",  "Type_of_medical_school",  #"USMLE_Step_1_Score", 
+                #"USMLE_Step_2_CK_Score", 
+                "white_non_white", "Match_Status")
+```
+
+No step_2
+```{r}
+dd <- datadist(train)
+options(datadist = "dd")
+m.2 <- lrm(Match_Status ~ Age + Citizenship + Medical_Education_or_Training_Interrupted + Type_of_medical_school + 
+             #USMLE_Step_1_Score + 
+             #USMLE_Step_2_CK_Score 
+             + white_non_white,
+           data = train, x = T, y = T)
+m.2
+```
+
+##ANOVA for model 2
+```{r}
+anova(m.2)
+plot(anova(m.2))
+tm_print_save("model_2_fewers_variables_plot_no_step_2.tiff")
+```
+
+##Effects summary for m.2
+```{r}
+summary(m.2)
+plot(summary(m.2))
+tm_print_save("model_2_fewers_odds_ratio_plot_no_step_2.tiff")
+```
+
+The calibration plot does not look much different.  
+```{r}
+plot(rms::calibrate(m.2))
+tm_print_save("model_2_fewers_calibration_plot_no_step_2.tiff")
+```
+
+##Nomogram for m.2
+```{r, include = TRUE, , fig.width = 12, fig.height = 12, dpi = 1200}
+#https://rpubs.com/TELOVE/project1_demo_2019-432
+nomo.m.2.no.step.2 <- rms::nomogram(m.2,  #requires an lrm model from rms package
+                lp.at = seq(-3,4,by=0.5),
+                fun = plogis,
+                fun.at = c(0.001, 0.01, 0.05, seq(0.2, 0.8, by = 0.2), 0.95, 0.99, 0.999),
+                funlabel = "Chance of Matching in OBGYN",
+                lp =FALSE,
+                #conf.int = c(0.1,0.7),
+                abbrev = F,
+                minlength = 9)
+
+plot(nomo.m.2.no.step.2)
+tm_print_save("nomo_model_2_nomogram_no_step_2.tiff")
+```
+
+
+
+
 # 3) Model: Caret for Fitting Generalized Linear Models
 
 It is important to know what type of modeling a particular model supports. This can be done using the caret function getModelInfo.  This tells us that gbm supports both regression and classification. As this is a binary classification, we need to force glm into using the classification mode. We do this by changing the outcome variable to a factor. 
@@ -394,7 +495,20 @@ Caret offers many tuning functions to help you get as much as possible out of yo
 #https://topepo.github.io/caret/model-training-and-tuning.html#an-example
 #https://www.viralml.com/video-content.html?v=-nai4NBx5zI
 set.seed(123)
-train$Match_Status <- as.factor(train$Match_Status)
+#train$Match_Status <- as.factor(train$Match_Status)
+
+train
+class(train)
+class(train$Match_Status)
+head((train$Match_Status), 10)
+
+train <- train %>%
+dplyr::mutate(Match_Status = dplyr::recode(Match_Status, `Did Not Match` = "Did_Not_Match", Match = "Match"))
+
+test <- test %>%
+dplyr::mutate(Match_Status = dplyr::recode(Match_Status, `Did Not Match` = "Did_Not_Match", Match = "Match"))
+
+head((train$Match_Status), 10)
 
 fitControl <- caret::trainControl(## 10-fold CV
                            method = "repeatedcv",
@@ -404,25 +518,18 @@ fitControl <- caret::trainControl(## 10-fold CV
                            classProbs = TRUE, 
                            savePredictions=TRUE) 
 
-train <- train %>%
-dplyr::mutate(Match_Status = dplyr::recode(Match_Status, `1` = "Match", `0` = "Did.not.match"))
-train$Match_Status
-
-test <- test %>%
-dplyr::mutate(Match_Status = dplyr::recode(Match_Status, `1` = "Match", `0` = "Did.not.match"))
-
-train$ACLS <- as.factor(train$ACLS)
-train$Alpha_Omega_Alpha <- as.factor(train$Alpha_Omega_Alpha)
-train$BLS <- as.factor(train$BLS)
-train$Citizenship <- as.factor(train$Citizenship)
-train$Couples_Match <- as.factor(train$Couples_Match)
-train$Gender <- as.factor(train$Gender)
-train$Medical_Education_or_Training_Interrupted <- as.factor(train$Medical_Education_or_Training_Interrupted)
-train$PALS <- as.factor(train$PALS)
-train$Type_of_medical_school <- as.factor(train$Type_of_medical_school)
-train$US_or_Canadian_Applicant <- as.factor(train$US_or_Canadian_Applicant)
-train$Visa_Sponsorship_Needed <- as.factor(train$Visa_Sponsorship_Needed)
-train$white_non_white <- as.factor(train$white_non_white)
+# train$ACLS <- as.factor(train$ACLS)
+# train$Alpha_Omega_Alpha <- as.factor(train$Alpha_Omega_Alpha)
+# train$BLS <- as.factor(train$BLS)
+# train$Citizenship <- as.factor(train$Citizenship)
+# train$Couples_Match <- as.factor(train$Couples_Match)
+# train$Gender <- as.factor(train$Gender)
+# train$Medical_Education_or_Training_Interrupted <- as.factor(train$Medical_Education_or_Training_Interrupted)
+# train$PALS <- as.factor(train$PALS)
+# train$Type_of_medical_school <- as.factor(train$Type_of_medical_school)
+# train$US_or_Canadian_Applicant <- as.factor(train$US_or_Canadian_Applicant)
+# train$Visa_Sponsorship_Needed <- as.factor(train$Visa_Sponsorship_Needed)
+# train$white_non_white <- as.factor(train$white_non_white)
 ```
 
 ## Model: Caret, Teaching the Model
@@ -660,6 +767,7 @@ Use the divide-and-conquer (aka recursive partinioning e.g. rpart) technique to 
 ```{r rpart EDA}
 #https://bradleyboehmke.github.io/HOML/DT.html
 #https://www.datacamp.com/community/tutorials/decision-trees-R 
+#https://exploratory.io/note/kei/Visualizing-a-decision-tree-using-R-packages-7185899605672132
 t.model <-
   rpart::rpart(as.factor(Match_Status) ~.,
         data = train,     
@@ -669,6 +777,8 @@ t.model <-
 
 t.model$variable.importance
 ```
+
+The biggest factor is the type of medical school attended.  The Decision Tree rules run from the top to the bottom. If you look at the top of the tree, the 1st rule is “International medical school”. “Yes” goes to the left hand side, and “No” goes to the right. If you look at the right box at the 2nd level, you can tell that the 76% of applicants were not IMGs, and your match rate is 90% (0.9). If you are an international medical school graduate, chances are only 54%.
 
 ```{r fancyR plot rpart EDA, include=TRUE}
 # Tree visualization
@@ -712,6 +822,26 @@ rpart::printcp(t.model)
 ##The figure shows the pruning complexity parameter plot for a fully grown tree. Significant reduction in the cross validation error is achieved with tree sizes 88-100 and then the cross validation error levels off with minimal or no additional improvements.
 
 ```{r}
+train <- readr::read_csv("~/Dropbox/Nomogram/nomogram/train_output_of_split_correlation.csv") %>%
+  dplyr::select("ACLS", "Age", "Alpha_Omega_Alpha",  "BLS", "Citizenship",  "Count_of_Peer_Reviewed_Journal_Articles_Abstracts", "Count_of_Poster_Presentation",
+                "Count_of_Peer_Reviewed_Book_Chapter",
+                "Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published","Couples_Match", "Gender", "Medical_Education_or_Training_Interrupted", "Medical_Degree", "NIH_dollars", "PALS",  "Type_of_medical_school", "US_or_Canadian_Applicant", #"USMLE_Step_1_Score",
+                #"USMLE_Step_2_CK_Score", 
+                "Visa_Sponsorship_Needed", "white_non_white", "Match_Status")
+
+test <- readr::read_csv("~/Dropbox/Nomogram/nomogram/test_output_of_split_correlation.csv") %>%
+ dplyr::select("ACLS", "Age", "Alpha_Omega_Alpha",  "BLS", "Citizenship",  "Count_of_Peer_Reviewed_Journal_Articles_Abstracts", "Count_of_Poster_Presentation",
+                "Count_of_Peer_Reviewed_Book_Chapter",
+                "Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published","Couples_Match", "Gender", "Medical_Education_or_Training_Interrupted", "Medical_Degree", "NIH_dollars", "PALS",  "Type_of_medical_school", "US_or_Canadian_Applicant", #"USMLE_Step_1_Score",
+                #"USMLE_Step_2_CK_Score", 
+                "Visa_Sponsorship_Needed", "white_non_white", "Match_Status")
+
+train <- train %>%
+dplyr::mutate(Match_Status = dplyr::recode(Match_Status, `Did Not Match` = "0", Match = "1"))
+
+test <- test %>%
+dplyr::mutate(Match_Status = dplyr::recode(Match_Status, `Did Not Match` = "0", Match = "1"))
+
 t.model2 <- rpart::rpart(
     formula = final_formula,
     data    = train,
@@ -752,6 +882,8 @@ tm_ggsave(t.model3.plot, "t_model3_plot.tiff")
 
 ## Prune the decision tree down based on complexity graph above
 Based on the complexity plot, prune the tree to a complexity of 0.005 using the prune() function with the tree and the complexity parameter.  Now Compute the accuracy of the pruned tree. 
+
+Even though the Decision Tree algorithm is relatively simple and basic, it still provides a great explainability. Without any background in statistics or machine learning, you can understand what are the conditions to have the target outcomes by just looking at the tree diagram.
 ```{r}
 pruned.t.model <- rpart::prune(t.model, cp = 0.005) #Set the cp where the complexity to accuraty rate plateaued.  
 tm_rpart_plot(pruned.t.model)
@@ -762,20 +894,16 @@ summary(pruned.t.model)
  
 ## Validate the results on a test dataset
 ```{r}
-
-
-pred = stats::predict(pruned.t.model, test, type = "class")
-
-caret::confusionMatrix(as.factor(test$Match_Status), pred)
-(pruned.t.model)
+# pred = stats::predict(pruned.t.model, test, type = "class")
+# 
+# head((pred), 10)
+# class(pred)
+# colnames(pred)
+# 
+# 
+# caret::confusionMatrix(as.factor(test$Match_Status), pred)
+# (pruned.t.model)
 ```
-
-```{r}
-# Compute the accuracy of the pruned tree
-solution_tree <- predict(pruned.t.model, newdata = test, type = "class")
-mean(solution_tree == test$Match_Status)
-```
-The accuracy or correct classification rate of the PRUNED decision tree called `pruned.t.model` is `r round(mean(solution_tree == test$Match_Status), digits = 3)`.  Not a huge benefit in accuracy but the model will be more understandable and be faster to run now that it is pruned.  
 
 
 Abstract

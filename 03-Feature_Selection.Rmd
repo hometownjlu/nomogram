@@ -1,16 +1,8 @@
 ---
-title: "A Model to Predict Chances of Matching into Obstetrics and Gynecology Residency"
+title: "03-Feature_Selection: A Model to Predict Chances of Matching into Obstetrics and Gynecology Residency"
 author: "Tyler M. Muffly, MD"
 date: "Department of Obstetrics and Gynecology, Denver Health, Denver, CO"
 output:
-  pdf_document:
-    pandoc_args:
-    - --wrap=none
-    - --top-level-division=chapter
-    df_print: paged
-    fig_caption: yes
-    #keep_tex: no
-    latex_engine: xelatex
   html_document:
     toc: true
     toc_float: true
@@ -20,6 +12,14 @@ output:
     dev: tiff
     df_print: paged
     theme: journal
+  pdf_document:
+    pandoc_args:
+    - --wrap=none
+    - --top-level-division=chapter
+    df_print: paged
+    fig_caption: yes
+    #keep_tex: no
+    latex_engine: xelatex
   word_document:
     toc_depth: '2'
 fontsize: 12pt
@@ -38,12 +38,14 @@ editor_options:
 number_sections: yes
 smart: yes
 ---
-# Read in the original `all_data`, `train`, and `test`
+# Read in the original `all_data`, `train`, and `test` while removing `USMLE_Step_1_Score` and `USMLE_Step_2_CK_Score`.  
 ```{r, include=FALSE, echo=FALSE}
+rm(list = ls())
+
 library(magrittr)
-all_data <- readr::read_csv("~/Dropbox/Nomogram/nomogram/all_data_output_of_split_correlation.csv")
-train <- readr::read_csv("~/Dropbox/Nomogram/nomogram/train_output_of_split_correlation.csv")
-test <- readr::read_csv("~/Dropbox/Nomogram/nomogram/test_output_of_split_correlation.csv")
+all_data <- readr::read_csv("~/Dropbox/Nomogram/nomogram/all_data_output_of_split_correlation.csv") %>% dplyr::select(-USMLE_Step_1_Score, -USMLE_Step_2_CK_Score)
+train <- readr::read_csv("~/Dropbox/Nomogram/nomogram/train_output_of_split_correlation.csv") %>% dplyr::select(-USMLE_Step_1_Score, -USMLE_Step_2_CK_Score)
+test <- readr::read_csv("~/Dropbox/Nomogram/nomogram/test_output_of_split_correlation.csv") %>% dplyr::select(-USMLE_Step_1_Score, -USMLE_Step_2_CK_Score)
 
 train <- train %>%
 dplyr::mutate(Match_Status = dplyr::recode(Match_Status, `Did Not Match` = "0", Match = "1"))
@@ -62,12 +64,10 @@ tm_print_save <- function (filename) {
 ```
 
 # Review the variables
-"Malpractice_Cases_Pending", Removed because this is due to the fact that all people had 0 cases/zero variance variable.  
+`Malpractice_Cases_Pending`, Removed because this is due to the fact that all people had 0 cases/zero variance variable.  All other variables that are commented out were excluded from Boruta.  `Applicant_Name` was removed for privacy concerns.  
 ```{r, include=TRUE, echo=FALSE}
 #https://github.com/manojmukkamala/DiabeticPatientsReadmission/blob/master/Project_V4.R
 #Just writing the names of all the variables under one term to avoid re-writing when we apply model multiple times
-
-#"Malpractice_Cases_Pending", Removed because this is due to the fact that all people had 0 cases/zero variance
 
 drivers <- c("ACLS",
                                                                      "Age",
@@ -96,8 +96,8 @@ drivers <- c("ACLS",
                                                         "Sigma_Sigma_Phi",
                                                  "Type_of_medical_school",
                                                "US_or_Canadian_Applicant",
-                                                     "USMLE_Step_1_Score",
-                                                  "USMLE_Step_2_CK_Score",
+                                                    # "USMLE_Step_1_Score",
+                                                  #"USMLE_Step_2_CK_Score",
                                                 "Visa_Sponsorship_Needed",
                                                         "white_non_white")
 
@@ -108,7 +108,7 @@ dependentVar <- "Match_Status"
 formula <- paste(dependentVar, "~", paste(drivers, collapse = " + "))
 formula
 ```
-I spent a lot of time getting the feature selection right because of the possible complaints of discrimination when saying that gender and age and other stuff matters.  This is specifically to address NS's complaints while creating a parisimonious and fast model.  
+I spent a lot of time getting the feature selection right because of the possible complaints of discrimination when saying that gender and age and other stuff matters.  This is specifically to address Dr. Santoro's complaints while creating a parisimonious and fast model.  
 
 # Feature Selection: Boruta wrapper around randomForest classification algo
 You can see how you can use Boruta to perform a top-down search for relevant features by comparing original attributes' importance with importance achievable at random, estimated using their permuted copies, and progressively eliminating irrelevant features.
@@ -118,18 +118,24 @@ https://www.r-bloggers.com/venn-diagram-comparison-of-boruta-fselectorrcpp-and-g
 Reference:  
 https://www.jstatsoft.org/article/view/v036i11 
 DOI:  10.18637/jss.v036.i11
+```{r}
+knitr::include_graphics("images/Boruta_random_forest.png")
+```
+
+In short, Boruta runs the Random Forest model building many times (the default is 20) and therefore you can see the importance scores as distribution with Boxplot, not as a single value with Bar chart.
 
 First, Boruta  duplicates the dataset, and shuffle the values in each column. These values are called shadow features. * Then, it trains a classifier, such as a Random Forest Classifier, on the dataset. By doing this, you ensure that you can an idea of the importance -via the Mean Decrease Accuracy or Mean Decrease Impurity- for each of the features of your data set. The higher the score, the better or more important.
 
 Then, the algorithm checks for each of your real features if they have higher importance. That is, whether the feature has a higher Z-score than the maximum Z-score of its shadow features than the best of the shadow features. If they do, it records this in a vector. These are called a hits. Next,it will continue with another iteration. After a predefined set of iterations, you will end up with a table of these hits. Remember: a Z-score is the number of standard deviations from the mean a data point is.
 
+```{r}
+knitr::include_graphics("images/shadow_variables.png")
+knitr::include_graphics("images/shadow_variables_best_scoring.png")
+```
+
 At every iteration, the algorithm compares the Z-scores of the shuffled copies of the features and the original features to see if the latter performed better than the former. If it does, the algorithm will mark the feature as important. In essence, the algorithm is trying to validate the importance of the feature by comparing with random shuffled copies, which increases the robustness. This is done by simply comparing the number of times a feature did better with the shadow features using a binomial distribution.
 
 If a feature hasn't been recorded as a hit in say 15 iterations, you reject it and also remove it from the original matrix. After a set number of iterations -or if all the features have been either confirmed or rejected- you stop.
-
-```{r}
-knitr::include_graphics("images/boruta_algo.png")
-```
 
 ```{r, include=FALSE, echo=FALSE, cache=TRUE, warning=FALSE}
 #Method:  Boruta search
@@ -151,10 +157,23 @@ Boruta gives a call on the significance of features in a data set. Many of them 
 But what does this mean?
 Tentative features have an importance that is so close to their best shadow features that Boruta is not able to make a decision with the desired confidence in the default number of Random Forest runs.  I increased the number of maxRuns and the number of trees to decrease the number of tentatives.  
 
-```{r, warning=FALSE}
+```{r}
+knitr::include_graphics("images/boruta_example.png")
+```
+The green color indicates that these variables are statistically confirmed that they are better than the ‘Shadow’ variables hence they are useful to predict the target variable.
+
+On the other hand, the gray color indicates that these variables are statistically confirmed that they are worse than the ‘Shadow’ variables thence they are useless to predict the target variable.
+
+Now, here is yellow. These variables mean that they are better than ‘Shadow’ variables sometimes but worse sometimes, and the test can’t conclude either way.
+
+```{r, warning=FALSE, include=FALSE}
 # Get significant variables including tentatives
 boruta_signif <-Boruta::getSelectedAttributes(boruta_output, withTentative = TRUE)
-print(boruta_signif)  
+print(boruta_signif)
+```
+
+
+```{r, warning=FALSE, include=TRUE}
 boruta_signif1 <- tibble::as_tibble(boruta_signif)
 boruta_signif1
 readr::write_csv(boruta_signif1, (here::here("results", "boruta_signif.csv")))
@@ -173,8 +192,8 @@ knitr::kable(boruta_confirmed_variables, caption = "Boruta Confirmed Variables")
 The y axis label Importance represents the Z score of every feature in the shuffled dataset.  The blue boxplots correspond to minimal, average and maximum Z score of a shadow feature, while the red and green boxplots represent Z scores of rejected and confirmed features, respectively. As you can see the red boxplots have lower Z score than that of maximum Z score of shadow feature which is precisely the reason they were put in unimportant category.
 ```{r, warning = FALSE}
 BorutaImportance <- plot(boruta_output, cex.axis=0.35, las=2, xlab="", main="Boruta Variable Importance")  # Plot variable importance
-#plot(BorutaImportance)
-#plot(BorutaImportance,las=3)
+plot(BorutaImportance)
+plot(BorutaImportance,las=3)
 
 tm_print_save("Boruta_Variable_Importance.tiff")
 ```
@@ -189,7 +208,7 @@ Backwards is when you start with a model of all the predictors and then check wh
 
 ##Try forwards stepwise regression
 https://quantifyinghealth.com/stepwise-selection/
-```{r}
+```{r, fig.align="center"}
 knitr::include_graphics("images/forward-stepwise-algorithm.png")
 ```
 
@@ -393,9 +412,9 @@ head(hyper_grid)
 ```
 
 ```{r, include = FALSE}
-all_data <- readr::read_csv("~/Dropbox/Nomogram/nomogram/all_data_output_of_split_correlation.csv")
-train <- readr::read_csv("~/Dropbox/Nomogram/nomogram/train_output_of_split_correlation.csv")
-test <- readr::read_csv("~/Dropbox/Nomogram/nomogram/test_output_of_split_correlation.csv")
+all_data <- readr::read_csv("~/Dropbox/Nomogram/nomogram/all_data_output_of_split_correlation.csv") %>% dplyr::select(-USMLE_Step_1_Score, -USMLE_Step_2_CK_Score)
+train <- readr::read_csv("~/Dropbox/Nomogram/nomogram/train_output_of_split_correlation.csv") %>% dplyr::select(-USMLE_Step_1_Score, -USMLE_Step_2_CK_Score)
+test <- readr::read_csv("~/Dropbox/Nomogram/nomogram/test_output_of_split_correlation.csv") %>% dplyr::select(-USMLE_Step_1_Score, -USMLE_Step_2_CK_Score)
 
 train <- train %>%
 dplyr::mutate(Match_Status = dplyr::recode(Match_Status, `Did Not Match` = "Did.Not.Match", Match = "Matched"))
@@ -536,13 +555,13 @@ optimal_combinations
 #Interaction between features show that younger Age and international/US_or_Canadian_Applicant interact positively.  A medical education interruption and USMLE Step 1 score are negative interaction.  There is a three way interaction between (Age-34.6), international applicants (US_or_Canadian_Applicantinternational), Visa_Sponsorship_needed_yes (Visa_Sponsorship_NeededYes) that is negative.  
 ```
 
-```{r}
+```{r, include = F}
 #Feature Selection: Recursive Feature Elimination 
 # So at first the model is fit on the data. Then we have coefficients of each feature or feature importance. We drop the feature with least coefficient or importance. Then the model is fit on the remaining features. The process is repeated until we have a necessary number of features (or some other criteria is fulfilled).  
 
 #Method 2: Recursive Feature Elimination
-# train <- readr::read_csv("~/Dropbox/Nomogram/nomogram/train_output_of_split_correlation.csv")
-# test <- readr::read_csv("~/Dropbox/Nomogram/nomogram/test_output_of_split_correlation.csv")
+# train <- readr::read_csv("~/Dropbox/Nomogram/nomogram/train_output_of_split_correlation.csv") %>% dplyr::select(-USMLE_Step_1_Score, -USMLE_Step_2_CK_Score)
+# test <- readr::read_csv("~/Dropbox/Nomogram/nomogram/test_output_of_split_correlation.csv") %>% dplyr::select(-USMLE_Step_1_Score, -USMLE_Step_2_CK_Score)
 # 
 # train <- train %>%
 # dplyr::mutate(Match_Status = dplyr::recode(Match_Status, `Did Not Match` = "Did.Not.Match", Match = "Matched"))
@@ -936,7 +955,7 @@ lrm.with.lasso.variables <-
                                     US_or_Canadian_Applicant +
                                     Medical_Education_or_Training_Interrupted + 
                                     Alpha_Omega_Alpha + 
-                                    USMLE_Step_1_Score + 
+                                    #USMLE_Step_1_Score + 
                                     Count_of_Oral_Presentation + 
                                     Visa_Sponsorship_Needed,
                                     #Medical_Degree, #Removed due to VIF issues of collinearity
@@ -1058,7 +1077,7 @@ boruta_drivers <- c(
                                                         #"Sigma_Sigma_Phi",
                                                  "Type_of_medical_school",
                                                "US_or_Canadian_Applicant",
-                                                     "USMLE_Step_1_Score",
+                                                     #"USMLE_Step_1_Score",
                                                   "USMLE_Step_2_CK_Score",
                                                 "Visa_Sponsorship_Needed",
                                                         "white_non_white")
