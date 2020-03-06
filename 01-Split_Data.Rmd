@@ -48,7 +48,7 @@ all_data <- readr::read_csv("~/Dropbox/Nomogram/nomogram/all_data_end_of_EDA.csv
 # Why are we using a train and test sample data set to test the model?  
 The training set contains a known output (`all_data$Match_Status`) and the model learns this data in order to be generalized to other data in the process. In this way, the model will predict values for the test data (cross validation). It is possible to determine the prediction accuracy of the model.
 
-Overfitting is one of the biggest challenges in the machine learning process. 
+Overfitting is one of the biggest challenges in the machine learning process. You don’t want to build a model that fits perfectly to the data it knows the answer but doesn’t perferm well for the data that it doesn’t know the answer.  This is to prevent the over-fitting.
 ```{r}
 knitr::include_graphics("images/overfitting.jpg")
 ```
@@ -125,15 +125,15 @@ rm(test_3)
 # brew tap adoptopenjdk/openjdk
 # brew cask install homebrew/cask-versions/adoptopenjdk8
 
-h2o::h2o.init()
-all_data.h2o <- h2o::as.h2o(all_data)
-split_2 <- h2o::h2o.splitFrame(all_data.h2o, ratios = 0.8, 
-                          seed = 123)
-train_4 <- split_2[[1]]
-test_4  <- split_2[[2]]
-
-rm(train_4)
-rm(test_4)
+# h2o::h2o.init()
+# all_data.h2o <- h2o::as.h2o(all_data)
+# split_2 <- h2o::h2o.splitFrame(all_data.h2o, ratios = 0.8, 
+#                           seed = 123)
+# train_4 <- split_2[[1]]
+# test_4  <- split_2[[2]]
+# 
+# rm(train_4)
+# rm(test_4)
 ```
 
 ```{r, include=FALSE}

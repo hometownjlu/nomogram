@@ -130,6 +130,10 @@ Then, the algorithm checks for each of your real features if they have higher im
 
 ```{r}
 knitr::include_graphics("images/shadow_variables.png")
+```
+
+
+```{r}
 knitr::include_graphics("images/shadow_variables_best_scoring.png")
 ```
 
@@ -137,16 +141,22 @@ At every iteration, the algorithm compares the Z-scores of the shuffled copies o
 
 If a feature hasn't been recorded as a hit in say 15 iterations, you reject it and also remove it from the original matrix. After a set number of iterations -or if all the features have been either confirmed or rejected- you stop.
 
-```{r, include=FALSE, echo=FALSE, cache=TRUE, warning=FALSE}
+```{r, label = BORUTA, include=FALSE, echo=FALSE, cache=TRUE, warning=FALSE}
 #Method:  Boruta search
+library(rgl)
+library(export)
 set.seed(123)
 boruta_output <- Boruta::Boruta(Match_Status ~ ., 
                                 data=na.omit(all_data), 
                                 pValue = 0.01,
                                 maxRuns = 1000,
                                 doTrace=2,  #show the models as it works
-                                ntree=500)  
-names(boruta_output)
+                                ntree=500)
+```
+
+
+```{r, include=FALSE, echo=FALSE, cache=FALSE, warning=FALSE}
+#names(boruta_output)
 Boruta::getConfirmedFormula(boruta_output)
 Boruta::attStats(boruta_output)
 ```
@@ -158,7 +168,7 @@ But what does this mean?
 Tentative features have an importance that is so close to their best shadow features that Boruta is not able to make a decision with the desired confidence in the default number of Random Forest runs.  I increased the number of maxRuns and the number of trees to decrease the number of tentatives.  
 
 ```{r}
-knitr::include_graphics("images/boruta_example.png")
+knitr::include_graphics("images/Boruta RandomForest_Importance.png")
 ```
 The green color indicates that these variables are statistically confirmed that they are better than the ‘Shadow’ variables hence they are useful to predict the target variable.
 
@@ -316,9 +326,17 @@ pROC::auc(backwards_ROC)
 
 
 # Factor Selection:  Principal Components Analysis
+PCA — Primary Component Analysis — is one of those statistical algorithms that is popular among data scientists and statisticians, but not much among people who are outside of data science or statistics.
+
+It can be used as a dimensionality reduction method, which can help to minimize the number of the variables (or columns of a data frame) without losing much of the original information. This is useful especially when you are building machine learning models based on the data with many variables like 100s or 1000s.
+
+But PCA can be also practically useful to visualize the relationships between the variables or even between the subjects of your interest such as customers, products, countries, etc.
+
 Principal Component Analysis (PCA)  was initially developed to analyse large volumes of data in order to tease out the differences/relationships between the logical entities being analysed. It extracts the fundamental structure of the data without the need to build any model to represent it. This 'summary' of the data is arrived at through a process of reduction that can transform the large number of variables into a lesser number that are uncorrelated (i.e. the ‘principal components'), whilst at the same time being capable of easy interpretation on the original data.
 
 In order to reduce `r nrow(all_data) ` dimensions or knowing the significant impact of our reduction we will do PCA.
+
+So what are the variables that are highly correlated to one another?
 ```{r, echo=FALSE, include=TRUE}
 all_data_pca <- caret::preProcess(dplyr::select(all_data, - Match_Status), 
                         method = c("center", "scale", "nzv", "pca"))
