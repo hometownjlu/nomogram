@@ -36,6 +36,9 @@ always_allow_html: yes
 editor_options: 
   chunk_output_type: console
 ---
+# Baseline Performance
+Model performance and utility will be judged on how much more accurate the model can determine a residency match than a human. Since the target of the prediction is binary (Match or No Match), we can assume a baseline of 50% for random chance. Next we want to determine a rather modest human baseline. If a human were to predict "Match" for every resident, they would be accurate 78.9% of the time, a 28.9% increase over chance. Though we can imagine more elaborate methods to improve human performance, we will use this method to establish a baseline. Therefore, in order to create a successful model, we must aim for an accuracy greater than 78.9%. 
+
 I removed the `USMLE_Step_1_Score` given the impending pass/fail in 2020.  I also removed `USMLE_Step_2_CK_Score` because most students do not have this test completed by the time that they apply.  
 
 ```{r, fig.align="center"}
@@ -395,7 +398,6 @@ ggplot2::ggplot(roc.data, aes(x=fpr, ymin=0, ymax=tpr)) +
          subtitle = "Model 2 for test data")
 ```
 
-
 ### Nomogram using lrm: lrm package train.glm.with.boruta.variables
 ```{r DynNom logistic regression model}
 # rsconnect::setAccountInfo(name='mufflyt',
@@ -510,6 +512,29 @@ print(a)
 ```
 The accuracy tells us that our model is correct `r a[[1]]` of the time - not bad
 
+## Confusion matrix
+```{r}
+# varImp(cv_model3)
+# print(cv_model3) ## Resample Accuracy = 0.844
+# 
+# cv_model3.predict.test <- predict(cv_model3, newdata = test[,1:9]) 
+# levels(cv_model3.predict.test)
+# levels(test$Match_Status)
+# 
+# class(cv_model3.predict.test)
+# class(test$Match_Status)
+# 
+# #use model made from training data with test data now
+# caret::confusionMatrix(data = cv_model3.predict.test,
+#                        reference = test$Match_Status,
+#                        positive = "Match",
+#                        dnn = c("Predicted Matching", "Truth of Matching"))
+#                       # prevalence = NULL,
+#                       # mode = "everything")
+# table(cv_model3.predict.test, test$Match_Status)
+# (66+478)/(66+478+73+30) ## Accuracy:0.8408
+```
+
 ```{r}
 knitr::include_graphics("images/predictions.png")
 ```
@@ -535,10 +560,20 @@ To get the AUC score, you need to pass the yes column to the roc function (each 
 ```{r}
 #https://www.viralml.com/video-content.html?v=-nai4NBx5zI
 
-auc <- pROC::roc(ifelse(test$Match_Status=="Match",1,0), predictions[[2]])  #Prediction vs. actual
+auc <- pROC::roc(ifelse(test$Match_Status=="Match",1,0), predictions[[2]], plot =TRUE, #Prediction vs. actual
+              legacy.axes=TRUE,
+               percent = TRUE, 
+               xlab = "False Positive Percentage",
+               ylab="True Positive Percentage",
+              lwd=4, 
+              print.auc=TRUE)  
 print(auc$auc)
-pROC::plot.roc(auc, add = FALSE, identity = TRUE, reuse.auc=TRUE,
-axes=TRUE, legacy.axes=FALSE)
+pROC::plot.roc(auc, 
+               print.thres="best", #print.thres.best.method="closest.topleft", 
+               add = TRUE, 
+               percent = TRUE, 
+               lwd=4,
+               print.auc=TRUE)
 ```
 The AUC is telling us that our model has a `r auc$auc [[1]]` AUC score (remember that an AUC ranges between 0.5 and 1, where 0.5 is random and 1 is perfect).
 
@@ -747,7 +782,7 @@ boruta_and_backwards_drivers <- c(
                                                "US_or_Canadian_Applicant",
                                                      #"USMLE_Step_1_Score",
                                                  # "USMLE_Step_2_CK_Score",
-                                                "Visa_Sponsorship_Needed",
+                                                #"Visa_Sponsorship_Needed",
                                                         "white_non_white")
 
 #Writing the name of dependent variable seperately
@@ -841,7 +876,7 @@ test <- test %>%
 dplyr::mutate(Match_Status = dplyr::recode(Match_Status, `Did Not Match` = "0", Match = "1"))
 
 t.model2 <- rpart::rpart(
-    formula = final_formula,
+    formula = final_final_formula,
     data    = train,
     method  = "anova", 
     control = list(cp = 0, xval = 10)
@@ -892,15 +927,23 @@ summary(pruned.t.model)
  
 ## Validate the results on a test dataset
 ```{r}
-# pred = stats::predict(pruned.t.model, test, type = "class")
+pred = stats::predict(pruned.t.model, test, type = "class")
+readr::write_csv(as.data.frame(pred), "~/Dropbox/nomogram/pred.csv")
+
+pred1 <- pred %>% as.data.frame () %>%
+  dplyr::mutate(pred = dplyr::recode(pred, `Did Not Match` = "0", Match = "1")) %>%
+  dplyr::mutate(pred = as.factor(pred)) %>%
+  dplyr::select(-.)
+
+colnames(pred1)
 # 
 # head((pred), 10)
 # class(pred)
 # colnames(pred)
 # 
 # 
-# caret::confusionMatrix(as.factor(test$Match_Status), pred)
-# (pruned.t.model)
+caret::confusionMatrix(as.factor(test$Match_Status), pred1)
+(pruned.t.model)
 ```
 
 
@@ -920,23 +963,42 @@ To add in.
 
 Materials and Methods
 ===========================================================================================
-This was an institutional review board exempt retrospective cohort analysis of medical students who applied to Obstetrics and Gynecology (OBGYN) residency from 2015 to 2018.  Guidelines for transparent reporting of a multivariable prediction model for individual outcomes were used in this study.(https://www.equator-network.org/reporting-guidelines/tripod-statement/).  Eligible participants were identified if they applied to OBGYN residency during the study period of 2015 to 2018.  The outcome of the model was defined as matching or not matching into residency for the specific application year.  Individual predictors of successfully* matching were compiled from a literature review, expert opinion, and judgment then collected from the Electronic Residency Application Service materials.
 
-Once the data set was complete it was divided into a model training and test set.  *When an external validation data set is unavailable to test a new model but an existing modeling data set is sufficiently large, as in this case, it is recommended to split by time and develop the model using data from one period and evaluate its performance from data from a future period.  There was a large case imbalance with matching rates split by year therefore we split the data randomly.
+Study Population
+Eligible participants were identified if they applied to OBGYN residency during the study period of 2015 to 2018.  The study protocol was deemed exempt as a retrospective cohort analysis as all identifiers were removed.  Guidelines for transparent reporting of a multivariable prediction model for individual outcomes were used in this study.(https://www.equator-network.org/reporting-guidelines/tripod-statement/).  Individual predictors of successfully* matching into obstetrics and gynecology residency were compiled from a literature review, expert opinion, and judgment then collected from the Electronic Residency Application Service materials.
 
-In all, 18 candidate risk factors were considered for fitting on the training data set (supplmental table).  Variable selection was done using a penalized logistic regression called least absolute shrinkage and selection operator (LASSO).  The LASSO model is a regression analysis method that performs both variable selection and regularization in order to enhance the prediction accuracy and interpretability of the statistical model it produces.  We elected to use LASSO to choose which covariates to include over stepwise selection because the latter only improves prediction accuracy in certain cases, such as when only a few covariates have a strong relationship with the outcome.
+Data Collection
+The list of applicants and their match status was a compilation from secondary sources. There was over 95% agreement between these three sources:  
+
+1) Electronic Residency Application Service archived data was exported from theProgram Director Work Station.  The data were collected by the University of Colorado OBGYN residency that has both a categorical and a preliminary position.  Applicants to the preliminary position were considered to be unmatched. 
+
+2)  Registration with the National Practicioner Database is required for all physicians.  A taxonomy code distinguishes specialties so can tell if applicants to OBGYN failed to match and then entered into another field.  
+https://npiregistry.cms.hhs.gov 
+
+3)  Medical schools often publish a list of where their students will be training  This is public information was hand searched from the internet.   
+
+
+Definitions*
+The outcome of the model was defined as matching or not matching into a obstetrics and gynecology residency position for the specific application year.  
+
+Statistical Analysis*
+Applicant demographics, educational preparations, research experience, and academic honors were compared between those who matched into obstetrics and gynecology and those who did not using t tests and chi-square tests.
+
+For model development, the dataset was randomly divided into a derivation set (80%) used to train the model and a validation set (20%) used to test the accuracy of the model. No data was required to be imputed as it was required in the ERAS application.  
+
+In all, `r ncol(test)` candidate risk factors were considered for fitting on the training data set (supplmental table).  Variable selection was done using a penalized logistic regression called least absolute shrinkage and selection operator (LASSO).  The LASSO model is a regression analysis method that performs both variable selection and regularization in order to enhance the prediction accuracy and interpretability of the statistical model it produces.  We elected to use LASSO to choose which covariates to include over stepwise selection because the latter only improves prediction accuracy in certain cases, such as when only a few covariates have a strong relationship with the outcome.
 
 The logistic model’s discriminative ability was measured by the area under the curve (AUC) for the receiver operating characteristic curve based on the sensitivity and specificity of the model.  An AUC value closer to 1 indicates a better prediction of the outcome and an AUC value of 0.5 indicates that the model predicts no better than chance. The AUC is also a representation of the concordance index and measures the model’s ability to generate a higher predicted probability of a successful match* occurring in a medical student who has a ????.   For example, if we have a pair of medical students, in which one medical student matches and the other does not, the concordance index measures the model’s ability to assign a higher risk of not matching to the medical student who successfully matches. All concordance indices and receiver operating characteristic curves were internally validated using a 1,000 bootstrap resample to correct for bias and overfitting within the model. The bootstrapping method of validation has been shown to be superior to other approaches to estimate internal validity. Calibration curves were also plotted to depict the relationship between the model’s predicted outcomes against the cohort’s observed outcome, where a perfectly calibrated model follows a 45° line.
 
 After the best model was selected and internally validated, the model was compared with the best currently available method of estimating risk, that is, an expert medical educator’s predictions. To perform these comparisons, a subset of 50 participants was randomly selected for comparing the probability of matching between the model and the panel of experts. These ?? participants were used to compare predictions of the models with experts’ predictions and not as a true independent validation subset. The model was rebuilt using the remaining participants in the data set excluding the 50 randomly selected participants. The candidate risk factors of these 50 participants were given to 20 “expert” medical educators with representation from each of the *** for review resulting in 1,000 expert predictions and 50 model predictions for each outcome. All medical educators were considered to be experienced in counseling medical students regarding OBGYN matching. Each of the 20 experts were asked to consider each medical student’s data from all ??? variables among the 50 randomly selected students and provide their best estimated outcome by answering the following question: “Out of 100 medical students with these exact characteristics, estimate the number of medical students who would not matching into OBGYN during the 2019 application year.” Individual medical educators’ predictions were not averaged to yield a single value because incorporating each medical educator’s predictions substantially increased statistical power. The model’s predictions were compared with the experts’ predictions, which included all risk factors, to determine which was most accurate. The difference in accuracy was determined by using a bootstrap method from their respective receiver operating characteristic curves. Change.  
 
-All analyses were performed using R 3.6.1.  However, considering the large amount of data, processing the data was taking too long and that was compromising the efficiency of the study. So, the platform h2o.ai was used, integrated with R, to explore the grid mode and parallel processing models. The grid allowed to combine different parameters to build different models. The parallel processing allowed those models to be built at the same time. This efficiency increase made it possible to build more models, with better tuning parameters.
+All analyses were performed using R 3.6.2.  
 
 Results
 ===========================================================================================
 A total of `r nrow(all_data)` applied to obstetrics and gynecology residency at the University of Colorado from 2015 to 2018.  The overall mean rate of matching in the training cohort was `r table(train$Match_Status)[[2]]` of `r nrow(train)` was (`r round((prop.table(table(train$Match_Status))[[2]]*100),1)`%).
 The unadjusted comparison of the `r ncol(all_data)` candidate predictors in the training cohort are presented in Supplemental Table 1.  To identify predictors from the candidates we employed least absolute shrinkage and selection operator (LASSO).  Regularisation techniques change how the model is fit by adding a penalty for every additional parameter you have in the model.
-`r length(final_formula[2])` variables were included within the final model.  Applicants from the United States or Canada, high USMLE Step 1 scores, female gender, White race, no visa sponsorship needed, membership in Alpha Omega Alpha, no interruption of medical training, couples matching, and allopathic medical training increased the chances of matching into OBGYN.  In contrast, more oral presentations, increasing age, a higher number of peer-reviewed online publications, an increased number of authored book chapters, and a higher count of poster presentations all decreased the probability of matching into OBGYN (table 2).  The nomogram illustrates the strength of association of the predictors to the outcome as well as the nonlinear associations between age, count of Oral Presentations, count of peer−reviewed book chapters and the chances of matching (Figure 1).
+`r as.english(length(final_formula[2]))` variables were included within the final model.  Applicants from the United States or Canada, high USMLE Step 1 scores, female gender, White race, no visa sponsorship needed, membership in Alpha Omega Alpha, no interruption of medical training, couples matching, and allopathic medical training increased the chances of matching into OBGYN.  In contrast, more oral presentations, increasing age, a higher number of peer-reviewed online publications, an increased number of authored book chapters, and a higher count of poster presentations all decreased the probability of matching into OBGYN (table 2).  The nomogram illustrates the strength of association of the predictors to the outcome as well as the nonlinear associations between age, count of Oral Presentations, count of peer−reviewed book chapters and the chances of matching (Figure 1).
 
 Discussion
 ===========================================================================================
