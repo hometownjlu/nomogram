@@ -10,7 +10,7 @@
 # Set  libPaths.
 #.libPaths("/Users/tylermuffly/.exploratory/R/3.6")
 
-pkgs <- (c('caret', 'readxl', 'XML', 'reshape2', 'devtools', 'purrr', 'readr', 'ggplot2', 'dplyr', 'magick', 'janitor', 'lubridate', 'hms', 'tidyr', 'stringr', 'openxlsx', 'forcats', 'RcppRoll', 'tibble', 'bit64', 'munsell', 'scales', 'rgdal', 'tidyverse', "foreach", "PASWR", "rms", "pROC", "ROCR", "nnet", "packrat", "DynNom", "export", "caTools", "mlbench", "randomForest", "ipred", "xgboost", "Metrics", "RANN", "AppliedPredictiveModeling", "nomogramEx", "shiny", "earth", "fastAdaboost", "Boruta", "glmnet", "ggforce", "tidylog", "InformationValue", "pscl", "scoring", "DescTools", "gbm", "Hmisc", "arsenal", "pander", "moments", "leaps", "MatchIt", "car", "mice", "rpart", "beepr", "fansi", "utf8", "zoom", "lmtest", "ResourceSelection", "rmarkdown", "rattle", "rmda", "funModeling", "tinytex", "caretEnsemble", "Rmisc", "corrplot", "progress", "perturb", "vctrs", "highr", "labeling", "DataExplorer", "rsconnect", "inspectdf", "ggpubr", "tableone", "knitr", "drake", "visNetwork", "rpart.plot", "RColorBrewer", "kableExtra", "kernlab", "naivebayes", "e1071", "data.table", "skimr", "naniar", "english", "mosaic", "broom", "mltools", "tidymodels", "tidyquant", "rsample", "yardstick", "parsnip", "tensorflow", "keras", "sparklyr", "dials", "cowplot", "lime", "flexdashboard", "shinyjs", "shinyWidgets", "plotly", "BH", "vip", "ezknitr", "here", "usethis", "corrgram", "BiocManager", "factoextra", "parallel", "doParallel", "GA", "odbc", "RSQLite", "discrim", "doMC",  "summarytools", "remotes", "fs", "PerformanceAnalytics", "correlationfunnel", "psych", "h2o", "ranger", 'R.methodsS3'))
+pkgs <- (c('caret', 'readxl', 'XML', 'reshape2', 'devtools', 'purrr', 'readr', 'ggplot2', 'dplyr', 'magick', 'janitor', 'lubridate', 'hms', 'tidyr', 'stringr', 'openxlsx', 'forcats', 'RcppRoll', 'tibble', 'bit64', 'munsell', 'scales', 'rgdal', 'tidyverse', "foreach", "PASWR", "rms", "pROC", "ROCR", "nnet", "packrat", "DynNom", "export", "caTools", "mlbench", "randomForest", "ipred", "xgboost", "Metrics", "RANN", "AppliedPredictiveModeling", "nomogramEx", "shiny", "earth", "fastAdaboost", "Boruta", "glmnet", "ggforce", "tidylog", "InformationValue", "pscl", "scoring", "DescTools", "gbm", "Hmisc", "arsenal", "pander", "moments", "leaps", "MatchIt", "car", "mice", "rpart", "beepr", "fansi", "utf8", "zoom", "lmtest", "ResourceSelection", "rmarkdown", "rattle", "rmda", "funModeling", "tinytex", "caretEnsemble", "Rmisc", "corrplot", "progress", "perturb", "vctrs", "highr", "labeling", "DataExplorer", "rsconnect", "inspectdf", "ggpubr", "tableone", "knitr", "drake", "visNetwork", "rpart.plot", "RColorBrewer", "kableExtra", "kernlab", "naivebayes", "e1071", "data.table", "skimr", "naniar", "english", "mosaic", "broom", "mltools", "tidymodels", "tidyquant", "rsample", "yardstick", "parsnip", "tensorflow", "keras", "sparklyr", "dials", "cowplot", "lime", "flexdashboard", "shinyjs", "shinyWidgets", "plotly", "BH", "vip", "ezknitr", "here", "usethis", "corrgram", "BiocManager", "factoextra", "parallel", "doParallel", "GA", "odbc", "RSQLite", "discrim", "doMC",  "summarytools", "remotes", "fs", "PerformanceAnalytics", "correlationfunnel", "psych", "h2o", "ranger", 'R.methodsS3', 'plotROC'))
 
 #install.packages(pkgs,dependencies = c("Depends", "Suggests", "Imports", "LinkingTo"), repos = "https://cloud.r-project.org")  #run this first time
 lapply(pkgs, require, character.only = TRUE)
@@ -26,37 +26,37 @@ doMC::registerDoMC(cores = detectCores()-1) #Use multiple cores for processing
 #brew install pandoc
 #brew install pkg-config
 
-install.packages("officer")
-install.packages("rvg")
-install.packages("openxlsx")
-install.packages("ggplot2")
-install.packages("flextable")
-install.packages("xtable")
-install.packages("rgl")
-install.packages("stargazer")
-install.packages("tikzDevice")
-install.packages("xml2")
-install.packages("broom")
-install.packages("devtools")
-library(devtools)
-devtools::install_github("tomwenseleers/export")
+# install.packages("officer")
+# install.packages("rvg")
+# install.packages("openxlsx")
+# install.packages("ggplot2")
+# install.packages("flextable")
+# install.packages("xtable")
+# install.packages("rgl")
+# install.packages("stargazer")
+# install.packages("tikzDevice")
+# install.packages("xml2")
+# install.packages("broom")
+# install.packages("devtools")
+# library(devtools)
+# devtools::install_github("tomwenseleers/export")
 
-# The following two commands remove any previously installed H2O packages for R.
-if ("package:h2o" %in% search()) { detach("package:h2o", unload=TRUE) }
-if ("h2o" %in% rownames(installed.packages())) { remove.packages("h2o") }
-
-# Next, we download packages that H2O depends on.
-pkgs <- c("RCurl","jsonlite")
-for (pkg in pkgs) {
-  if (! (pkg %in% rownames(installed.packages()))) { install.packages(pkg) }
-}
-
-# Now we download, install and initialize the H2O package for R.
-install.packages("h2o", type="source", repos="http://h2o-release.s3.amazonaws.com/h2o/rel-yu/2/R")
-
-# Finally, let's load H2O and start up an H2O cluster
-library(h2o)
-h2o.init()
+# # The following two commands remove any previously installed H2O packages for R.
+# if ("package:h2o" %in% search()) { detach("package:h2o", unload=TRUE) }
+# if ("h2o" %in% rownames(installed.packages())) { remove.packages("h2o") }
+# 
+# # Next, we download packages that H2O depends on.
+# pkgs <- c("RCurl","jsonlite")
+# for (pkg in pkgs) {
+#   if (! (pkg %in% rownames(installed.packages()))) { install.packages(pkg) }
+# }
+# 
+# # Now we download, install and initialize the H2O package for R.
+# install.packages("h2o", type="source", repos="http://h2o-release.s3.amazonaws.com/h2o/rel-yu/2/R")
+# 
+# # Finally, let's load H2O and start up an H2O cluster
+# library(h2o)
+# h2o.init()
 
 
 #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
@@ -116,25 +116,25 @@ rm(all_years)
 colnames(all_data)
 
 #all_data$Count_of_Online_Publications <- as.numeric(all_data$Count_of_Online_Publications)
-all_data$white_non_white <- forcats::fct_explicit_na(all_data$white_non_white, na_level="(Missing)")
+#all_data$white_non_white <- forcats::fct_explicit_na(all_data$white_non_white, na_level="(Missing)")
 #all_data$Year <- forcats::fct_explicit_na(all_data$Year, na_level="(Missing)")
-all_data$Gender <- forcats::fct_explicit_na(all_data$Gender, na_level="(Missing)")
-all_data$Couples_Match <- forcats::fct_explicit_na(all_data$Couples_Match, na_level="(Missing)")
-all_data$US_or_Canadian_Applicant <- forcats::fct_explicit_na(all_data$US_or_Canadian_Applicant, na_level="(Missing)")
+#all_data$Gender <- forcats::fct_explicit_na(all_data$Gender, na_level="(Missing)")
+#all_data$Couples_Match <- forcats::fct_explicit_na(all_data$Couples_Match, na_level="(Missing)")
+#all_data$US_or_Canadian_Applicant <- forcats::fct_explicit_na(all_data$US_or_Canadian_Applicant, na_level="(Missing)")
 #all_data$Medical_Education_Interrupted <- forcats::fct_explicit_na(all_data$Medical_Education_Interrupted, na_level="(Missing)")
-all_data$Alpha_Omega_Alpha <- forcats::fct_explicit_na(all_data$Alpha_Omega_Alpha, na_level="(Missing)")
-all_data$Military_Service_Obligation <- forcats::fct_explicit_na(all_data$Military_Service_Obligation, na_level="(Missing)")
-all_data$Visa_Sponsorship_Needed <- forcats::fct_explicit_na(all_data$Visa_Sponsorship_Needed, na_level="(Missing)")
-all_data$Medical_Degree <- forcats::fct_explicit_na(all_data$Medical_Degree, na_level="(Missing)")
-all_data$Match_Status <- forcats::fct_explicit_na(all_data$Match_Status, na_level="(Missing)")
+#all_data$Alpha_Omega_Alpha <- forcats::fct_explicit_na(all_data$Alpha_Omega_Alpha, na_level="(Missing)")
+#all_data$Military_Service_Obligation <- forcats::fct_explicit_na(all_data$Military_Service_Obligation, na_level="(Missing)")
+#all_data$Visa_Sponsorship_Needed <- forcats::fct_explicit_na(all_data$Visa_Sponsorship_Needed, na_level="(Missing)")
+#all_data$Medical_Degree <- forcats::fct_explicit_na(all_data$Medical_Degree, na_level="(Missing)")
+#all_data$Match_Status <- forcats::fct_explicit_na(all_data$Match_Status, na_level="(Missing)")
 
 #all_data$Count_of_Articles_Abstracts <- as.numeric(all_data$Count_of_Articles_Abstracts)
-all_data$Age <- as.numeric(all_data$Age)
-all_data$Count_of_Poster_Presentation <- as.numeric(all_data$Count_of_Poster_Presentation)
-all_data$USMLE_Step_1_Score <- as.numeric(all_data$USMLE_Step_1_Score)
-all_data$Count_of_Oral_Presentation <- as.numeric(all_data$Count_of_Oral_Presentation)
+#all_data$Age <- as.numeric(all_data$Age)
+#all_data$Count_of_Poster_Presentation <- as.numeric(all_data$Count_of_Poster_Presentation)
+#all_data$USMLE_Step_1_Score <- as.numeric(all_data$USMLE_Step_1_Score)
+#all_data$Count_of_Oral_Presentation <- as.numeric(all_data$Count_of_Oral_Presentation)
 #all_data$Count_of_Other_than_Published <- as.numeric(all_data$Count_of_Other_than_Published)
-all_data$Count_of_Peer_Reviewed_Book_Chapter <- as.numeric(all_data$Count_of_Peer_Reviewed_Book_Chapter)
+#all_data$Count_of_Peer_Reviewed_Book_Chapter <- as.numeric(all_data$Count_of_Peer_Reviewed_Book_Chapter)
 #all_data$Count_of_Online_Publications <- as.numeric(all_data$Count_of_Online_Publications)
 #all_data <- na.omit(all_data)
 

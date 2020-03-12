@@ -3,6 +3,16 @@ title: "A Model to Predict Chances of Matching into Obstetrics and Gynecology Re
 author: "Tyler M. Muffly, MD"
 date: "Department of Obstetrics and Gynecology, Denver Health, Denver, CO"
 output:
+  word_document:
+    toc_depth: '2'
+  pdf_document:
+    pandoc_args:
+    - --wrap=none
+    - --top-level-division=chapter
+    df_print: paged
+    fig_caption: yes
+    #keep_tex: no
+    latex_engine: xelatex
   html_document:
     toc: true
     toc_float: true
@@ -12,16 +22,6 @@ output:
     dev: svg
     df_print: paged
     theme: journal
-  pdf_document:
-    pandoc_args:
-    - --wrap=none
-    - --top-level-division=chapter
-    df_print: paged
-    fig_caption: yes
-    #keep_tex: no
-    latex_engine: xelatex
-  word_document:
-    toc_depth: '2'
 fontsize: 12pt
 geometry: margin=1in
 header-includes:

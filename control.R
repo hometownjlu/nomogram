@@ -37,3 +37,5 @@ rmarkdown::render(input = "~/Dropbox/Nomogram/nomogram/04-GLM_and_CART_models.Rm
 pander::openFileInOS("04-GLM_and_CART_models.html")
 pander::openFileInOS("04-GLM_and_CART_models.pdf")
 
+
+

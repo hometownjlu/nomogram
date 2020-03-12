@@ -77,7 +77,7 @@ drivers <- c("ACLS",
                                                  "Type_of_medical_school",
                                                "US_or_Canadian_Applicant",
                                                      #"USMLE_Step_1_Score",
-                                                  "USMLE_Step_2_CK_Score",
+                                                  #"USMLE_Step_2_CK_Score",
                                                 "Visa_Sponsorship_Needed",
                                                         "white_non_white")
 
