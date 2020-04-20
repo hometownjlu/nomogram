@@ -10,7 +10,9 @@
 # Set  libPaths.
 #.libPaths("/Users/tylermuffly/.exploratory/R/3.6")
 
-pkgs <- (c('caret', 'readxl', 'XML', 'reshape2', 'devtools', 'purrr', 'readr', 'ggplot2', 'dplyr', 'magick', 'janitor', 'lubridate', 'hms', 'tidyr', 'stringr', 'openxlsx', 'forcats', 'RcppRoll', 'tibble', 'bit64', 'munsell', 'scales', 'rgdal', 'tidyverse', "foreach", "PASWR", "rms", "pROC", "ROCR", "nnet", "packrat", "DynNom", "export", "caTools", "mlbench", "randomForest", "ipred", "xgboost", "Metrics", "RANN", "AppliedPredictiveModeling", "nomogramEx", "shiny", "earth", "fastAdaboost", "Boruta", "glmnet", "ggforce", "tidylog", "InformationValue", "pscl", "scoring", "DescTools", "gbm", "Hmisc", "arsenal", "pander", "moments", "leaps", "MatchIt", "car", "mice", "rpart", "beepr", "fansi", "utf8", "zoom", "lmtest", "ResourceSelection", "rmarkdown", "rattle", "rmda", "funModeling", "tinytex", "caretEnsemble", "Rmisc", "corrplot", "progress", "perturb", "vctrs", "highr", "labeling", "DataExplorer", "rsconnect", "inspectdf", "ggpubr", "tableone", "knitr", "drake", "visNetwork", "rpart.plot", "RColorBrewer", "kableExtra", "kernlab", "naivebayes", "e1071", "data.table", "skimr", "naniar", "english", "mosaic", "broom", "mltools", "tidymodels", "tidyquant", "rsample", "yardstick", "parsnip", "tensorflow", "keras", "sparklyr", "dials", "cowplot", "lime", "flexdashboard", "shinyjs", "shinyWidgets", "plotly", "BH", "vip", "ezknitr", "here", "usethis", "corrgram", "BiocManager", "factoextra", "parallel", "doParallel", "GA", "odbc", "RSQLite", "discrim", "doMC",  "summarytools", "remotes", "fs", "PerformanceAnalytics", "correlationfunnel", "psych", "h2o", "ranger", 'R.methodsS3', 'plotROC'))
+rm(list = setdiff(ls(), lsf.str()))
+
+pkgs <- (c('caret', 'readxl', 'XML', 'reshape2', 'devtools', 'purrr', 'readr', 'ggplot2', 'dplyr', 'magick', 'janitor', 'lubridate', 'hms', 'tidyr', 'stringr', 'openxlsx', 'forcats', 'RcppRoll', 'tibble', 'bit64', 'munsell', 'scales', 'rgdal', 'tidyverse', "foreach", "PASWR", "rms", "pROC", "ROCR", "nnet", "packrat", "DynNom", "export", "caTools", "mlbench", "randomForest", "ipred", "xgboost", "Metrics", "RANN", "AppliedPredictiveModeling", "shiny", "earth", "fastAdaboost", "Boruta", "glmnet", "ggforce", "tidylog", "InformationValue", "pscl", "scoring", "DescTools", "gbm", "Hmisc", "arsenal", "pander", "moments", "leaps", "MatchIt", "car", "mice", "rpart", "beepr", "fansi", "utf8", "lmtest", "ResourceSelection", "rmarkdown", "rattle", "rmda", "funModeling", "tinytex", "caretEnsemble", "Rmisc", "corrplot", "progress", "perturb", "vctrs", "highr", "labeling", "DataExplorer", "rsconnect", "inspectdf", "ggpubr", "tableone", "knitr", "drake", "visNetwork", "rpart.plot", "RColorBrewer", "kableExtra", "kernlab", "naivebayes", "e1071", "data.table", "skimr", "naniar", "english", "mosaic", "broom", "mltools", "tidymodels", "tidyquant", "rsample", "yardstick", "parsnip", "dials", "cowplot", "lime", "flexdashboard", "shinyjs", "shinyWidgets", "plotly", "BH", "vip", "ezknitr", "here", "corrgram", "factoextra", "parallel", "doParallel", "odbc", "RSQLite", "discrim", "doMC",  "summarytools", "remotes", "fs", "PerformanceAnalytics", "correlationfunnel", "psych", "h2o", "ranger", 'R.methodsS3', 'plotROC', 'english'))
 
 #install.packages(pkgs,dependencies = c("Depends", "Suggests", "Imports", "LinkingTo"), repos = "https://cloud.r-project.org")  #run this first time
 lapply(pkgs, require, character.only = TRUE)
@@ -62,7 +64,9 @@ doMC::registerDoMC(cores = detectCores()-1) #Use multiple cores for processing
 #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
 # Directory Paths for Data and Results
 #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
-setwd("~/Dropbox/Nomogram/nomogram")
+library(here)
+here::set_here("~/Dropbox/Nomogram/nomogram")
+here::here()
 
 #Builds the file directory structure necessary for the project
 library(fs)
@@ -85,34 +89,17 @@ system("ls ..")
 #Create a dataframe of independent and dependent variables. 
 ## Here are the data for download
 
-data_folder <- paste0(getwd(), "/data/")
-results_folder <- paste0(getwd(), "/results/")
+data_folder <- (here::here("data/"))
+results_folder <- (here::here("results/"))
+data_file <- readr::read_csv("https://www.dropbox.com/s/dfvp1plfp1xb2ea/All_ERAS_data_merged_output_2_1_2020.csv?raw=1")
 
-#data_file <- "all_years_mutate_124.csv"
-#data_file <- "all_years_filter_112.rds" 
-data_file <- "~/Dropbox/Nomogram/nomogram/data/All_ERAS_data_merged_output_2_1_2020.csv"
-
-# data_file <- "all_years_filter_112.rds" 
-# # Download list of payer types
-# if(!file.exists(data_file)){
-#   data_file <- readr::read_rds("https://www.dropbox.com/s/bip689v3btdjoxz/all_years_filter_112.rds?dl=1") 
-#   readr::write_rds(data_file, path = data_folder)
-# } else {
-#   raw_data <- read_rds(data_file) 
-# }
 #wget (http://www.gnu.org/software/wget/) is commonly installed on Unix-alikes (but not macOS).
 
 
 #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
 #####  Read in the data
 #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
-
-#all_data <- all_years
-
 all_data <- data_file
-rm(all_years)
-  #read_csv(paste0(data_file))
-
 colnames(all_data)
 
 #all_data$Count_of_Online_Publications <- as.numeric(all_data$Count_of_Online_Publications)
@@ -142,18 +129,18 @@ colnames(all_data)
 #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
 #####  Set reference category for each variable
 #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
-contrasts(all_data$US_or_Canadian_Applicant)
-all_data$US_or_Canadian_Applicant <- relevel(all_data$US_or_Canadian_Applicant, ref = "US senior")
-contrasts(all_data$white_non_white)
-all_data$white_non_white <- relevel(all_data$white_non_white, ref = "White")
-all_data$Gender <- relevel(all_data$Gender, ref = "Female")
-all_data$Couples_Match <- relevel(all_data$Couples_Match, ref = "No")
+# contrasts(all_data$US_or_Canadian_Applicant)
+#all_data$US_or_Canadian_Applicant <- relevel(all_data$US_or_Canadian_Applicant, ref = "US senior")
+# contrasts(all_data$white_non_white)
+# all_data$white_non_white <- relevel(all_data$white_non_white, ref = "White")
+# all_data$Gender <- relevel(all_data$Gender, ref = "Female")
+# all_data$Couples_Match <- relevel(all_data$Couples_Match, ref = "No")
 #all_data$Medical_Education_Interrupted <- relevel(all_data$Medical_Education_Interrupted, ref = "No")
-all_data$Alpha_Omega_Alpha <- relevel(all_data$Alpha_Omega_Alpha, ref = "No")
-all_data$Military_Service_Obligation <- relevel(all_data$Military_Service_Obligation, ref = "No")
-all_data$Medical_Degree <- relevel (all_data$Medical_Degree, ref = "MD")
-all_data$Visa_Sponsorship_Needed <- relevel(all_data$Visa_Sponsorship_Needed, ref = "No")
-all_data$Match_Status <- relevel(all_data$Match_Status, ref = "Match")
+# all_data$Alpha_Omega_Alpha <- relevel(all_data$Alpha_Omega_Alpha, ref = "No")
+# all_data$Military_Service_Obligation <- relevel(all_data$Military_Service_Obligation, ref = "No")
+# all_data$Medical_Degree <- relevel (all_data$Medical_Degree, ref = "MD")
+# all_data$Visa_Sponsorship_Needed <- relevel(all_data$Visa_Sponsorship_Needed, ref = "No")
+# all_data$Match_Status <- relevel(all_data$Match_Status, ref = "Match")
 
 
 ###tableby labels
@@ -1075,3 +1062,4 @@ tm_broom <- function(model){
   glance <- broom::glance(model)
   return(glance)
 }
+

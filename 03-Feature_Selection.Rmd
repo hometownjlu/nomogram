@@ -40,12 +40,17 @@ smart: yes
 ---
 # Read in the original `all_data`, `train`, and `test` while removing `USMLE_Step_1_Score` and `USMLE_Step_2_CK_Score`.  
 ```{r, include=FALSE, echo=FALSE}
-rm(list = ls())
+rm(list = setdiff(ls(), lsf.str()))
+```
 
+
+```{r, include=FALSE, echo=FALSE}
 library(magrittr)
-all_data <- readr::read_csv("~/Dropbox/Nomogram/nomogram/all_data_output_of_split_correlation.csv") %>% dplyr::select(-USMLE_Step_1_Score, -USMLE_Step_2_CK_Score)
-train <- readr::read_csv("~/Dropbox/Nomogram/nomogram/train_output_of_split_correlation.csv") %>% dplyr::select(-USMLE_Step_1_Score, -USMLE_Step_2_CK_Score)
-test <- readr::read_csv("~/Dropbox/Nomogram/nomogram/test_output_of_split_correlation.csv") %>% dplyr::select(-USMLE_Step_1_Score, -USMLE_Step_2_CK_Score)
+all_data <- readr::read_csv(here::here("all_data_output_of_split_correlation.csv")) %>% dplyr::select( -contains("USMLE"))
+
+train <- readr::read_csv(here::here("train_output_of_split_correlation.csv")) %>% dplyr::select( -contains("USMLE"))
+
+test <- readr::read_csv(here::here("test_output_of_split_correlation.csv")) %>% dplyr::select( -contains("USMLE"))
 
 train <- train %>%
 dplyr::mutate(Match_Status = dplyr::recode(Match_Status, `Did Not Match` = "0", Match = "1"))
@@ -430,9 +435,9 @@ head(hyper_grid)
 ```
 
 ```{r, include = FALSE}
-all_data <- readr::read_csv("~/Dropbox/Nomogram/nomogram/all_data_output_of_split_correlation.csv") %>% dplyr::select(-USMLE_Step_1_Score, -USMLE_Step_2_CK_Score)
-train <- readr::read_csv("~/Dropbox/Nomogram/nomogram/train_output_of_split_correlation.csv") %>% dplyr::select(-USMLE_Step_1_Score, -USMLE_Step_2_CK_Score)
-test <- readr::read_csv("~/Dropbox/Nomogram/nomogram/test_output_of_split_correlation.csv") %>% dplyr::select(-USMLE_Step_1_Score, -USMLE_Step_2_CK_Score)
+all_data <- readr::read_csv("~/Dropbox/Nomogram/nomogram/all_data_output_of_split_correlation.csv") 
+train <- readr::read_csv("~/Dropbox/Nomogram/nomogram/train_output_of_split_correlation.csv") 
+test <- readr::read_csv("~/Dropbox/Nomogram/nomogram/test_output_of_split_correlation.csv") 
 
 train <- train %>%
 dplyr::mutate(Match_Status = dplyr::recode(Match_Status, `Did Not Match` = "Did.Not.Match", Match = "Matched"))

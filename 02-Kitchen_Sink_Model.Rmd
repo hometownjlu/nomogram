@@ -38,9 +38,14 @@ editor_options:
 ---
 
 ```{r}
-all_data <- readr::read_csv("~/Dropbox/Nomogram/nomogram/all_data_output_of_split_correlation.csv")
-train <- readr::read_csv("~/Dropbox/Nomogram/nomogram/train_output_of_split_correlation.csv")
-test <- readr::read_csv("~/Dropbox/Nomogram/nomogram/test_output_of_split_correlation.csv")
+rm(list = setdiff(ls(), lsf.str()))
+```
+
+
+```{r}
+all_data <- readr::read_csv(here::here("all_data_output_of_split_correlation.csv"))
+train <- readr::read_csv(here::here("train_output_of_split_correlation.csv"))
+test <- readr::read_csv(here::here("test_output_of_split_correlation.csv"))
 ```
 
 ```{r}
@@ -141,10 +146,6 @@ formula
 
 
 
-
-
-
-
 # Kitchen Sink Model: (aka throw everything at it)
 Create a Kitchen Sink or a "large" model with all factors in the `train` data set first. This is essentially a screening model with all variables. 
 
@@ -156,7 +157,7 @@ class(train$Match_Status)
 #train <- train %>% select(-Match_Status1)
 require(rms)
 
-train1 <- train %>% dplyr::select(-Type_of_medical_school, -USMLE_Step_2_CK_Score, -USMLE_Step_1_Score, -US_or_Canadian_Applicant, -Medical_Degree)
+train1 <- train %>% dplyr::select(-Type_of_medical_school, -US_or_Canadian_Applicant, -Medical_Degree)
 
 d <- 
   rms::datadist(train1)

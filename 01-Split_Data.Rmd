@@ -36,13 +36,17 @@ always_allow_html: yes
 editor_options: 
   chunk_output_type: console
 ---
+```{r}
+rm(list = setdiff(ls(), lsf.str()))
+```
+
 
 ```{r}
-knitr::include_graphics("images/machine-learning-splitting-datasets-3-638.jpg")
+knitr::include_graphics(here::here("images/machine-learning-splitting-datasets-3-638.jpg"))
 ```
 
 ```{r, include=FALSE}
-all_data <- readr::read_csv("~/Dropbox/Nomogram/nomogram/all_data_end_of_EDA.csv")
+all_data <- readr::read_csv(here::here("all_data_end_of_EDA.csv"))
 ```
 
 # Why are we using a train and test sample data set to test the model?  
@@ -50,14 +54,14 @@ The training set contains a known output (`all_data$Match_Status`) and the model
 
 Overfitting is one of the biggest challenges in the machine learning process. You don’t want to build a model that fits perfectly to the data it knows the answer but doesn’t perferm well for the data that it doesn’t know the answer.  This is to prevent the over-fitting.
 ```{r}
-knitr::include_graphics("images/overfitting.jpg")
+knitr::include_graphics(here::here("images/overfitting.jpg"))
 ```
 
 Overfitting means that the model has been trained “too well”, and as a result it learns the noise present in the training data as if it was a reliable pattern. Overfitting affects the ability of the model to perform well in unseen data, which is known as generalisation.  Two well known strategies to overcome the problem of overfitting are the train/validation split and cross-validation.
 
 # Identify training and test samples
 ```{r}
-knitr::include_graphics("images/Train-Test-Split-Diagram.jpg")
+knitr::include_graphics(here::here("images/Train-Test-Split-Diagram.jpg"))
 ```
 
 
@@ -73,14 +77,22 @@ data_split <- rsample::initial_split(data = all_data,
                                      strata = "Match_Status", 
                                      prop = 0.8)
 
-train <- data_split %>% rsample::training() %>% dplyr::glimpse()  # Extract the training dataframe
+train <- data_split %>% rsample::training() %>% 
+  dplyr::select(-contains("USMLE")) %>% 
+  dplyr::select(-Medical_School_of_Graduation) %>%
+  dplyr::glimpse()  # Extract the training dataframe
+
 readr::write_csv(x = train, 
           path = (here::here("results", "train_at_data_split_phase.csv")), 
           col_names = TRUE)
 # training_data_plot_hist_facet <- plot_hist_facet(data = train)
 #  training_data_plot_hist_facet
 
-test <- data_split %>% rsample::testing() %>% dplyr::glimpse() # Extra
+test <- data_split %>% rsample::testing() %>% 
+  dplyr::select(-contains("USMLE")) %>% 
+    dplyr::select(-Medical_School_of_Graduation) %>%
+  dplyr::glimpse() # Extra
+
 readr::write_csv(x = test, 
           path = (here::here("results", "test_at_data_split_phase.csv")), 
           col_names = TRUE)
@@ -94,30 +106,30 @@ I will call the training sample `train` and the test sample `test`.  *Creative!*
 #More ways to split the data.  
 
 # Using base R
-set.seed(123)  # for reproducibility
-index_1 <- base::sample(1:nrow(all_data), round(nrow(all_data) * 0.8))
-train_1 <- all_data[index_1, ]
-test_1  <- all_data[-index_1, ]
-rm(test_1)
-rm(train_1)
+# set.seed(123)  # for reproducibility
+# index_1 <- base::sample(1:nrow(all_data), round(nrow(all_data) * 0.8))
+# train_1 <- all_data[index_1, ]
+# test_1  <- all_data[-index_1, ]
+# rm(test_1)
+# rm(train_1)
 
 # Using caret package
-set.seed(123)  # for reproducibility
-index_2 <- caret::createDataPartition(all_data$Match_Status, p = 0.8, 
-                               list = FALSE)
-train_2 <- all_data[index_2, ]
-test_2  <- all_data[-index_2, ]
-rm(train_2)
-rm(test_2)
+# set.seed(123)  # for reproducibility
+# index_2 <- caret::createDataPartition(all_data$Match_Status, p = 0.8, 
+#                                list = FALSE)
+# train_2 <- all_data[index_2, ]
+# test_2  <- all_data[-index_2, ]
+# rm(train_2)
+# rm(test_2)
 
 # Using rsample package
-set.seed(123)  # for reproducibility
-split_1  <- rsample::initial_split(all_data, prop = 0.8)
-train_3  <- rsample::training(split_1)
-test_3   <- rsample::testing(split_1)
-rm(split_1)
-rm(train_3)
-rm(test_3)
+# set.seed(123)  # for reproducibility
+# split_1  <- rsample::initial_split(all_data, prop = 0.8)
+# train_3  <- rsample::training(split_1)
+# test_3   <- rsample::testing(split_1)
+# rm(split_1)
+# rm(train_3)
+# rm(test_3)
 
 # Using h2o package
 # brew tap caskroom/versions
@@ -138,12 +150,13 @@ rm(test_3)
 
 ```{r, include=FALSE}
 #Remove applicant names from train and test.  
-
 # train <- train %>%
-#   dplyr::select(-Applicant_Name)
+#   dplyr::select(-Applicant_Name) %>%
+#   dplyr::select(-Medical_School_of_Graduation)
 # 
 # test <- test %>%
-#   dplyr::select(-Applicant_Name)
+#   dplyr::select(-Applicant_Name) %>%
+#   dplyr::select(-Medical_School_of_Graduation)
 ```
 
 
@@ -358,7 +371,8 @@ tm_print_save <- function (filename) {
 }
 
 cnum <- train[,c("Age", "Count_of_Non_Peer_Reviewed_Online_Publication", "Count_of_Oral_Presentation", "Count_of_Other_Articles", "Count_of_Peer_Reviewed_Book_Chapter", "Count_of_Peer_Reviewed_Journal_Articles_Abstracts", "Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published", "Count_of_Peer_Reviewed_Online_Publication", "Count_of_Poster_Presentation", "Count_of_Scientific_Monograph", #"USMLE_Step_1_Score", 
-                 "USMLE_Step_2_CK_Score", "NIH_dollars" )]
+                 #"USMLE_Step_2_CK_Score", 
+                 "NIH_dollars" )]
 cormat <- stats::cor(cnum) # Select only numeric variables that are significant on univariate testing.
 pairs <- graphics::pairs(cnum)
 pairs
@@ -386,8 +400,8 @@ tm_ggsave(inspect_cor_plot, "inspect_cor_plot.tiff")
 
 
 ```{r, include=FALSE}
-readr::write_csv(all_data, "~/Dropbox/Nomogram/nomogram/all_data_output_of_split_correlation.csv")
-readr::write_csv(train, "~/Dropbox/Nomogram/nomogram/train_output_of_split_correlation.csv")
-readr::write_csv(test, "~/Dropbox/Nomogram/nomogram/test_output_of_split_correlation.csv")
+readr::write_csv(all_data, (here::here("all_data_output_of_split_correlation.csv")))
+readr::write_csv(train, (here::here("train_output_of_split_correlation.csv")))
+readr::write_csv(test, (here::here("test_output_of_split_correlation.csv")))
 ```
 

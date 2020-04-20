@@ -98,6 +98,11 @@ This data was cleaned in a separate R script with the help of exploratory.io.
 Packrat is in use to control package versions and a packrat.lock file is posted to my github repository.  This will allow for easier reproducibility.  Packrat records the exact package versions you depend on, and ensures those exact versions are the ones that get installed wherever you go.  We can also control the environment by deploying the project inside a Docker container as needed.  The project was created in R version 3.6.1 and run inside RStudio 1.2.5019.  Session info is present at the bottom of the script.  
 
 ```{r}
+rm(list = setdiff(ls(), lsf.str()))
+```
+
+
+```{r}
 #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
 #####  Functions for nomogram
 #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
@@ -972,7 +977,7 @@ cat("\014")  #Clear console
 #Bundle is stored in packrat/bundles/***.tar.gz
 
 #options(tinytex.verbose = FALSE)
-library(knitr)
+#library(knitr)
 ```
 
 
@@ -992,12 +997,12 @@ here::here()
 #May need to run this file line-by-line (CRTL+Enter) by hand.  
 
 #source(file=(here::here("Code", "Additional_functions_nomogram.R")), echo=TRUE, verbose=TRUE)
-all_data <- readr::read_csv("~/Dropbox/Nomogram/nomogram/data/All_ERAS_data_merged_output_2_1_2020.csv")
+data_file <- readr::read_csv("https://www.dropbox.com/s/dfvp1plfp1xb2ea/All_ERAS_data_merged_output_2_1_2020.csv?raw=1")
+all_data <- data_file
 
 library(magrittr)
 all_data <- all_data %>%
   dplyr::select(-Applicant_Name) #MAY KEEP THIS IN.  
-conflicts()
 ```
 
 The data are given below:
@@ -1296,9 +1301,8 @@ tm_write2pdf(tm_arsenal_table_output, "tm_arsenal_table_output1")
 ```
 
 ```{r}
-readr::write_csv(all_data, "~/Dropbox/Nomogram/nomogram/all_data_end_of_EDA.csv")
-file.exists("~/Dropbox/Nomogram/nomogram/all_data_end_of_EDA.csv")
-#test
+readr::write_csv(all_data, (here::here("all_data_end_of_EDA.csv")))
+file.exists(here::here("all_data_end_of_EDA.csv"))
 ```
 
 

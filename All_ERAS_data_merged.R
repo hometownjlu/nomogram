@@ -49,22 +49,297 @@
   #May need to run this file line-by-line (CRTL+Enter) by hand. 
   
   # Steps to produce GOBA_list_of_people_who_all_matched_into_OBGYN ----
+  
+  # Read in all data of GOBA scrapes ----
+  # We start with a list of FPMRS physicians and the year that they were boarded called all_bound_together.csv.  The data is filtered for providers who are retired, not in the United States, and has a unique random id.  
+  
+  # #Read directly from Dropbox, workforce, scraper, Scraper_results_2019
+  a1 <- read.csv(url("https://www.dropbox.com/s/81s4sfltiqwymq1/Downloaded%20%289035315-9050954%29%20%282019-08-13%2022.csv?raw=1"))
+  a2 <- read.csv(url("https://www.dropbox.com/s/x2q4kn9w0z92em0/Downloaded%20%289037771-9050954%29%20%282019-08-27%2019-21-01%29.csv?raw=1"))
+  a3 <- read.csv(url("https://www.dropbox.com/s/p7eggr3w9trhoka/Physicians%20%281-100%29%20%282019-09-06%2017-29-12%29.csv?raw=1"))
+  a4 <- read.csv(url("https://www.dropbox.com/s/jke52sy6j0mhyg9/Physicians%20%289e%2B05-6e%2B05%29%20%282019-09-09%2006-29-19%29.csv?raw=1"))
+  a5 <- read.csv(url("https://www.dropbox.com/s/gv5qh8jp0mnsoii/Physicians%20%289e%2B06-9032700%29%20%282019-09-08%2006-48-56%29.csv?raw=1"))
+  a6 <- read.csv(url("https://www.dropbox.com/s/0lfpdmz7wnj4dae/Physicians%20%28100-10000%29%20%282019-09-06%2019-31-29%29.csv?raw=1"))
+  a7 <- read.csv(url("https://www.dropbox.com/s/6ym2y1b4pf1ustt/Physicians%20%2810000-29000%29%20%282019-09-06%2022-53-42%29.csv?raw=1"))
+  a8 <- read.csv(url("https://www.dropbox.com/s/6ym2y1b4pf1ustt/Physicians%20%2810000-29000%29%20%282019-09-06%2022-53-42%29.csv?raw=1"))
+  a9 <- read.csv(url("https://www.dropbox.com/s/awa08ncbs3c27vg/Physicians%20%28971758-9032700%29%20%282019-09-09%2006-29-59%29.csv?raw=1"))
+  a10 <- read.csv(url("https://www.dropbox.com/s/35cte66ijjkwixv/Physicians%20%289000023-8995000%29%20%282019-09-08%2008-54-45%29.csv?raw=1"))
+  a11 <- read.csv(url("https://www.dropbox.com/s/og76ky1qolmfo36/Physicians%20%289001120-9032700%29%20%282019-09-08%2014-56-13%29.csv?raw=1"))
+  a12 <- read.csv(url("https://www.dropbox.com/s/xep4t7vrmy0so5f/Physicians%20%289014500-9016500%29%20%282019-09-09%2017-29-37%29.csv?raw=1"))
+  a13 <- read.csv(url("https://www.dropbox.com/s/0fdaeiqcdxuu4p3/Physicians%20%289014500-90146500%29%20%282019-09-09%2017-25-04%29.csv?raw=1"))
+  a14 <- read.csv(url("https://www.dropbox.com/s/1kjeumeyc6rkqaw/Physicians%20%289016500-9019500%29%20%282019-09-09%2017-37-30%29.csv?raw=1"))
+  a15 <- read.csv(url("https://www.dropbox.com/s/npak5lc1oqgzxff/Physicians%20%289019500-9029500%29%20%282019-09-09%2017-58-01%29.csv?raw=1"))
+  a16 <- read.csv(url("https://www.dropbox.com/s/pu9n1cz62s9rw33/Physicians%20%289029500-9059500%29%20%282019-09-09%2018-12-26%29.csv?raw=1"))
+  a17 <- read.csv(url("https://www.dropbox.com/s/afy2x8sn5aiwhls/Physicians%20%289035315-9032700%29%20%282019-09-08%2007-36-38%29.csv?raw=1"))
+  a18 <- read.csv(url("https://www.dropbox.com/s/yyb56grdml8r3u2/Physicians%20%289035315-9032700%29%20%282019-09-08%2010-52-04%29.csv?raw=1"))
+  a19 <- read.csv(url("https://www.dropbox.com/s/eb2ys0rhrej57gi/Physicians%20%289035315-9032700%29%20%282019-09-08%2010-57-51%29.csv?raw=1"))
+  a20 <- read.csv(url("https://www.dropbox.com/s/0icba0c7fiykfg6/Physicians%20%289050954-9030000%29%20%282019-09-07%2021-56-03%29.csv?raw=1"))
+  a21 <- read.csv(url("https://www.dropbox.com/s/3myst0596aqn96e/Physicians_total_drop_na_29.csv?raw=1"))
+  a22 <- read.csv(url("https://www.dropbox.com/s/bdxfcw0iq9etp77/Physicians_total_left_join_27.csv?raw=1"))
+  
+  #Read directly from Dropbox, workforce, scraper, GOBA_December_2019_Pull
+  a23 <- read.csv(url("https://www.dropbox.com/s/0tia58u15r6deok/Physicians%20%289017048-9007048%29%20%282019-12-23%2008-40-42%29.csv?raw=1"))
+  a24 <- read.csv(url("https://www.dropbox.com/s/xzx12mxjjoetf5m/Physicians%20%289027048-9017048%29%20%282019-12-22%2016-53-04%29.csv?raw=1"))
+  a25 <- read.csv(url("https://www.dropbox.com/s/3lssg0qzhvvvnac/Physicians%20%289029730-9050000%29%20%282020-01-27%2006-53-03%29.csv?raw=1"))
+  a26 <- read.csv(url("https://www.dropbox.com/s/dwjfszn6rbgcxd3/Physicians%20%289032048-9027048%29%20%282019-12-22%2014-30-40%29.csv?raw=1"))
+  a27 <- read.csv(url("https://www.dropbox.com/s/yiqm06tooy6skpj/Physicians%20%289037048-9032048%29%20%282019-12-22%2013-22-42%29.csv?raw=1"))
+  a28 <- read.csv(url("https://www.dropbox.com/s/bjbvq6xi6izbwl4/Physicians%20%289038000-1%29%20%282020-01-03%2017-06-20%29.csv?raw=1"))
+  a29 <- read.csv(url("https://www.dropbox.com/s/lrkgxasq1u8979b/Physicians%20%289041048-9037048%29%20%282019-12-22%2012-25-57%29.csv?raw=1"))
+  a30 <- read.csv(url("https://www.dropbox.com/s/fa43ujcfl60ir93/Physicians%20%289041048-9042048%29%20%282019-12-21%2016-51-37%29.csv?raw=1"))
+  a31 <- read.csv(url("https://www.dropbox.com/s/y01mt2zt1y7vrex/Physicians%20%289041048-9043048%29%20%282019-12-21%2017-14-39%29.csv?raw=1"))
+  a32 <- read.csv(url("https://www.dropbox.com/s/a7n3lby7velswmn/Physicians%20%289041048-9043048%29%20%282019-12-22%2008-51-01%29.csv?raw=1"))
+  a33 <- read.csv(url("https://www.dropbox.com/s/y5fc6qcjsdox89k/Physicians%20%289050000-9038000%29%20%282020-01-03%2018-20-19%29.csv?raw=1"))
+  
+  
+  #Read directly from Dropbox, workforce, scraper, Old Mac GOBA Pulls
+  a34 <- read.csv(url("https://www.dropbox.com/s/h4bpf3tysmklq18/Physicians%20%289041048-9043048%29%20%282019-12-21%2017-14-39%29.csv?raw=1"))
+  a35 <- read.csv(url("https://www.dropbox.com/s/94lih4dnxel8o2s/Physicians%20%281-9050542%29%20%282019-10-22%2019-52-47%29.csv?raw=1"))
+  a36 <- read.csv(url("https://www.dropbox.com/s/ivm9cdr42fsye9l/Physicians%20%289041048-9042048%29%20%282019-12-21%2016-51-37%29.csv?raw=1"))
+  a37 <- read.csv(url("https://www.dropbox.com/s/uc3frk69k0eiybv/Physicians%20%289041048-9043048%29%20%282019-12-22%2008-51-01%29.csv?raw=1"))
+  a38 <- read.csv(url("https://www.dropbox.com/s/upyiagiijk1dz1n/Physicians%20%2817479-9050542%29%20%282019-10-26%2012-03-15%29.csv?raw=1"))
+  a39 <- read.csv(url("https://www.dropbox.com/s/whxdypbi3q1eg89/Physicians%20%289e%2B06-9032700%29%20%282019-09-08%2006-48-56%29.csv?raw=1"))
+  a40 <- read.csv(url("https://www.dropbox.com/s/tdu6js4jgmlgzk3/Physicians%20%289017048-9007048%29%20%282019-12-23%2008-40-42%29.csv?raw=1"))
+  a41 <- read.csv(url("https://www.dropbox.com/s/ecoddjv1ivu8tkb/Physicians%20%289050000-9038000%29%20%282020-01-03%2018-20-19%29.csv?raw=1"))
+  a42 <- read.csv(url("https://www.dropbox.com/s/p0t6tfevsklsxx9/Physicians%20%289032048-9027048%29%20%282019-12-22%2014-30-40%29.csv?raw=1"))
+  a43 <- read.csv(url("https://www.dropbox.com/s/z5z3m9vbxmdd8hf/Physicians%20%2824456-9050542%29%20%282019-10-28%2020-35-42%29.csv?raw=1"))
+  a44 <- read.csv(url("https://www.dropbox.com/s/0zizjata2bdohdo/Physicians%20%289037048-9032048%29%20%282019-12-22%2013-22-42%29.csv?raw=1"))
+  a45 <- read.csv(url("https://www.dropbox.com/s/gpz31s436i9ev06/Physicians%20%289027048-9017048%29%20%282019-12-22%2016-53-04%29.csv?raw=1"))
+  a46 <- read.csv(url("https://www.dropbox.com/s/jngn8o513mtawif/Physicians%20%289e%2B05-6e%2B05%29%20%282019-09-09%2006-29-19%29.csv?raw=1"))
+  a47 <- read.csv(url("https://www.dropbox.com/s/qc3nmzgbv2lo5as/Physicians%20%289038000-1%29%20%282020-01-03%2017-06-20%29.csv?raw=1"))
+  a48 <- read.csv(url("https://www.dropbox.com/s/uw6oj0ofkkvxi6n/Physicians%20%28100-10000%29%20%282019-09-06%2019-31-29%29.csv?raw=1"))
+  a49 <- read.csv(url("https://www.dropbox.com/s/ucvzbcmenatfatx/Physicians%20%2810000-29000%29%20%282019-09-06%2022-53-42%29.csv?raw=1"))
+  a50 <- read.csv(url("https://www.dropbox.com/s/kxbtov4x0t0pd6q/Physicians%20%2824456-9050542%29%20%282019-10-29%2006-54-22%29.csv?raw=1"))
+  a51 <- read.csv(url("https://www.dropbox.com/s/mdmjy2vjclb8l5f/Physicians%20%289041048-9037048%29%20%282019-12-22%2012-25-57%29.csv?raw=1"))
+  
+  #added on 3/7/2020
+  a53 <- read.csv(url("https://www.dropbox.com/s/uqu52z9seexace9/Physicians%20%289010000-9024666%29%20%282020-02-25%2019-44-45%29.csv?raw=1"))
+  a55 <- read.csv(url("https://www.dropbox.com/s/lt2vtk2d3nz4gff/Physicians%20%288000083-8041022%29%20%282020-02-23%2014-52-06%29.csv?raw=1"))
+  a56 <- read.csv(url("https://www.dropbox.com/s/w62lq7ootdj6tnd/Physicians%20%289010000-9024666%29%20%282020-02-25%2021-45-40%29.csv?raw=1"))
+  a59 <- read.csv(url("https://www.dropbox.com/s/nh4ppeg4r8q5jpi/Physicians%20%289013114-9024666%29%20%282020-02-26%2018-00-24%29.csv?raw=1"))
+  a60 <- read.csv(url("https://www.dropbox.com/s/e5sr31gnee0ppgz/Physicians%20%281-9060000%29%20%282020-02-22%2009-39-54%29.csv?raw=1"))
+  a61 <- read.csv(url("https://www.dropbox.com/s/k2h99u8fjz95cur/Physicians%20%281-9060000%29%20%282020-02-22%2009-41-10%29.csv?raw=1"))
+  a62 <- read.csv(url("https://www.dropbox.com/s/n5gf97s4uq4nxj4/Physicians%20%281-847312%29%20on%202-22.2020.csv?raw=1"))
+  
+  #Add March 2020 scrapes 
+  a63 <- read.csv(url("https://www.dropbox.com/s/lhoqdltq4f0iodk/Physicians%20%289030000-9024666%29%20%282020-03-07%2016-45-56%29.csv?raw=1"))
+  a64 <- read.csv(url("https://www.dropbox.com/s/sx85vsvodmil8h6/Physicians%20%289040000-9030000%29%20%282020-03-08%2014-50-09%29.csv?raw=1"))
+  a65 <- read.csv(url("https://www.dropbox.com/s/1yzghhwt63294t1/Physicians%20%289050000-9040000%29%20%282020-03-08%2020-12-49%29.csv?raw=1"))
+  
+  
+  #ABOG 2013 from SGS Bastow project from Dropbox/ workforce/ scraper/ 2013 data
+  a52 <- read.csv(url("https://www.dropbox.com/s/4ml8wdoijw67n7g/abog%2012.21.2013.csv?raw=1")) %>%
+    dplyr::rename(userid = ID) %>%
+    dplyr::mutate(`Certification 2` = dplyr::recode(Certification.2, `Female Pelvic Medicine and Reconstructive Surgery` = "FPM")) %>%
+    dplyr::rename(sub1 = Certification.2)
+  
+  # # Bind together all the individual scrapes ----
+  # # Steps to produce the output
+  all_a_dataframes <- a1 %>%
+    readr::type_convert() %>%
+    exploratory::clean_data_frame() %>%
+    bind_rows(a2, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a3, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a4, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a5, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a6, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a7, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a8, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a9, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a10, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a11, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a12, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a13, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a14, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a15, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a16, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a17, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a18, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a19, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a20, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a21, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a22, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a23, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a24, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a25, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a26, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a27, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a28, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a29, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a30, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a31, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a32, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a33, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a34, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a35, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a36, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a37, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a38, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a39, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a40, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a41, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a42, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a43, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a44, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a45, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a46, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a47, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a48, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a49, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a50, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a51, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a52, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a53, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a55, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a56, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a59, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a60, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a61, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a62, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE)%>%
+    bind_rows(a63, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a64, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    bind_rows(a65, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
+    select(-contains("new"))
+  
+  readr::write_csv(all_a_dataframes, "~/Dropbox/Rui/data/all_a_dataframes.csv")
+  all_a_dataframes <- readr::read_csv("~/Dropbox/Rui/data/all_a_dataframes.csv")
+  
+  all_bound_together <- all_a_dataframes %>%
+    readr::type_convert() %>%
+    exploratory::clean_data_frame() %>%
+    dplyr::distinct(userid, .keep_all = TRUE) %>%
+    dplyr::select(-starts_with("ID.new")) %>%
+    #dplyr::filter(sub1 %in% c("FPM", "Female Pelvic Medicine & Reconstructive Surgery")) %>%
+    dplyr::arrange(name) %>%
+    dplyr::select(userid:orig_bas) %>%
+    dplyr::mutate(unique_random_id = (userid*3.1415926535) - 3, unique_random_id = round(unique_random_id, digits = 0)) %>%
+    dplyr::filter(sub1certStatus %nin% c("Retired", "Not Currently Certified")) %>%
+    dplyr::filter(sub2certStatus %nin% c("Retired", "Not Currently Certified")) %>%
+    dplyr::filter(certStatus %nin% c("Retired", "Not Currently Certified")) %>%
+    dplyr::filter(!is.na(state)) %>%
+    dplyr::filter(state != "ON") %>%
+    dplyr::filter(clinicallyActive !="No")
+  
+  dim(all_bound_together)
+  colnames(all_bound_together)
+  head(all_bound_together, 200)
+  dplyr::glimpse(all_bound_together)
+  #View(all_bound_together)
+  
+  # Write the final bound scraper to disk ----
+  readr::write_rds(all_bound_together, "/Users/tylermuffly/Dropbox/Nomogram/nomogram/data/list of people who all matched into OBGYN.rds")
+  
+  #We start with a list of FPMRS physicians and the year that they were boarded called all_bound_together.csv.  The data is filtered for providers who are retired, not in the United States, and has a unique random id.  
+  
   GOBA_list_of_people_who_all_matched_into_OBGYN <- 
-    # We needed this data because it is a check about who is an OBGYN.  The ERAS data only tells us who applied.  The GOBA list tells us who matched.  There is no public information about residents available on Physician Compare, NPPES or Doximity beyond the basics of address.  
-    exploratory::read_rds_file("/Users/tylermuffly/Dropbox/Nomogram/nomogram/data/list of people who all matched into OBGYN.rds") %>%
+    # We needed this data because it is a check about who is an OBGYN.  The ERAS data only tells us who applied.  The GOBA list tells us who matched.  There is no public information about residents available on Physician Compare, NPPES or Doximity beyond the basics of address.  See Rui Project for file:  pulling_all_scrapes_together.R  
+    exploratory::read_rds_file(here::here("/data/list of people who all matched into OBGYN.rds")) %>%
     readr::type_convert() %>%
     exploratory::clean_data_frame() %>%
     #arrange(desc(userid) %>%
     dplyr::select(userid, firstname, lastname, name) #, city_state, state)
   
+ 
+  #2019 archive ----
+  # Steps to produce archive_2019_2
+  `archive_2019_2` <- exploratory::read_excel_file( "/Users/tylermuffly/Dropbox/Nomogram/nomogram/data/Archives/2019 All Data 2.xlsx", sheet = "e79bee75-b572-4e23-ba50-6b5b42f", na = c('','NA'), skip=0, col_names=TRUE, trim_ws=TRUE, col_types="text") %>%
+    readr::type_convert() %>%
+    exploratory::clean_data_frame()
+  
+  # Steps to produce the output
+  archive2019 <- exploratory::read_excel_file( "/Users/tylermuffly/Dropbox/Nomogram/nomogram/data/Archives/2019 All Data 1.xlsx", sheet = "642b9f43-7b4c-4ea1-8df7-00a8b42", na = c('','NA'), skip=0, col_names=TRUE, trim_ws=TRUE, col_types="text") %>%
+    readr::type_convert() %>%
+    exploratory::clean_data_frame() %>%
+    #left_join(archive_2019_2, by = c("AAMC ID" = "AAMC ID")) %>%  #totally duplicates of everything in first set
+    unite(`Applicant Name`, `First Name`, `Last Name`, sep = " ", remove = FALSE, na.rm = FALSE) %>%
+    select(-`Last Name`, -`First Name`) %>%
+    dplyr::select(`AAMC ID`, `Applicant Name`, `Medical Education or Training Interrupted`, 
+                  #ACLS, 
+                  #BLS, 
+                  #`Malpractice Cases Pending`, 
+                  #`Medical Licensure Problem`, 
+                  #PALS, 
+                  `Felony Conviction`, `Alpha Omega Alpha`, `Tracks Applied by Applicant`,
+                  #Citizenship, 
+                  `Date of Birth`, Gender, `Gold Humanism Honor Society`, `Military Service Obligation`, `Participating as a Couple in NRMP`, `Self Identify`, 
+                  #`Sigma Sigma Phi`, 
+                  `US or Canadian Applicant`, `Visa Sponsorship Needed`, #`Higher Education Degree`, 
+                  `Medical Degree`, `Medical School of Graduation`, `USMLE Step 1 Score`, `Tracks Applied by Applicant`, `Count of Non Peer Reviewed Online Publication`, `Count of Oral Presentation`, `Count of Other Articles`, `Count of Peer Reviewed Book Chapter`, `Count of Peer Reviewed Journal Articles/Abstracts`, `Count of Peer Reviewed Journal Articles/Abstracts(Other than Published)`, `Count of Peer Reviewed Online Publication`, `Count of Poster Presentation`, `Count of Scientific Monograph`, #`OBGYN Grade--10`, 
+                  `Applicant Name`, `Misdemeanor Conviction`,
+                  
+                  #New variables to include for feature engineering.  Must be included for each year of data.   
+                  `Medical School Type`, `USMLE Step 2 CK Score`, #`Language Fluency`, 
+                  #`Higher Education Degree_1`, `Higher Education Degree_2`
+    ) %>%
+    #dplyr::rename(`Applicant Name` = PERSONAL_31) %>%
+    dplyr::rename(`Step_2_CK` = `USMLE Step 2 CK Score`) %>%
+    dplyr::mutate(`US or Canadian Applicant` = factor(`US or Canadian Applicant`)) %>%
+    dplyr::mutate(Gender = dplyr::recode(Gender, Female = "Female"), Gender = dplyr::recode(Gender, Female = "Female", Male = "Male", `No Response` = "Female")) %>%
+    #dplyr::mutate(BLS = dplyr::recode(BLS, Yes = "Yes", .missing = "No")) %>%
+    dplyr::mutate(`Medical Education or Training Interrupted` = factor(`Medical Education or Training Interrupted`), #ACLS = factor(ACLS), BLS = factor(BLS), 
+                  #`Malpractice Cases Pending` = factor(`Malpractice Cases Pending`), `Medical Licensure Problem` = factor(`Medical Licensure Problem`), 
+                  #PALS = factor(PALS), 
+                  `Alpha Omega Alpha` = dplyr::recode(`Alpha Omega Alpha`, `Alpha Omega Alpha (AOA) elections held during senior year` = "Elections_Senior_Year", `Alpha Omega Alpha (Member of AOA)` = "Yes", `No Alpha Omega Alpha (AOA) chapter at my school` = "No"), #`Alpha Omega Alpha` = dplyr::recode(`Alpha Omega Alpha`, , .missing = "No"), 
+                  `Alpha Omega Alpha` = factor(`Alpha Omega Alpha`)) %>%
+    #filter(!is.na(`Limiting Factors`)) %>%
+    dplyr::mutate(`Visa Sponsorship Needed` = dplyr::recode(`Visa Sponsorship Needed`, No = "No", Yes = "Yes", .missing = "No")) %>%
+    dplyr::mutate(`Gold Humanism Honor Society` = dplyr::recode(`Gold Humanism Honor Society`, `Gold Humanism Honor Society (Member of GHHS)` = "Yes", .missing = "Not a Member")) %>%
+    dplyr::mutate(`Gold Humanism Honor Society` = factor(`Gold Humanism Honor Society`)) %>%
+    dplyr::mutate(`Gold Humanism Honor Society` = factor(`Gold Humanism Honor Society`), `Participating as a Couple in NRMP` = factor(`Participating as a Couple in NRMP`), `Visa Sponsorship Needed` = factor(`Visa Sponsorship Needed`), Match_Status = dplyr::recode(`Tracks Applied by Applicant`, `Ob-Gyn/Preliminary|1076220P0 (Preliminary)` = "Did not match")) %>%
+    reorder_cols(Match_Status) %>%
+    dplyr::mutate(Match_Status = dplyr::recode(Match_Status, `Obstetrics-Gynecology|1076220C0 (Categorical)` = "Matched"), `Gold Humanism Honor Society` = dplyr::recode(`Gold Humanism Honor Society`, `No Gold Humanism Honor Society (GHHS) chapter at my school` = "No", `Not a Member` = "Not_a_Member", Yes = "Yes")) %>%
+    dplyr::mutate(Match_Status = dplyr::recode(Match_Status, `Did not match` = "Did_Not_Match", Matched = "Matched")) %>%
+    dplyr::select(-`Tracks Applied by Applicant`) %>%
+    dplyr::mutate(`Alpha Omega Alpha` = dplyr::recode(`Alpha Omega Alpha`, `Elections in Senior year` = "Senior_Year_Elections", No = "No", `No chapter` = "No_Chapter", Yes = "Yes"), 
+                  #Citizenship = dplyr::recode(Citizenship, `U.S. Citizen` = "US_Citizen", .default = "Not_A_Citizen"), 
+          `Self Identify` = dplyr::recode(`Self Identify`, White = "White", `White|Other: Arab-American` = "White", `White|Other: Guyanese` = "White", `White|Other: Lebanese-American` = "White", `White|Other: Middle Eastern` = "White", `White|Other: Middle-Eastern (Jewish)` = "White", `White|Other: Persian` = "White", `White|Other: Portuguese` = "White", `White|Other: Turkish` = "White", .default = "Not_White")) %>%
+    #filter(!is.na(`Self Identify`)) %>%
+    #dplyr::mutate(`Sigma Sigma Phi` = dplyr::recode(`Sigma Sigma Phi`, `No Sigma Sigma Phi (SSP) chapter at my school` = "No_Chapter", `Sigma Sigma Phi (Member of SSP)` = "Yes_Member", .default = "No")) %>%
+    #dplyr::select(-`Higher Education Degree`) %>%
+    dplyr::mutate(`Medical Degree` = dplyr::recode(`Medical Degree`, `B.A./M.D.` = "MD", D.O. = "DO", `B.S./M.D.` = "MD", `DO/MA` = "DO", `DO/MBA` = "DO", `DO/MPH` = "DO", M.D. = "MD", `M.D./M.B.A.` = "MD", `M.D./M.P.H.` = "MD", `M.D./Other` = "MD", `M.D./Ph.D.` = "MD", `M.S./M.D.` = "MD", M.B. = "MD", `M.B.,B.S.` = "MD", M.B.B.Ch. = "MD", M.B.B.Ch.B = "MD", M.B.Ch.B. = "MD", B.A.O. = "MD", M.C. = "MD", M.Med. = "MD")) %>%
+    filter(!is.na(`Medical Degree`)) %>%
+    dplyr::mutate(`Medical Degree` = factor(`Medical Degree`), 
+                  #`Sigma Sigma Phi` = dplyr::recode(`Sigma Sigma Phi`, , .missing = "Not_a_member"), 
+                  #`Sigma Sigma Phi` = factor(`Sigma Sigma Phi`), 
+                  `Self Identify` = factor(`Self Identify`), `Military Service Obligation` = factor(`Military Service Obligation`)) %>%
+    #Citizenship = factor(Citizenship)) %>%
+    #dplyr::select(-`Felony Conviction`)) %>%
+    #dplyr::mutate(`OBGYN Grade--10` = factor(`OBGYN Grade--10`)) %>%
+    #dplyr::select(-`OBGYN Grade--10`) %>%
+    dplyr::mutate(Year = 2019) %>%
+    mutate(DOB = excel_numeric_to_date(`Date of Birth`)) %>%
+    #dplyr::mutate(DOB = lubridate::mdy(`Date of Birth`)) %>%
+    #dplyr::rename(DOB = `Date of Birth`) %>%
+    dplyr::mutate(`Current date` = mdy("01/01/2019")) %>%
+    dplyr::mutate(Age = `Current date`- DOB, Age = as.numeric(Age)/365) %>%
+    filter(!is.na(Age) & Age >= 24) %>%
+    dplyr::select(c(-`Current date`, -DOB)) %>%
+    dplyr::mutate(Match_Status = factor(Match_Status)) %>%
+    clean_names(case = "parsed") %>%
+    #dplyr::mutate(Year = dplyr::recode(Year, `2017` = "2018"), 
+                  #Sigma_Sigma_Phi = dplyr::recode(Sigma_Sigma_Phi, No_Chapter = "No", Not_a_member = "No", Yes_Member = "Yes"),
+    #plyr::mutate(Medical_Licensure_Problem = dplyr::recode(Medical_Licensure_Problem, N = "No", Y = "Yes")) %>%
+    #dplyr::rename(`Medical Licensure Problem` = Medical_Licensure_Problem) %>%
+    dplyr::rename(Type_of_medical_school = `Medical_School_Type`) %>%
+    select(-Felony_Conviction, -Date_of_Birth, -Misdemeanor_Conviction) %>%
+    dplyr::mutate("Malpractice_Cases_Pending" = "No") %>%
+    dplyr::mutate("Medical Licensure Problem" = "No")  %>%
+    dplyr::mutate("Felony Conviction" = "No") %>%
+    dplyr::mutate("Misdemeanor_Conviction" = "No") %>%
+    dplyr::mutate("Sigma_Sigma_Phi" = "No") %>%
+    mutate(Citizenship = US_or_Canadian_Applicant)
+    
+  colnames(archive2019) #Missing ACLS, Missing BLS, Missing PALS, 
+  #View(archive2019)
+  
   
   # 2018_archive ----
   #2018 does pull in Medical_School_of_Graduation
-  archive2018 <- exploratory::read_delim_file("/Users/tylermuffly/Dropbox/Nomogram/nomogram/data/Archives/2018_archive.csv" , ",", quote = "\"", skip = 0 , col_names = TRUE , na = c('','NA') , locale=readr::locale(encoding = "UTF-8", decimal_mark = ".", grouping_mark = "," ), trim_ws = TRUE , progress = FALSE) %>%
+  archive2018 <- exploratory::read_delim_file(here::here("/data/Archives/2018_archive.csv") , ",", quote = "\"", skip = 0 , col_names = TRUE , na = c('','NA') , locale=readr::locale(encoding = "UTF-8", decimal_mark = ".", grouping_mark = "," ), trim_ws = TRUE , progress = FALSE) %>%
     readr::type_convert() %>%
     exploratory::clean_data_frame() %>%
     dplyr::select(`AAMC ID`, `Applicant Name`, `Medical Education or Training Interrupted`, ACLS, BLS, `Malpractice Cases Pending`, `Medical Licensure Problem`, PALS, `Felony Conviction`, `Alpha Omega Alpha`, Citizenship, `Date of Birth`, Gender, `Gold Humanism Honor Society`, `Military Service Obligation`, `Participating as a Couple in NRMP`, `Self Identify`, `Sigma Sigma Phi`, `US or Canadian Applicant`, `Visa Sponsorship Needed`, #`Higher Education Degree`, 
-           `Medical Degree`, `Medical School of Graduation`, `USMLE Step 1 Score`, `Tracks Applied by Applicant`, `Count of Non Peer Reviewed Online Publication`, `Count of Oral Presentation`, `Count of Other Articles`, `Count of Peer Reviewed Book Chapter`, `Count of Peer Reviewed Journal Articles/Abstracts`, `Count of Peer Reviewed Journal Articles/Abstracts(Other than Published)`, `Count of Peer Reviewed Online Publication`, `Count of Poster Presentation`, `Count of Scientific Monograph`, `OBGYN Grade--10`, `Applicant Name`, `Misdemeanor Conviction`,
+           `Medical Degree`, `Medical School of Graduation`, `USMLE Step 1 Score`, `Tracks Applied by Applicant`, `Count of Non Peer Reviewed Online Publication`, `Count of Oral Presentation`, `Count of Other Articles`, `Count of Peer Reviewed Book Chapter`, `Count of Peer Reviewed Journal Articles/Abstracts`, `Count of Peer Reviewed Journal Articles/Abstracts(Other than Published)`, `Count of Peer Reviewed Online Publication`, `Count of Poster Presentation`, `Count of Scientific Monograph`, #`OBGYN Grade--10`, 
+           `Applicant Name`, `Misdemeanor Conviction`,
         
            #New variables to include for feature engineering.  Must be included for each year of data.   
            `Medical School Type`, `USMLE Step 2 CK Score`, #`Language Fluency`, 
@@ -93,8 +368,8 @@
     filter(!is.na(`Medical Degree`)) %>%
     dplyr::mutate(`Medical Degree` = factor(`Medical Degree`), `Sigma Sigma Phi` = dplyr::recode(`Sigma Sigma Phi`, , .missing = "Not_a_member"), `Sigma Sigma Phi` = factor(`Sigma Sigma Phi`), `Self Identify` = factor(`Self Identify`), `Military Service Obligation` = factor(`Military Service Obligation`), Citizenship = factor(Citizenship)) %>%
     dplyr::select(-`Felony Conviction`) %>%
-    dplyr::mutate(`OBGYN Grade--10` = factor(`OBGYN Grade--10`)) %>%
-    dplyr::select(-`OBGYN Grade--10`) %>%
+    #dplyr::mutate(`OBGYN Grade--10` = factor(`OBGYN Grade--10`)) %>%
+    #dplyr::select(-`OBGYN Grade--10`) %>%
     dplyr::mutate(Year = 2018) %>%
     dplyr::mutate(Positions_offered = 1336, Year = factor(Year)) %>%
     dplyr::mutate(Year = dplyr::recode(Year, `2018` = "2017"), `Date of Birth` = mdy(`Date of Birth`)) %>%
@@ -111,7 +386,7 @@
   
   # 2017 data -----
   #archive2017$Medical_school_name
-  archive2017 <- exploratory::read_delim_file("/Users/tylermuffly/Dropbox/Nomogram/nomogram/data/Archives/2017_archive.csv" , ",", quote = "\"", skip = 0 , col_names = TRUE , na = c('','NA') , locale=readr::locale(encoding = "UTF-8", decimal_mark = ".", grouping_mark = "," ), trim_ws = TRUE , progress = FALSE) %>%
+  archive2017 <- exploratory::read_delim_file(here::here("/data/Archives/2017_archive.csv"), ",", quote = "\"", skip = 0 , col_names = TRUE , na = c('','NA') , locale=readr::locale(encoding = "UTF-8", decimal_mark = ".", grouping_mark = "," ), trim_ws = TRUE , progress = FALSE) %>%
     readr::type_convert() %>%
     exploratory::clean_data_frame() %>%
     filter(ACLS != "06/30/2018") %>%
@@ -161,7 +436,7 @@
   
   # 2016_archive ----
   # archive2016$Medical_School_of_Graduation
-  archive2016 <- exploratory::read_delim_file("/Users/tylermuffly/Dropbox/Nomogram/nomogram/data/Archives/2016_archive.csv" , ",", quote = "\"", skip = 0 , col_names = TRUE , na = c('','NA') , locale=readr::locale(encoding = "UTF-8", decimal_mark = "."), trim_ws = TRUE , progress = FALSE) %>%
+  archive2016 <- exploratory::read_delim_file(here::here("/data/Archives/2016_archive.csv"), ",", quote = "\"", skip = 0 , col_names = TRUE , na = c('','NA') , locale=readr::locale(encoding = "UTF-8", decimal_mark = "."), trim_ws = TRUE , progress = FALSE) %>%
     readr::type_convert() %>%
     exploratory::clean_data_frame() %>%
     dplyr::mutate(`Current date` = mdy("01/01/2019")) %>%
@@ -242,7 +517,7 @@
   
   # 2015_archive  ----
   #archive2015$Medical_School_of_Graduation
-  archive2015 <- exploratory::read_delim_file("/Users/tylermuffly/Dropbox/Nomogram/nomogram/data/Archives/2015_archive.csv" , ",", quote = "\"", skip = 0 , col_names = TRUE , na = c('','NA') , locale=readr::locale(encoding = "UTF-8", decimal_mark = "."), trim_ws = TRUE , progress = FALSE) %>%
+  archive2015 <- exploratory::read_delim_file(here::here("data/Archives/2015_archive.csv") , ",", quote = "\"", skip = 0 , col_names = TRUE , na = c('','NA') , locale=readr::locale(encoding = "UTF-8", decimal_mark = "."), trim_ws = TRUE , progress = FALSE) %>%
     readr::type_convert() %>%
     exploratory::clean_data_frame() %>%
     dplyr::select(PERSONAL, PERSONAL_4, PERSONAL_6, PERSONAL_12, PERSONAL_14, PERSONAL_17, PERSONAL_24, PERSONAL_26, PERSONAL_31, PERSONAL_35, PERSONAL_46, PERSONAL_52, PERSONAL_58, PERSONAL_64, PERSONAL_78, PERSONAL_80, PERSONAL_81, PERSONAL_83, USMLE, MEDICAL, MEDICAL_8, TRACKSAPPLICANT, PUB_COUNT, PUB_COUNT_1, PUB_COUNT_2, PUB_COUNT_3, PUB_COUNT_4, PUB_COUNT_5, PUB_COUNT_6, PUB_COUNT_7, PUB_COUNT_8,
@@ -327,12 +602,15 @@
   colnamesarchive2016 <- names(archive2016) #"Medical School Type"  
   colnamesarchive2017 <- names(archive2017)
   colnamesarchive2018 <- names(archive2018) #"Type_of_medical_school"
+  colnamesarchive2019 <- names(archive2019)
   
   setdiff(colnamesarchive2015, colnamesarchive2016) #all columns equal
   
   setdiff(colnamesarchive2016, colnamesarchive2017)
   
   setdiff(colnamesarchive2017, colnamesarchive2018)
+  
+  setdiff(colnamesarchive2018, colnamesarchive2019)
   
   
 # all years together ----
@@ -341,6 +619,7 @@
     bind_rows(archive2016, id_column_name = "ID", current_df_name = "all_years", force_data_type = TRUE) %>%
     bind_rows(archive2017, id_column_name = "ID", current_df_name = "all_years", force_data_type = TRUE) %>%
     bind_rows(archive2018, id_column_name = "ID", current_df_name = "all_years", force_data_type = TRUE) %>%
+    bind_rows(archive2019, id_column_name = "ID", current_df_name = "all_years", force_data_type = TRUE) %>%
   #all_years is 3524 rows at this point
   
     clean_names(case = "parsed") %>%
@@ -365,12 +644,7 @@
     #all_years has 2438 people.  
   
     dplyr::mutate(Applicant_Name = str_to_title(Applicant_Name), formatted_names = humaniformat::format_reverse(Applicant_Name), firstname = humaniformat::first_name(formatted_names), lastname = humaniformat::last_name(formatted_names)) %>%
-    #write_csv(all_years, "~/Dropbox/Nomogram/nomogram/all_years_before_distinct.csv")
-    
-    #dplyr::distinct(Applicant_Name, .keep_all = TRUE) %>%
-    #This is where all_years drops from 3428 to 2545 by 883 people because of distinct Applicant_name.  
-    
-    
+
     arrange(lastname) %>%
     # I need to look at matches from both sides.  ERAS shows who applied to OBGYN.  The GOBA_list_of_people_who_all_matched_into_OBGYN data shows who actually got into OBGYN.  
     left_join(GOBA_list_of_people_who_all_matched_into_OBGYN, by = c("lastname" = "lastname", "firstname" = "firstname"), ignorecase=TRUE) %>%
@@ -416,7 +690,7 @@
   colnames(all_years)
   dim(all_years)
   
-  total_number_of_applicants <- nrow(archive2015) + nrow(archive2016) + nrow(archive2017) + nrow(archive2018)
+  total_number_of_applicants <- nrow(archive2015) + nrow(archive2016) + nrow(archive2017) + nrow(archive2018) + nrow(archive2018)
   
   print("The number of applicants to OBGYN at CU was:") 
   print(total_number_of_applicants)
@@ -444,7 +718,7 @@
   
   # NIH dollars by OBGYN Department 2018 ----
   # I could not export working R code from exploratory so I exported the file directly from exploratory as a CSV.  
-  nih_dollars <- read_csv("/Users/tylermuffly/Dropbox/Nomogram/nomogram/data/Ob_Gyn_2018_NIH_dollars_from_blue_ridge_funding_mutate_2.csv")
+  nih_dollars <- read_csv(here::here("/data/Ob_Gyn_2018_NIH_dollars_from_blue_ridge_funding_mutate_2.csv"))
   
   ## http://www.brimr.org/NIH_Awards/2018/NIH_Awards_2018.htm
   all_years <- all_years %>% 
@@ -453,7 +727,7 @@
 
   
   # Steps to produce ACOG_Districts
-  ACOG_Districts <- read_csv(file = "~/Dropbox/Nomogram/nomogram/data/ACOG_Districts.csv")
+  ACOG_Districts <- read_csv(file = (here::here("/data/ACOG_Districts.csv")))
     
 # all_years1 <- all_years %>% 
 #       readr::type_convert() %>%
@@ -475,20 +749,23 @@
   rm(nih_dollars)
   
   ###  Mini-Exploration of the Data ----
-  all_years
+  #all_years
   dim(all_years)
-  View(all_years)
+  #View(all_years)
   data.table::data.table(all_years)
   funModeling::freq(data=all_years, plot = FALSE, na.rm = FALSE)
   class(all_years$NIH_dollars)
   colnames(all_years)
-  all_years <- all_years %>% #dplyr::select(- Applicant_Name) %>%
-    reorder_cols(Medical_School_of_Graduation, Applicant_Name, ACLS, Age, Alpha_Omega_Alpha, BLS, Citizenship, Count_of_Non_Peer_Reviewed_Online_Publication, Count_of_Oral_Presentation, Count_of_Other_Articles, Count_of_Peer_Reviewed_Book_Chapter, Count_of_Peer_Reviewed_Journal_Articles_Abstracts, Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published, Count_of_Peer_Reviewed_Online_Publication, Count_of_Poster_Presentation, Count_of_Scientific_Monograph, Couples_Match, Gender, Medical_Education_or_Training_Interrupted, Medical_Degree, Military_Service_Obligation, Misdemeanor_Conviction, PALS, Sigma_Sigma_Phi, US_or_Canadian_Applicant, USMLE_Step_1_Score, USMLE_Step_2_CK_Score, Visa_Sponsorship_Needed, white_non_white, Medical_Licensure_Problem, Type_of_medical_school, NIH_dollars, Match_Status) 
+  all_years <- all_years %>% dplyr::select(c(-Medical_School_of_Graduation, -Applicant_Name, -USMLE_Step_1_Score, -USMLE_Step_2_CK_Score)) %>%
+    reorder_cols(ACLS, Age, Alpha_Omega_Alpha, BLS, Citizenship, Count_of_Non_Peer_Reviewed_Online_Publication, Count_of_Oral_Presentation, Count_of_Other_Articles, Count_of_Peer_Reviewed_Book_Chapter, Count_of_Peer_Reviewed_Journal_Articles_Abstracts, Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published, Count_of_Peer_Reviewed_Online_Publication, Count_of_Poster_Presentation, Count_of_Scientific_Monograph, Couples_Match, Gender, Medical_Education_or_Training_Interrupted, Medical_Degree, Military_Service_Obligation, Misdemeanor_Conviction, PALS, Sigma_Sigma_Phi, US_or_Canadian_Applicant,  Visa_Sponsorship_Needed, white_non_white, Medical_Licensure_Problem, Type_of_medical_school, NIH_dollars, Match_Status) 
   colnames(all_years)
   
-  view(summarytools::dfSummary(x = all_years, justify = "l", style = "multiline", varnumbers = FALSE, valid.col = FALSE, tmp.img.dir = "./img", max.distinct.values = 5))
+  view(summarytools::dfSummary(x = all_years, justify = "l", style = "multiline", varnumbers = FALSE, valid.col = FALSE, tmp.img.dir = "./img", max.distinct.values = 5, graph.magnif = 0.75))
+  view(all_years, file = (here::here("/data/all_years_summary_tools.html")))
+  summarytools::freq(all_years)
+  view(summarytools::freq(all_years), collapse = TRUE, , path = (here::here("/data/")))
   
-  write_csv(x = all_years, path = "~/Dropbox/Nomogram/nomogram/data/All_ERAS_data_merged_output_2_1_2020.csv")
+  write_csv(x = all_years, path = (here::here("/data/All_ERAS_data_merged_output_2_1_2020.csv")))
 
   # rm(archive2015)
   # rm(archive2016)

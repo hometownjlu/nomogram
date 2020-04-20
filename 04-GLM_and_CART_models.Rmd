@@ -3,6 +3,16 @@ title: "04-GLM_and_CART_models: A Model to Predict Chances of Matching into Obst
 author: "Tyler M. Muffly, MD"
 date: "Department of Obstetrics and Gynecology, Denver Health, Denver, CO"
 output:
+  word_document:
+    toc_depth: '2'
+  pdf_document:
+    pandoc_args:
+    - --wrap=none
+    - --top-level-division=chapter
+    df_print: paged
+    fig_caption: yes
+    #keep_tex: no
+    latex_engine: xelatex
   html_document:
     toc: true
     toc_float: true
@@ -12,16 +22,6 @@ output:
     dev: svg
     df_print: paged
     theme: journal
-  pdf_document:
-    pandoc_args:
-    - --wrap=none
-    - --top-level-division=chapter
-    df_print: paged
-    fig_caption: yes
-    #keep_tex: no
-    latex_engine: xelatex
-  word_document:
-    toc_depth: '2'
 fontsize: 12pt
 geometry: margin=1in
 header-includes:
@@ -47,7 +47,7 @@ knitr::include_graphics("images/pass.jpg")
 
 Read in the original `all_data`, `train`, and `test`
 ```{r, include = FALSE, echo=FALSE, warning=FALSE}
-rm(list = ls())
+rm(list = setdiff(ls(), lsf.str()))
 
 library(magrittr)
 all_data <- readr::read_csv("~/Dropbox/Nomogram/nomogram/all_data_output_of_split_correlation.csv") %>%
@@ -930,38 +930,42 @@ summary(pruned.t.model)
 pred = stats::predict(pruned.t.model, test, type = "class")
 readr::write_csv(as.data.frame(pred), "~/Dropbox/nomogram/pred.csv")
 
-pred1 <- pred %>% as.data.frame () %>%
-  dplyr::mutate(pred = dplyr::recode(pred, `Did Not Match` = "0", Match = "1")) %>%
-  dplyr::mutate(pred = as.factor(pred)) %>%
-  dplyr::select(-.)
+#Data and reference should be factors with the same levels, NOT WORKING!!!
+# pred1 <- pred %>% as.data.frame () %>%
+#   dplyr::mutate(pred = dplyr::recode(pred, `Did Not Match` = "0", Match = "1")) %>%
+#   dplyr::mutate(pred = as.factor(pred)) %>%
+#   dplyr::select(-.)
 
-colnames(pred1)
+#colnames(pred1)
 # 
 # head((pred), 10)
 # class(pred)
 # colnames(pred)
 # 
 # 
-caret::confusionMatrix(as.factor(test$Match_Status), pred1)
+#caret::confusionMatrix(as.factor(test$Match_Status), pred1)
 (pruned.t.model)
+```
+
+```{r}
+#install.packages("english", repos="https://cloud.r-project.org")
+#library("english")
 ```
 
 
 Abstract
 ===========================================================================================
-Background:  A model that predicts a medical student's chances of matching into an obstetrics and gynecology residency may facilitate improved counseling and fewer unmatched medical students.
+Background:  A model that predicts a applicant's chances of matching into an obstetrics and gynecology residency may facilitate improved counseling and fewer unmatched medical students.
 
-Objective:  We sought to construct and validate a model that predicts a medical student's chance of matching into obstetrics and gynecology residency.
+Objective:  We sought to construct and validate a model that predicts an applicant's chance of matching into obstetrics and gynecology residency.
 
-Study Design:  In all, `r nrow(all_data)` medical students applied to a residency in Obstetrics and Gynecology at the University of Colorado from 2015 to 2018 were analyzed.  The data set was splint into a model training cohort of `r nrow(train)` who applied in 2015 to 2018 and a separate random validation cohort of `r nrow(test)`.    In all, `r ncol(all_data) - 1` candidate predictors for matching were collected.  Multiple logistic models were fit onto the training cohort to predict matching.  Variables were removed using random forest iterative models to find the best parsimonious model.  Model discrimination was measured using the concordance index.  The model was internally valideated using 1,000 bootstrapped samples and temporarly validated by testing the model's performance in the validation cohort.  Calibration curves were plotted to inform educators about the accuracy of predicted probabilities.
+Study Design:  In all, `r nrow(all_data)` participants applied to a residency in Obstetrics and Gynecology at the University of Colorado from 2015 to 2018 were analyzed.  The data set was splint into a model training cohort of `r nrow(train)` who applied and a separate random validation cohort of `r nrow(test)`.    In all, `r ncol(all_data) - 1` candidate predictors for matching were collected.  Multiple logistic models were fit onto the training cohort to predict matching.  Variables were removed using random forest iteratiated using 1,000 bootstrapped samples and temporarly validated by testing the model's performance in the validation cohort.  Calibration curves were plotted to inform applicants and educators about the accuracy of predicted probabilities.
 
-Results:  The match rate in the training cohort was `r round((prop.table(table(train$Match_Status))[[2]]*100),1)`% (I need help getting 95% CI).  The model had excellent discrimination and calibration during internal validation (bias-corrected concordance index,`r round((m.2$stats[6]),2)`) and maintained accuracy during temportal validation using the separate validation cohort (concordance index,`r round((m.2$stats[6]),2)`).
+Results:  The match rate in the training cohort was `r round((prop.table(table(train$Match_Status))[[2]]*100),1)`% (I need help getting 95% CI).  The model had excellent discrimination and calibration during internal validation (bias-corrected concordance index,`r round((m.2$stats[6]),2)`) and maintained accuracy during temportal validation using the separate random validation cohort (concordance index,`r round((m.2$stats[6]),2)`).
 
 Introduction
 ===========================================================================================
-Not matching into an obstetrics and gynecology residency is extremely costly both in economic and applicant welfare terms.   A critical step in the prevention of not matching is the diagnosis of .  Machine learning, a subset of artificial intelligence, is the set of models and methods that can automatically detect patterns in vast amounts of data, extract information and use it to perform various kinds of decision-making under uncertain conditions.  
-
-Machine learning (ML) classification algorithms have been used in a variety of applications, from the filtering of spam emails to the suggestion of movies a Netflix user might next enjoy. Machine learning may also become an indispensable tool for medical clinicians, with algorithms approaching problems much like a medical clinician progressing through their clinical training might; learning rules from data and applying them to new patients. The application of machine learning in the identification of disease has often focussed on image recognition.  Machine learning has been used within the field of obstetrics and gynecology, for example in attempting to predict fertility outcomes, and success of trial of labor after cesarean delivery.
+Not matching into an obstetrics and gynecology residency is extremely costly both in terms of economic and applicant welfare.   A critical step in the prevention of not matching is providing applicants a personalized prognosis of matching probability.  Machine learning, a subset of artificial intelligence, is the set of models and methods that can automatically detect patterns in vast amounts of data, extract information and use it to perform various kinds of decision-making under uncertain conditions.  Machine learning (ML) classification algorithms have been used in a variety of applications, from the filtering of spam emails to the suggestion of movies a Netflix user might next enjoy. Machine learning may also become an indispensable tool for medical clinicians, with algorithms approaching problems much like a medical clinician progressing through their clinical training might; learning rules from data and applying them to new patients. Machine learning has been used within the field of obstetrics and gynecology, for example in attempting to predict fertility outcomes, and success of trial of labor after cesarean delivery.
 
 The purpose of this study is to establish a model for predicting the prognosis of matching into obstetrics and gynecology residency.  
 
@@ -971,19 +975,18 @@ The aims of this study were to evaluate whether a complex, multifaceted residenc
 
 Materials and Methods
 ===========================================================================================
-
 Study Population*
-Eligible participants were identified if they applied to OBGYN residency during the study period of 2015 to 2018.  The study protocol was deemed exempt as a retrospective cohort analysis as all identifiers were removed.  Guidelines for transparent reporting of a multivariable prediction model for individual outcomes were used in this study.(https://www.equator-network.org/reporting-guidelines/tripod-statement/).  Individual predictors of successfully* matching into obstetrics and gynecology residency were compiled from a literature review, expert opinion, and judgment then collected from the Electronic Residency Application Service materials.
+Eligible applicants were identified if they applied to OBGYN residency during the study period of 2015 to 2018.  The study protocol was deemed exempt as a retrospective cohort analysis as all identifiers were removed.  Guidelines for transparent reporting of a multivariable prediction model for individual outcomes were used in this study.(https://www.equator-network.org/reporting-guidelines/tripod-statement/).  Individual predictors of successfully* matching into obstetrics and gynecology residency were compiled from a literature review, expert opinion, and judgment then collected from the Electronic Residency Application Service materials.
 
 Data Collection*
 The list of applicants and their match status was a compilation from secondary sources. There was over 95% agreement between these three sources:  
 
-1) Electronic Residency Application Service archived data was exported from theProgram Director Work Station.  The data were collected by the University of Colorado OBGYN residency that has both a categorical and a preliminary position.  Applicants to the preliminary position were considered to be unmatched. 
+1) Electronic Residency Application Service archived data was exported from the Program Director Work Station.  The data were collected by the University of Colorado OBGYN residency that has both a categorical and a preliminary position.  Applicants to the preliminary position were considered to be unmatched. 
 
 2)  Registration with the National Practicioner Database is required for all physicians.  A taxonomy code distinguishes specialties so can tell if applicants to OBGYN failed to match and then entered into another field.  
 https://npiregistry.cms.hhs.gov 
 
-3)  Medical schools often publish a list of where their students will be training  This is public information was hand searched from the internet.   
+3)  Medical schools often publish a list of where their students will be training  This is public information was hand searched from the internet for 2015 to 2018.   
 
 
 Definitions*
@@ -1009,7 +1012,7 @@ A total of `r nrow(all_data)` applied to obstetrics and gynecology residency at 
 The unadjusted comparison of the `r ncol(all_data)` candidate predictors in the training cohort are presented in Supplemental Table 1.  
 
 Variable Selection*
-Feature engineering was performed in a stepwise manner and accuracy, positive predictive value (PPV) and negative predictive value (NPV) were evaluated as model performance metrics. To identify predictors from the candidates we employed least absolute shrinkage and selection operator (LASSO).  `r as.english(length(final_formula[2]))` variables were included within the final model as chosen by Boruta.  The use of principal component analysis did not have an important effect on model performance. Substantive model improvements were made by altering the classification threshold; the optimum threshold based on maximising accuracy was ≥0.55 for the diagnosis of matching, which maximised PPV (??) without detriment to NPV (?%).
+Feature engineering was performed in a stepwise manner and accuracy, positive predictive value (PPV) and negative predictive value (NPV) were evaluated as model performance metrics. To identify predictors from the candidates we employed least absolute shrinkage and selection operator (LASSO).  `r (length(final_formula[2]))` variables were included within the final model as chosen by Boruta.  The use of principal component analysis did not have an important effect on model performance. Substantive model improvements were made by altering the classification threshold; the optimum threshold based on maximising accuracy was ≥0.55 for the diagnosis of matching, which maximised PPV (??) without detriment to NPV (?%).
 
 Model Performance*
 A high level of accuracy was achieved using logistic regression to discriminate matching versus not matching into obstetrics and gynecology diagnoses. The area under receiver operating characteristic curve (AUC) of a 10-fold cross validation (CV) was used to evaluate the models. An accuracy of ???% was achieved from cross validation of the training dataset, with a PPV and NPV of 100% and 95% respectively. Accuracy on external validation was similar at 98% with a PPV of 86% and NPV of 99% (with CONT as a “positive” diagnosis). A confusion matrix of external validation results are shown in Table 1, with a full description of performance metrics in Table 2.  Therefore, the machine learning system described here can accurately differentiate between applicants who match and do not match based on their extracted applications characteristics. 
@@ -1019,27 +1022,25 @@ The availability of accurate probability estimates for matching was deemed extre
 
 
 
-
 Discussion
 ===========================================================================================
 In this study, the machine learning system had an excellent ability to differentiate matched and unmatched applicants, with a 10-fold CV AUC of 0.????. This system should, therefore, help to improve standards for matching diagnosis and improve the diagnosis consistency.  
 
-***However, it is more important to consider the false-positive rate than the false-negative rate for a model to predict matching; thus, we applied a partial AUC (pAUC) [20] to evaluate our proposed model. When using the maximum of false- positives as a fixed rate of 0.1, our proposed model achieved a pAUC of 0.931 ± 0.055, which is significantly higher (p � 0.048) than the pAUC of the RF using additional quantified parameters (pAUC: 0.864 ± 0.010; Figure 4). ***
+I need to figure out how to code this:  
+***However, it is more important to consider the false-positive rate than the false-negative rate for a model to predict matching; thus, we applied a partial AUC (pAUC)  to evaluate our proposed model. When using the maximum of false- positives as a fixed rate of 0.1, our proposed model achieved a pAUC of ???0.931 ± ???0.055, which is significantly higher (p ???? than the pAUC of the RF using additional quantified parameters (pAUC: ???0.864 ± ???0.010; Figure ???). ***
 
 We have developed a machine learning risk algorithm that accurately predicts matching into an obstetrics and gynecology residency across applicants. Identifying applicants at risk for not matching more than counseling from an advisor (the current gold standard) will allow for early intervention in those at highest risk for not matching and could perhaps mitigate cost and time spent by all parties. Our current model uses applicant data that are readily available in ERAS archives and could be calculated in real time to identify high-risk applicants.
 
 Review of prior studies is needed here.  
-Additionally, our algorithm is different from these others as we were able to ... In constructing our model, we aimed to balance model accuracy with interpretability. The variable importance plots demonstrate that the components of the model generally reflect factors that are known to correlate with matching (e.g., membership in academic honor societies, lower age, citizenship in the United States, and medical school United States senior). In addition to attempting to create an accurate yet interpretable model, we sought to identify matching status in applicants without using USMLE step scores, which is a strength of our algorithm. The role of USMLE Step 1 scores for determining matching has been questioned recently and will now be reported as pass or fail. Thus, the interplay and connection between USMLE Step scores and matching status are complex, which led us to explore creating algorithms that did not contain the USMLE Step scores. Our data suggest that excluding these data does not significantly impact the algorithm's ability to predict matching. USMLE Step 1 score is not always a reliable predictor for matching success (see Allison Strauss). As such, our algorithm should allow for better discrimination of those patients destined to match, regardless of their USMLE Step performance.
+Additionally, our algorithm is different from these others as we were able to ... In constructing our model, we aimed to balance model accuracy with interpretability. The variable importance plots demonstrate that the components of the model generally reflect factors that are known to correlate with matching (e.g., membership in academic honor societies, lower age, citizenship in the United States, and medical school United States senior). In addition to attempting to create an accurate yet interpretable model, we sought to identify matching status in applicants without using USMLE step scores, which is a strength of our algorithm. The role of USMLE Step 1 scores for determining matching has been questioned recently and will  be reported as pass or fail starting in 2020. Thus, the interplay and connection between USMLE Step scores and matching status are complex, which led us to explore creating algorithms that did not contain the USMLE Step scores. Our data suggest that excluding these data does not significantly impact the algorithm's ability to predict matching. USMLE Step 1 score is not always a reliable predictor for matching success. As such, our algorithm should allow for better discrimination of those patients destined to match, regardless of their USMLE Step performance.
 
-The prediction of matching into obstetrics and gynecology residency is a critical step in counseling applicants, however experience is required by the clerkship director to acquire these diagnostic skills. In addition, clerkship directors require a significant period of time dedicated to the analysis and interpretation of data in order to make the diagnosis, which can be challenging in general practice. There is great potential for automated diagnostic support tools to reduce the amount of training and time required to make such a diagnosis; where a clinician might require 30–60 minutes to evaluate all the information and make a prediction of matching, a machine learning algorithm requires only seconds. Such a convenient, rapid diagnostic test might consequently be performed more frequently than a clerkship director would manually, and therefore provide a more regular report. This increased rate of diagnostic testing should provide earlier identification of changing patterns of matching and allow clerkship directors greater opportunity to focus on implementing improved counseling strategies rather than simply making the diagnosis itself.
+The prediction of matching into obstetrics and gynecology residency is a critical step in counseling applicants, however experience is required by the clerkship director to acquire these diagnostic skills. In addition, clerkship directors require a significant period of time dedicated to the analysis and interpretation of applicant data in order to make the diagnosis, which can be challenging in practice. There is great potential for automated diagnostic support tools to reduce the amount of training and time required to make such a prognosis; where a clerkship director might require 30–60 minutes to evaluate all the information and make a prediction of matching, a machine learning algorithm requires only seconds. Such a convenient, rapid diagnostic test might consequently be performed more frequently than a clerkship director would manually, and therefore provide a more regular report. This increased rate of diagnostic testing should provide earlier identification of changing patterns of matching and allow clerkship directors greater opportunity to focus on implementing improved counseling strategies rather than simply making the diagnosis itself.
 
-Alongside the overall speed and predictive power of the algorithm, the predicted probability estimates are important in the clinical setting, and a ??99% probability of a diagnosis would be interpreted differently to a ??51% probability, despite both being attributed the same diagnoses. Calibration plots (Fig. 4) illustrate the observed event probability given a predicted probability; a ML diagnosis would be challenging to interpret in a clinical setting if a predicted probability of 80% only resulted in a correct diagnosis 20% of the time. The calibration plot “bins” predicted probabilities, plotting them against observed event percentages, with the desired outcome being a linear relationship between predicted and observed probabilities. Matching versus not matching calibration plots showed a strong association between predicted and observed probabilities and therefore by providing probability estimates of a diagnosis this would allow clinicians access to an accurate estimate of the uncertainty of a diagnosis rather than a binary, over-simplified outcome.
+Alongside the overall speed and predictive power of the algorithm, the predicted probability estimates are important in the clinical setting, and a ??99% probability of a diagnosis would be interpreted differently to a ??51% probability, despite both being attributed the same diagnoses of matching. Calibration plots (Fig. ???) illustrate the observed event probability given a predicted probability; a machine learning diagnosis would be challenging to interpret in a clinical setting if a predicted probability of 80% only resulted in a correct diagnosis 20% of the time. The calibration plot “bins” predicted probabilities, plotting them against observed event percentages, with the desired outcome being a linear relationship between predicted and observed probabilities. Matching versus not matching calibration plots showed a strong association between predicted and observed probabilities and therefore by providing probability estimates of a diagnosis this would allow clinicians access to an accurate estimate of the uncertainty of a diagnosis rather than a binary, over-simplified outcome.
 
-Our machine learning technique using logistic regression is relatively simple.  
+This study has several limitations. We did not use narrative components from the ERAS applications including the personal statement or letters of recommendation. However, we did utilize easily exportable variables that should allow for replication and validation in future studies. Additionally, we are limited in that we do not have a primary source of those who matched from Accreditation Council for Graduate Medical Education or the American Board of Obstetrics and Gynecology, Inc. This is an issue for both research on the match process as well as for educators who are often faced with a dearth of quantitative data when counseling an applicant. We have elected to utilize only variables that are typically available to applicants at the start of their fourth year of medical school when deciding to apply to obstetrics and gynecology. Finally, we are limited in that these data represent a single-center study, which may limit the generalizability of our findings. However, our residency is a large program based at a tertiary academic center with hospitals that serve a diverse patient population. In addition, with the University of Colorado applicants data includes data from both preliminary and categorical positions increasing generalizability. 
 
-This study has several limitations. We did not use narrative components from ERAS including the personal statement or letters of recommendation. However, we did utilize easily exportable variables that should allow for replication and validation in future cohorts. Additionally, we are limited in that we do not have a primary source of those who matched from ACGME or ABOG. This is an issue for both research on the match as well as for educators who are often faced with a dearth of personalizable quantitative data when counseling an applicant. We have elected to utilize only variables that are typically available to applicants when deciding to apply to obstetrics and gynecology. Finally, we are limited in that these data represent a single-center study, which may limit the generalizability of our findings. However, our residency is a large program based at a tertiary academic center with hospitals that serve a diverse patient population. In addition, with the data from applicants to both preliminary and categorical positions we are able to increase generalizability. 
-
-Further increases in the predictive accuracy of the machine learning algorithm to make the diagnosis may be achieved with increased granularity of ERAS application data. The data for this study were exported in one year periods for five years, which may have resulted in some loss of information. The residency program directors had access to  data from any match year, which may have made a difference in how data were interpreted. In this sense, educators had access to more data than the learning algorithms and it is certainly possible that predictive accuracy of ML could improve if these additional data were available. The residency program directors may also have had prior knowledge of applicants that may have influenced the diagnosis made. This again would be unseen by the machine learning algorithm.
+Further increases in the predictive accuracy of the machine learning algorithm to make the prognosis regarding matching may be achieved with increased granularity of ERAS application data. The data for this study were exported in one year periods for four years, which may have resulted in some loss of information. The residency program directors had access to  data from any match year, which may have made a difference in how data were interpreted. In this sense, educators had access to more data than the learning algorithms and it is certainly possible that predictive accuracy of ML could improve if these additional data were available. The residency program directors may also have had prior knowledge of applicants that may have influenced the diagnosis made. This again would be unseen by the machine learning algorithm.
 
 
 There is  pressure on obstetric and gynecology clerkship directors to reduce the number of unmatched applicants.  The application of this methodology in the field of matching probability  has the potential to aid clerkship directors to make a rapid diagnosis, the essential first step in the control of an extremely costly outcome in terms of applicant health and welfare.
