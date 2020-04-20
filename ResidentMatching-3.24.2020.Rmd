@@ -1,0 +1,915 @@
+---
+title: "Resident Matching - OBGYN"
+author: "Michael Courtois"
+date: "3/21/2020"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(cache = TRUE)
+source("~/Dropbox/Nomogram/nomogram/Code/Additional_functions_nomogram.R", echo = TRUE)
+```
+
+# Background
+
+Twelve months ago four of eight CU medical students applying to Obstetrics and Gyncology residency did not match. A model that predicts a medical student's chances of matching into an obstetrics and gynecology residency may facilitate improved counseling and fewer unmatched medical students.
+
+# Objective
+
+Create and validate a predictive model to understand a medical student's chances of matching into obstetrics and gynecology residency.
+
+# Methods
+
+## Data
+
+Data was sourced from the Electronic Residency Application Service (ERAS) residency application. Data points from 3,223 medical students who applied to a residency in Obstetrics and Gynecology at the University of Colorado from 2015 to 2018 were analyzed.
+
+A dataset (All_ERAS_data_merged_output_2_1_2020.csv) was curated from application data by Dr. Tyler Muffly and provided for modeling efforts.
+
+
+### Set-Up Environment
+
+Code is not printed in HTML but all relevant packages can be installed and loaded here. Please uncomment all necessary lines. Garbage was collected and the seed was set.
+
+```{r Setup Environment, echo=FALSE}
+
+## Install packages if not installed
+#if(!c('caret') %in% install.packages()){
+#  install.packages('caret')
+#}
+
+## Load packages
+library(caret)
+library(caTools)
+library(pROC)
+
+
+## Collect garbage
+gc()
+
+## Set Seed
+set.seed(41)
+
+```
+
+### Import Data
+
+The dataset is included in the R Project directory.
+
+```{r Import Data}
+
+## Import Data
+raw_data <- read.csv("~/Dropbox/Nomogram/nomogram/data/All_ERAS_data_merged_output_2_1_2020.csv")
+```
+
+### Clean Data
+
+Before creating any predictive models, exploratory data analysis was performed. Exploratory data analysis helped to inform feature engineering, dataset cleaning and other pre-processing efforts detailed below. Please refer to Dr. Muffly's original file for code/info. 
+
+This section of code is not exhaustive and additional cleaning may be implemented as necessary.
+
+```{r EDA}
+
+## Limited EDA here as Dr.Muffly has already completed EDA. Please refer to his file.
+
+## Check data types
+sapply(raw_data, class)
+```
+
+In summary, identifying features, features with zero variance and "extreme" variance were removed as detailed below. All features were properly formatted. Ancedotally, feature engineering was not introduced as the most of the newly-created features would seemingly introduce multi-collinearity into the model given the nature of the dataset. 
+
+Of the candidate zero-variance variables, only Medical Licensure Problem was eliminated as it was virtually zero-variance. The other features were maintained to be filtered in other feature selection (feature importance) techniques.
+
+```{r Clean Data}
+
+## Create functional copy of data
+data <- raw_data
+
+## Properly format all categorical variables
+#data$Medical_School_of_Graduation <- as.factor(make.names(data$Medical_School_of_Graduation))
+data$ACLS <- as.factor(make.names(data$ACLS))
+data$Alpha_Omega_Alpha <- as.factor(make.names(data$Alpha_Omega_Alpha))
+data$BLS <- as.factor(make.names(data$BLS))
+data$Citizenship <- as.factor(make.names(data$Citizenship))
+data$Couples_Match <- as.factor(make.names(data$Couples_Match))
+data$Gender <- as.factor(make.names(data$Gender))
+data$Medical_Education_or_Training_Interrupted <- as.factor(make.names(data$Medical_Education_or_Training_Interrupted))
+data$Medical_Degree <- as.factor(make.names(data$Medical_Degree))
+data$Military_Service_Obligation <- as.factor(make.names(data$Military_Service_Obligation))
+data$Misdemeanor_Conviction <- as.factor(make.names(data$Misdemeanor_Conviction))
+data$PALS <- as.factor(make.names(data$PALS))
+data$Sigma_Sigma_Phi <- as.factor(make.names(data$Sigma_Sigma_Phi))
+data$US_or_Canadian_Applicant <- as.factor(make.names(data$US_or_Canadian_Applicant))
+data$Visa_Sponsorship_Needed <- as.factor(make.names(data$Visa_Sponsorship_Needed))
+data$white_non_white <- as.factor(make.names(data$white_non_white))
+data$Type_of_medical_school <- as.factor(make.names(data$Type_of_medical_school))
+data$Match_Status <- as.factor(make.names(data$Match_Status))
+data$Medical_Licensure_Problem <- as.factor(make.names(data$Medical_Licensure_Problem))
+
+## Remove identifying features like applicant name
+#data <- subset(data, select=-c(Applicant_Name))
+
+## Remove USMLE Scores (Future applications switched to Pass/Fail)
+#data <- subset (data, select=-c(USMLE_Step_1_Score, USMLE_Step_2_CK_Score))
+
+## Candidate Near Zero-Variance Variables
+names(data)[caret::nearZeroVar(data)]
+
+## Remove Zero-Variance Feature Medical Licensure Problem
+data <- subset(data, select=-c(Medical_Licensure_Problem))
+
+## Feature Specific Changes ##
+
+## Age: Set to integer so end users wont have to calculate age as a decimal
+data$Age <- as.integer(floor(data$Age))
+
+## Medical School of Graduation (Too much variation)
+#data <- subset(data, select=-c(Medical_School_of_Graduation))
+
+## Check for bad values
+apply(data, 2, function(x) any(is.na(x) | is.infinite(x)))
+
+```
+
+After cleaning, we went from our original data set of `r dim(raw_data)[1]` rows and `r dim(raw_data)[2]` columns to a working dataset of `r dim(data)[1]` rows and `r dim(data)[2]` columns. 
+
+## Baseline Performance
+
+```{r Baseline Performance}
+
+base.neg <- table(data$Match_Status)["Did.Not.Match"]/(table(data$Match_Status)["Did.Not.Match"] + table(data$Match_Status)["Match"])
+base.neg
+base.pos <- table(data$Match_Status)["Match"]/(table(data$Match_Status)["Did.Not.Match"] + table(data$Match_Status)["Match"])
+base.pos
+
+```
+
+Model performance and utility will be judged on how much more accurate the model can determine a residency match than a human. Since the target of the prediction is binary (Match or No Match), we can assume a baseline of 50% for random chance. Next we want to determine a rather modest human baseline. If a human were to predict "Match" for every resident, they would be accurate `r round(base.pos*100,2)`% of the time, a `r round((base.pos - 0.5)*100,2)`% increase over chance. Though we can imagine more elaborate methods to improve human performance, we will use this method to establish a baseline. It could easily be just as true, that we could see human perforamnce fall below random chance. Possibly, the human could predict "No Match" for every candidate resident, dropping their accuracy to `r round(base.neg*100,2)`%. Let's give the benefit of the doubt, however, and give the higher accuracy. Therefore, in order to create a successful model, we must aim for an accuracy greater than `r round(base.pos*100,2)`%. Even slight improvement in performance is not inconsequential, especially due to the nature of the model. To be clear, however, accuracy is not the end-all metric for binary classification performance. As we will see, the "human" model breaks down in some very concerning ways. Ideally, we want a model with not only superior accuracy, but does so because of great sensitivity and specificity to the target. More on this later.
+
+## Predictive Model
+
+### Split Data
+
+To train and validate our models, we will split our data into a train and test set. Due to the relatively-low record count, we will slightly break convention and split our data 85% into train and 15% into test. All validation or cross-validation will be taken as a subset of the training set. The caTools library allows a split while preserving relative ratios within our target feature. 
+
+```{r Split Data}
+split <- caTools::sample.split(data$Match_Status, SplitRatio = 0.85)
+train <- subset(data, split == TRUE)
+test <- subset(data, split == FALSE)
+
+rm(split)
+```
+
+After splitting, the training set consisted of `r dim(train)[1]` rows (`r round(dim(train)[1]/dim(data)[1] *100, 2)`%) and the test set consisted of `r dim(test)[1]` rows (`r round(dim(test)[1]/dim(data)[1]*100,2)`%).
+
+## Generalized Linear Models
+
+
+
+### GLM1: Intercept
+
+First, we will run a simple logistic regression using only the target feature to get a intuition for the problem at hand. The logistic regression will be executed with the glm package for a binomial distribution (the distribution seen in our target feature) using logit. By only using the target feature (the intercept), we will be able to build an intuition when adding more features.
+
+```{r GLM1}
+
+## Run Logistic Regression (Intercept)
+glm1 <- glm(formula = Match_Status ~ 1, family = binomial(link = "logit"), data=train)
+summary(glm1)
+glm1.ip <- exp(glm1$coefficients[1])/(1+exp(glm1$coefficients[1])) ## Intercept Probability
+
+## Predict on Training Set For Validation
+glm1.pred.train <- predict(glm1, type="response")
+summary(glm1.pred.train)
+
+## See Average Probability of Positive Prediction/Negative Prediction
+tapply(glm1.pred.train,train$Match_Status, mean) ## We can see that our cutoff needs to be below this
+
+## Predict on Train
+glm1.pred.train.mat <- table(train$Match_Status, glm1.pred.train > 0.5)
+glm1.pred.train.mat
+glm1.pred.train.acc <- (glm1.pred.train.mat[2,1]) / nrow(train) ## Accuracy
+glm1.pred.train.acc
+
+## Predict on Test Set 
+glm1.pred.test = predict(glm1, type = 'response', newdata = test[,1:length(test)-1])
+glm1.pred.test.mat = table(test$Match_Status,glm1.pred.test >= 0.5)
+glm1.pred.test.mat
+glm1.pred.test.acc <- (glm1.pred.test.mat[2,1]) / nrow(test)
+glm1.pred.test.acc
+```
+
+Looking at the results of the first glm model (glm1), we see that the baseline utility or log-odds for the intercept without any other regressors is significant at `r round(glm1$coefficients,4)` or a probability of `r round(glm1.ip,3)` of matching. This probability may seem familiar. Remember, this is the same probability we submitted as our human baseline. Not a coincedence. Thus we can use GLM1 as our substitute for human performance in comparing models.
+
+How does glm1 do on our test data? Well, as expected. If you have been following closely, we would know that since our test and training datasets have the same distribution of our target variable that the glm1 model should have consistent performance on our test data. Indeed, that is the case as glm1 had an accuracy of `r round(glm1.pred.test.acc*100,2)`%.
+
+Let's see how adding three variables helps to improve performance.
+
+### GLM2: Intercept + 3 Variables
+
+```{r GLM2_1}
+
+## Logistic Regression
+glm2 <- glm(formula = Match_Status ~ Age + Citizenship + Gender,family = binomial(link = "logit"), data=train)
+summary(glm2)
+
+## Feature Probabilities
+glm2.ip <- exp(glm2$coefficients[1])/(1+exp(glm2$coefficients[1])) ## Intercept Probability
+glm2.ap <- exp(glm2$coefficients[2])/(1+exp(glm2$coefficients[2])) ## Age
+glm2.cp <- exp(glm2$coefficients[3])/(1+exp(glm2$coefficients[3])) ## Citizenship_US_Citizen
+glm2.gp <- exp(glm2$coefficients[4])/(1+exp(glm2$coefficients[4])) ## GenderMale
+
+```
+
+
+Turning our attention to glm2, we see improved performance right away from glm1. The AIC has decreased as well as our residual deviance compared to the null deviance (deviance calculated with just intercept AKA glm1) meaning this new model already is superior in understanding the variance in our data.
+
+Let's look specifically at the impact our variables had. To be fair, we could guess that these demographic might not entirely be random be features of some importance. Regardless, a small subset of features should help determine our current trajectory, whether or not these three features in particular are important or not.
+
+For glm2, the baseline utility (log-odds) when all other regressors equal zero (not considering any other regressors) is significant at `r round(glm2$coefficients[1],3)` or a starting probability of `r round(glm2.ip,3)`. The difference between the intercept probability between glm1 and glm2 can be explained by the addition of new variables.
+
+Now on to these additional variables starting with our continuous variables. Looking at age, a unit increase in age (i.e. age going up one year) decreases utility (log-odss) by `r round(glm2$coefficients[2],3)` or decreases the probability of match from `r glm2.ip` by `r glm2.ap` to `r glm2.ip - glm2.ap`. Anecdotally, we can determine that, according to glm2, younger residents are more likely to match. We cannot determine why this is true. As a conjecture we could point to the fact that most applicants are probably younger going straight from undergrad to med school but we need not understand why.
+
+Next lets move onto the categorical variables. For categorical variables, a 'base case' is taken account into the model intercept. We see from the model summary that both females and a citizenship status of "not a citizen" are considered in the reference case. (i.e. when male = 0 and citizen = 0). Therefore we see that when male = 1 the probability of match will decrease by `r round(glm2.gp,3)` and when citizenship = 1 the probability of match will increase by `r round(glm2.cp,3)`. 
+
+Considering the whole model, we could assume that a young female who is a citizen has the best chance of matching into OBGYN.
+
+So how does the model perform?
+
+```{r GLM2_2}
+## Predict on Train
+glm2.pred.train <- predict(glm2, type="response")
+summary(glm2.pred.train)
+
+```
+
+When predicting on train, we see our response probabilities are now all over the plac whereas in glm1, they were all the same. Therefore we face a new problem of choosing a cutoff point to make our prediction that maximizes the model performance.
+
+```{r GLM2_3}
+## See Average Probability of Positive Prediction/Negative Prediction
+tapply(glm2.pred.train,train$Match_Status, mean)
+
+## Need to Determine Probability Threshold: Test at 0.5
+glm2.pred.train.mat <- table(train$Match_Status, glm2.pred.train > 0.5)
+glm2.pred.train.acc <- (glm2.pred.train.mat[1,1]+glm2.pred.train.mat[2,2]) / nrow(train) ## Accuracy 
+```
+
+Lets narrow in on some possible values. Looking at the average probabilities we see relatively high-probabilities between the positive and negative class. Consertively, let's see how the model performs at a cutoff of 0.5 like with glm1. However, we know this already will be inefficient as we see some negative classes are above this threshold (i.e. introduce some false positives). But, at least we will have something we know we can improve upon.
+
+On the training set, we see we have an accuracy of `r round(glm2.pred.train.acc*100,3)`%. Let's see how we can improve this.
+
+```{r GLM2_4}
+
+## Determine Threshold with ROC Curve
+library(ROCR)
+
+
+glm2.pred.train.roc = prediction(glm2.pred.train, train$Match_Status)
+glm2.pred.train.roc.perf = performance(glm2.pred.train.roc, "tpr","fpr")
+#plot(glm2.pred.train.roc.perf)
+#abline(a=0,b=1)
+plot(glm2.pred.train.roc.perf, colorize = T, print.cutoffs.at=seq(0,1,by=0.1), text.adj=c(-0.2,1.7)) ## color is cutoff
+
+library(pROC)
+library(ggplot2)
+library(farver)
+
+Match_Status <- c(subset(train, select=c(Match_Status)))
+prediction <- c(ifelse(predict(glm1, type="response") > 0.5, 1, 0))
+roc.glm1.data <- data.frame(Match_Status,prediction)
+roc.glm1 <- pROC::roc(roc.glm1.data$Match_Status, roc.glm1.data$prediction, print.auc = TRUE)
+
+prediction <- c(ifelse(predict(glm2, type="response") > 0.5, 1, 0))
+roc.glm2.data <- data.frame(Match_Status,prediction)
+roc.glm2 <- pROC::roc(response = roc.glm2.data$Match_Status, predictor = roc.glm2.data$prediction, print.auc = TRUE)
+
+
+pROC::ggroc(list(glm2 = roc.glm2, glm1 = roc.glm1), legacy.axes = T) + xlab("FPR") + ylab("TPR") + 
+    geom_segment(aes(x = 0, xend = 1, y = 0, yend = 1), color="darkgrey", linetype="dashed")
+
+auc(roc.glm1.data$Match_Status,roc.glm1.data$prediction)
+auc(roc.glm2.data$Match_Status,roc.glm2.data$prediction)
+
+```
+
+One way we can pick a new cutoff is plotting the ROC (Reciever Operating Characteristic) curve which helps to understand the performance off a binary classification. We create the ROC curve by plotting the True Positive Rate (i.e. Sensitivity) against the False Positive Rate (specificity) at varying thresholds. In a perfect world, we would see 100% sensitivity and 100% specificity, or no false positives or false negatives (all positive). Now lets maintain our original premise. In a world of chance, we said we would be accurate 50% of the time. In relation to the ROC curve, that means 50% True Positive Rate and 50% False positive rate. Thus, chance is represented by the grey line running diagonally. Let's also bring in our human-decoy, glm1. We see glm1 overlayed against our "chance" diagonally above. This is slightly misleading as the ROC "curve" really only exists at two points (TPR=1, FPR=1) and (TPR=0,FPR=0). Since every  prediction in glm1 = 0.789 (probability not label) then any cutoff below 0.789 would have 100% True Positive Rate and 100% False Positive Rate since everything is being predicting as positive! Likewise, when the cutoff is above 0.789 and thus everything is predicted negative then you no longer have any positive predictions therefore your True Positive Rate = 0% and False Positive Rate = 0%. But connect those two points for the curve and it is the same as chance. 
+
+The takeaway here is that namely, chance or our "human" method both have underlying issue of not able to distinguish between the positive and negative classes. They solely are making systematic predictions. So even though the human-method has a superior accuracy to chance, it proves that both are just really a matter of luck! We can clearly support this argument by thinking, what if in a given year only 20% of candidates matched. If the human guessed the positive class everytime in this example, we would see a 30% decreases in accuracy, not a 30% gain in accuracy. Although we can imagine more sophisticated means in which a person could determine matches, possibly increasing their accuracy, for our purposes we should caveat our original statement about our human decoy. Yes, this method has a respectably accuracy but has great fall-out and is sensitive until it isn't. 
+
+Let's understand how we can create a well-rounded model that not only has better accuracy but can be sensitive/specific. We will now use AUC (Area Under the ROC Curve) to examine our models.
+
+To recap, glm1 has a AUC equivalent to random chance of 0.5. Our glm2 model with a cutoff of 0.5 has a AUC of `r round(auc(roc.glm2.data$Match_Status,roc.glm2.data$prediction),3)` for comparison. 
+
+Let's now properly select a threshold for our glm2 model.
+
+```{r GLM2_5}
+
+## Determine Threshold with Accuracy
+glm2.pred.train.acc.perf = performance(glm2.pred.train.roc, measure = "acc")
+plot(glm2.pred.train.acc.perf)
+
+ind = which.max(slot(glm2.pred.train.acc.perf, "y.values")[[1]] )
+acc = slot(glm2.pred.train.acc.perf, "y.values")[[1]][ind]
+cutoff = slot(glm2.pred.train.acc.perf, "x.values")[[1]][ind]
+print(c(accuracy= acc, cutoff = cutoff))
+
+Match_Status <- c(subset(train, select=c(Match_Status)))
+prediction <- c(ifelse(predict(glm1, type="response") > 0.5, 1, 0))
+roc.glm1.data<- data.frame(Match_Status,prediction)
+roc.glm1 <- pROC::roc(roc.glm1.data$Match_Status, roc.glm1.data$prediction, print.auc = TRUE)
+
+prediction <- c(ifelse(predict(glm2, type="response") > 0.5, 1, 0))
+roc.glm2.data.old <- data.frame(Match_Status,prediction)
+roc.glm2.old <- pROC::roc(roc.glm2.data.old$Match_Status, roc.glm2.data.old$prediction, print.auc = TRUE)
+
+prediction <- c(ifelse(predict(glm2, type="response") > cutoff, 1, 0))
+roc.glm2.data.new <- data.frame(Match_Status,prediction)
+roc.glm2.new <- pROC::roc(roc.glm2.data.new$Match_Status, roc.glm2.data.new$prediction, print.auc = TRUE)
+
+pROC::ggroc(list(glm2.old = roc.glm2.old, glm2.new = roc.glm2.new, glm1 = roc.glm1), legacy.axes = T) + theme_minimal() + ggtitle("GLM2 (Optimized Cutoff) vs. GLM2 (cutoff = 0.5) vs. GLM1 vs. Chance") + xlab("FPR") + ylab("TPR") + geom_segment(aes(x = 0, xend = 1, y = 0, yend = 1), color="darkgrey", linetype="dashed")
+
+auc(roc.glm1.data$Match_Status,roc.glm1.data$prediction)
+auc(roc.glm2.data$Match_Status,roc.glm2.data.old$prediction)
+auc(roc.glm2.data$Match_Status,roc.glm2.data.new$prediction)
+
+```
+
+Optimizing our cutoff-value for accuracy, we have improved our AUC from `r round(auc(roc.glm2.data$Match_Status,roc.glm2.data.old$prediction),3)` to `r round(auc(roc.glm2.data$Match_Status,roc.glm2.data.new$prediction),3)`
+
+
+```{r GLM2_6}
+
+## Predict on Test Set at Threshold Cutoff
+glm2.pred.test = predict(glm2, type='response', newdata = test[,1:length(test)-1])
+glm2.pred.test.mat = table(test$Match_Status,glm2.pred.test >= cutoff)
+
+glm2.pred.test.acc <- (glm2.pred.test.mat[1,1]+glm2.pred.test.mat[2,2]) / nrow(test) 
+glm2.pred.test.acc
+
+## RMarkdown is printing different value than console ##
+
+## Confusion Matrix GLM1
+glm1.pred.test = predict(glm1, type='response', newdata = test[,1:length(test)-1])
+prediction <- c(ifelse(glm1.pred.test > 0.5, 1, 0))
+glm1.predict.test <- data.frame(test$Match_Status,prediction)
+
+#confusionMatrix(as.factor(glm1.predict.test$prediction),as.factor(test$Match_Status))
+
+## Confusion Matrix GLM2
+prediction <- c(ifelse(glm2.pred.test > cutoff, 1, 0))
+glm2.predict.test <- data.frame(test$Match_Status,prediction)
+
+#confusionMatrix(as.factor(glm2.predict.test$prediction),as.factor(test$Match_Status))
+
+```
+
+With our modest tuning effort we can see, an accuracy of `r round(glm2.pred.test.acc*100,3)`% (a `r round((glm2.pred.test.acc - base.pos)*100,3)`% difference) and a `r round(auc(roc.glm2.data$Match_Status,roc.glm2.data.new$prediction) - 0.5,3)` gain in AUC from glm1.
+
+### GLM3: All Features
+
+```{r GLM3}
+library(caret)
+
+## Caret Package: GLM - All Variabeles
+glm3 <- caret::train(Match_Status ~ .,  data=train, method="glm", family="binomial")
+
+## See Variable Importance
+varImp(glm3)
+print(glm3) 
+
+## Training Resample Accuracys
+glm3.pred.train.acc <- glm3$results[2] ## Resample Accuracy = 0.0.8357577
+
+
+glm3.predict.test <- predict(glm3, newdata = test[,1:length(test)-1])
+#confusionMatrix(glm3.predict.test$new, test$Match_Status)
+glm3.predict.test.mat <- table(glm3.predict.test, test$Match_Status)
+#(67+557)/728
+(glm3.predict.test.mat[1,1]+glm3.predict.test.mat[2,2]) / nrow(test) ##Accuracy:0.8571429
+
+caret::confusionMatrix(glm3.predict.test,as.factor(test$Match_Status), positive="Match")
+
+glm3.predict.test.prob = predict(glm3, newdata = test[,1:length(test)-1], type = "prob")
+obs <- test$Match_Status
+pred <- glm3.predict.test
+glm3.auc <- as.data.frame(obs)
+glm3.auc$pred <- pred
+glm3.auc$`0` <- glm3.predict.test.prob$`0`
+glm3.auc$`1` <- glm3.predict.test.prob$`1`
+
+glm3.predict.test.prob$pred = glm3.predict.test
+twoClassSummary(glm3.auc, lev = levels(glm3.auc$obs))
+prSummary(glm3.auc, lev=levels(glm3.auc$obs))
+#mnLogLoss(glm3.auc, lev=levels(glm3.auc$obs))
+
+
+```
+
+** Possible reason for error: algorithm did not coverge; fitted probabiltiies numerically 0 or 1 occured; prediction from a rank-deficient fit may be misleading
+
+1 - NA for coefficient in output; variable does not contribute (multicollinearity); rank (number of columns/rows is this deficient)
+** First for universities
+** Type of medical school$osteopathic_School
+
+*** Feature importance verifies assumption of the warning thrown by glm3
+
+### Feature Selection
+```{r Variable Importance}
+## Find Highly-Correlated Variables
+data.numeric <- dplyr::select_if(data, is.numeric)
+correlationMatrix <- cor(data.numeric[,1:length(data.numeric)])
+highlyCorrelated <- findCorrelation(correlationMatrix, cutoff=0.5, names=T)
+print(highlyCorrelated) ## No highly-correlated numeric variables
+
+## Variable Importance (Cross-Validation K=10)
+control <- trainControl(method="repeatedcv", number=10, repeats=3)
+model <- train(Match_Status ~ ., data=train, method="lvq", preProcess="scale", trControl=control) 
+##Learning Vector Quantization is a classification model (artifical neural network)
+importance <- varImp(model, scale=FALSE)
+plot(importance)
+
+## Recursive Feature Elimination
+## Random Forest Method (CV K=10) Want at most twenty features
+control <- rfeControl(functions=rfFuncs, method="cv", number=10)
+results <- rfe(train[,1:length(train)-1], train$Match_Status, sizes=c(1:20), rfeControl=control) #sizes: features to retain
+print(results)
+## Output Features
+predictors(results)
+plot(results, type=c("g", "o")) ## Important Variables
+
+
+```
+
+The recursive feature elimination selected ten variables. Although ranking different in order of importance from the lvq method, all ten variables appear in the top twenty variables supplied by LVQ. To play if safe, we will go with top 20 from LVQ, paying particular close attention to the ten provided.
+
+### GLM 4:Select Variables
+
+```{r GLM4}
+glm4 <- train(Match_Status ~ Type_of_medical_school + US_or_Canadian_Applicant + Age
+              + Citizenship + NIH_dollars + BLS + white_non_white + Count_of_Poster_Presentation
+              + Visa_Sponsorship_Needed + Gender + Medical_Education_or_Training_Interrupted 
+              + Couples_Match + Alpha_Omega_Alpha 
+              + Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published
+              + PALS + Count_of_Oral_Presentation + Count_of_Peer_Reviewed_Journal_Articles_Abstracts
+              + Count_of_Peer_Reviewed_Book_Chapter + ACLS + Count_of_Non_Peer_Reviewed_Online_Publication
+              , data=train, method='glm',family='binomial')
+
+#Features/Feature Levels of Importance
+varImp(glm4)
+
+## Resample Results/Technical Details
+print(glm4)
+
+## Model 
+summary(glm4)
+
+## Predict on Test
+glm4.predict.test <- predict(glm4, newdata = test[,1:length(test)-1])
+
+## Test Accuracy
+glm4.predict.test.mat <- table(glm4.predict.test, test$Match_Status)
+(glm4.predict.test.mat[1,1]+glm4.predict.test.mat[2,2]) / nrow(test) ##Accuracy:0.8571429
+
+confusionMatrix(glm4.predict.test,as.factor(test$Match_Status))
+auc(test$Match_Status,as.numeric(glm4.predict.test))
+
+```
+
+Residual deviance went way down. AIC went way down. AUC has gone up to 0.713
+
+
+```{r GLM 5 CV}
+
+control <- trainControl(method = 'repeatedcv', number = 10, savePredictions = TRUE, classProbs = TRUE, summaryFunction = twoClassSummary)
+
+glm5 <- train(make.names(Match_Status) ~ Type_of_medical_school + US_or_Canadian_Applicant + Age
+              + Citizenship + NIH_dollars + BLS + white_non_white + Count_of_Poster_Presentation
+              + Visa_Sponsorship_Needed + Gender + Medical_Education_or_Training_Interrupted 
+              + Couples_Match + Alpha_Omega_Alpha 
+              + Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published
+              + PALS + Count_of_Oral_Presentation + Count_of_Peer_Reviewed_Journal_Articles_Abstracts
+              + Count_of_Peer_Reviewed_Book_Chapter + ACLS + Count_of_Non_Peer_Reviewed_Online_Publication
+              , data=train, method='glm',family='binomial', trControl = control, tuneLength = 5)
+
+#Features/Feature Levels of Importance
+varImp(glm5)
+
+## Resample Results/Technical Details
+print(glm5)
+
+## Model 
+summary(glm5)
+
+## Predict on Test
+glm5.predict.test <- predict(glm5, newdata = test[,1:length(test)-1])
+
+## Test Accuracy
+glm5.predict.test.mat <- table(glm5.predict.test, test$Match_Status)
+(glm5.predict.test.mat[1,1]+glm5.predict.test.mat[2,2]) / nrow(test) ##Accuracy:0.83057
+
+#confusionMatrix(glm5.predict.test,as.factor(test$Match_Status))
+#auc(test$Match_Status,as.numeric(glm5.predict.test))
+```
+
+
+
+###  Lasso and Elastic-Net Regularized Generalized Linear Models
+Lasso performs variable selection and regularization: penalize to zero for feature selection
+regularization parameter lambda is how much the coefficients are penalized
+
+Elastic net does combo Lasso/Ridge. Specify to Lasso
+
+Ridge Regression: "Shrinks coefficients to non-zero values to prevent overfit, but keeps all variables"
+LASSO: "Shrinks regression coefficients, with some shrunk to zero to assist in feature selection": helps solve issues of multicollinearity
+Elastic-Net: "Mix of Ridge and Lasso" 
+
+```{r GLMNET_1}
+
+## Caret: GLMNET
+lasso <- train(Match_Status~., data= train, method = "glmnet", preProc = c("center","scale") ,tuneGrid = expand.grid(alpha = 1, lambda = seq(0.00001,0.2, length =5)))
+lasso
+plot(lasso)
+plot(lasso$finalModel, xvar = 'norm', label = T)
+plot(lasso$finalModel, xvar = 'lambda', label = T)
+plot(lasso$finalModel, xvar = 'dev', label = T)
+plot(varImp(lasso))
+
+## Predict on Test
+lasso.predict.test <- predict(lasso, newdata = test[,1:length(test)-1])
+
+## Test Accuracy (Alittle worse accuracy/alittle better auc)
+confusionMatrix(lasso.predict.test,as.factor(test$Match_Status))
+auc(test$Match_Status,as.numeric(lasso.predict.test))
+
+
+## Caret: Elastic Net
+elastic <- train(Match_Status~., data = train, method = "glmnet", preProc = c("center","scale"), tuneGride = expand.grid(alpha=seq(0,1,length = 10), lambda = seq(0.0001, 1, length=5)))
+
+elastic
+plot(elastic)
+plot(elastic$finalModel, xvar = 'norm', label = T)
+plot(elastic$finalModel, xvar = 'lambda', label = T)
+plot(elastic$finalModel, xvar = 'dev', label = T)
+plot(varImp(elastic))
+
+## Predict on Test
+elastic.predict.test <- predict(elastic, newdata = test[,1:length(test)-1])
+
+## Test Accuracy (Alittle worse accuracy/alittle worse auc)
+confusionMatrix(elastic.predict.test,as.factor(test$Match_Status))
+auc(test$Match_Status,as.numeric(elastic.predict.test))
+
+## Best Elastic Net Tune
+elastic$bestTune
+
+
+
+## Caret: Elastic-Net with Repeated Cross-Validation
+fitControl <- trainControl(## 10-fold CV
+                           method = "repeatedcv",
+                           number = 10,
+                           repeats = 10,
+                           search = "random")
+
+elastic.cv <- train(Match_Status ~ .,
+               data = train,
+               method = "glmnet",
+               preProcess = c('scale', 'center'),
+               trControl = fitControl,
+               tuneGride = expand.grid(alpha=seq(0,1,length = 10), 
+                                       lambda = seq(0.0001, 1, length=5)))
+
+elastic.cv
+plot(elastic.cv)
+plot(elastic.cv$finalModel, xvar = 'norm', label = T)
+plot(elastic.cv$finalModel, xvar = 'lambda', label = T)
+plot(elastic.cv$finalModel, xvar = 'dev', label = T)
+plot(varImp(elastic.cv))
+
+## Best Elastic Net Tune
+elastic.cv$bestTune
+
+## Predict on Test
+elastic.cv.predict.test <- predict(elastic.cv, newdata = test[,1:length(test)-1])
+
+## Test Accuracy (Alittle worse accuracy/alittle worse auc)
+confusionMatrix(elastic.cv.predict.test,as.factor(test$Match_Status))
+auc(test$Match_Status,as.numeric(elastic.cv.predict.test))
+
+##Final Model Coeffiecients (80% Trained & CV)
+coef(elastic.cv$finalModel,s=elastic.cv$bestTune$lambda)
+
+elastic.cv.pred.test <- predict(elastic.cv, test, type = "raw")
+elastic.cv.pred.test.mat <- table(elastic.cv.pred.test,test$Match_Status)
+(elastic.cv.pred.test.mat[1,1]+elastic.cv.pred.test.mat[2,2])/nrow(test) ## Accuracy: 0.814093
+
+confusionMatrix(elastic.cv.pred.test,as.factor(test$Match_Status))
+
+elastic.cv.prob = predict(elastic.cv, newdata = test[,1:length(test)-1], type = "prob")
+obs <- test$Match_Status
+pred <- elastic.cv.pred.test
+elastic.cv.auc <- as.data.frame(obs)
+elastic.cv.auc$pred <- pred
+elastic.cv.auc$`0` <- elastic.cv.prob$`0`
+elastic.cv.auc$`1` <- elastic.cv.prob$`1`
+
+twoClassSummary(elastic.cv.auc, lev = levels(elastic.cv.auc$obs))
+prSummary(elastic.cv.auc, lev=levels(elastic.cv.auc$obs))
+#mnLogLoss(elastic.cv.auc, lev=levels(elastic.cv.auc$obs))
+
+```
+
+
+##Gut-Check Random Forest
+
+
+```{r RF}
+library(randomForest)
+library(mlbench)
+library(caret)
+library(e1071)
+
+library(doParallel)
+
+## Windows ##
+cores <- 7
+registerDoParallel(cores = cores)
+#cl <- makeCluster(4)
+registerDoParallel(cores)
+
+## Mac ##
+#library(doMC)
+#registerDoMC(cores=4)
+
+
+
+## Cross-Validation
+control <- trainControl(method='repeatedcv',
+                        number=10,
+                        repeats = 3,
+                        search = 'grid')
+  
+## mtry: Number of variable is randomly collected to be sampled at each split time
+## ntree: Number of branches will grow after each time split
+tunegrid <- expand.grid(.mtry=(1:15))
+rf <- train(Match_Status~., data = train, method = 'rf', metric = 'Accuracy', tuneGrid = tunegrid, trControl = control)
+print(rf)
+#plot(rf)
+
+rf.pred <- predict (rf, test)
+confusionMatrix(rf.pred,as.factor(test$Match_Status))
+
+rf.prob = predict(rf, newdata = test[,1:length(test)-1], type = "prob")
+obs <- test$Match_Status
+pred <- rf.pred
+rf.auc <- as.data.frame(obs)
+rf.auc$pred <- pred
+rf.auc$`0` <- rf.prob$`0`
+rf.auc$`1` <- rf.prob$`1`
+
+#twoClassSummary(rf.auc, lev = levels(rf.auc$obs))
+#prSummary(rf.auc, lev=levels(rf.auc$obs))
+#mnLogLoss(rf.auc, lev=levels(rf.auc$obs))
+
+#stopCluster(cores)
+
+```
+
+
+### Compare Models
+
+```{r GLM2.AUC}
+
+## Repeated Cross-Validation (10-Fold | 5 Times)
+control <- trainControl(method = 'repeatedcv', number = 10, repeats = 5, savePredictions = TRUE, classProbs = TRUE, preProc = c("center","scale"), summaryFunction = twoClassSummary)
+
+## Train
+glm <- train(Match_Status ~ Age + Citizenship + Gender, data=train, method='glm',family='binomial', trControl = control, tuneLength = 5)
+
+## Test
+obs <- test$Match_Status
+pred <- predict(glm, newdata = test[,1:length(test)-1], type = "raw")
+prob <- predict(glm, newdata = test[,1:length(test)-1], type = "prob")
+
+## Evaluate
+perf <- data.frame(obs,pred,prob)
+defaultSummary(perf)
+twoClassSummary(perf, lev = levels(perf$obs), model = glm)
+mnLogLoss(perf, lev = levels(perf$obs))
+confusionMatrix(data = obs, reference = pred, positive = "Match")
+
+## Plot AUC Curve
+plot(performance(prediction(prob$Match, obs),"tpr","fpr"), colorize = T, main = "GLM2.AUC | ROC Curve",print.cutoffs.at=seq(0,1,by=0.1), text.adj=c(-0.2,1.7))
+abline(a=0,b=1)
+legend(0.8,0.4,round(twoClassSummary(perf, lev = levels(perf$obs), model = glm)[1],4),title="AUC")
+
+## Plot Accuracy Curve
+acc = performance(prediction(prob$Match, obs), measure = "acc")
+plot(acc, main = "GLM2.AUC | Accuracy vs. Cutoff")
+
+```
+
+```{r GLM2.ACC}
+
+## Repeated Cross-Validation (10-Fold | 5 Times)
+control <- trainControl(method = 'repeatedcv', number = 10, repeats = 5, savePredictions = TRUE, classProbs = TRUE, preProc = c("center","scale"), summaryFunction = defaultSummary)
+
+## Train
+glm <- train(Match_Status ~ Age + Citizenship + Gender, data=train, method='glm',family='binomial', trControl = control, tuneLength = 5)
+
+## Test
+obs <- test$Match_Status
+pred <- predict(glm, newdata = test[,1:length(test)-1], type = "raw")
+prob <- predict(glm, newdata = test[,1:length(test)-1], type = "prob")
+
+## Evaluate
+perf <- data.frame(obs,pred,prob)
+defaultSummary(perf)
+twoClassSummary(perf, lev = levels(perf$obs), model = glm)
+mnLogLoss(perf, lev = levels(perf$obs))
+confusionMatrix(data = obs, reference = pred, positive = "Match")
+
+## Plot AUC Curve
+plot(performance(prediction(prob$Match, obs),"tpr","fpr"), colorize = T, main = "GLM2.ROC | ROC Curve",print.cutoffs.at=seq(0,1,by=0.1), text.adj=c(-0.2,1.7))
+abline(a=0,b=1)
+legend(0.8,0.4,round(twoClassSummary(perf, lev = levels(perf$obs), model = glm)[1],4),title="AUC")
+
+## Plot Accuracy Curve
+acc = performance(prediction(prob$Match, obs), measure = "acc")
+plot(acc, main = "GLM2.ROC | Accuracy vs. Cutoff")
+
+```
+
+```{r GLM3.AUC}
+
+## Repeated Cross-Validation (10-Fold | 5 Times)
+control <- trainControl(method = 'repeatedcv', number = 10, repeats = 5, savePredictions = TRUE, classProbs = TRUE, preProc = c("center","scale"), summaryFunction = twoClassSummary)
+
+## Train
+glm <- train(Match_Status ~ ., data=train, method='glm',family='binomial', trControl = control, tuneLength = 5)
+
+## Test
+obs <- test$Match_Status
+pred <- predict(glm, newdata = test[,1:length(test)-1], type = "raw")
+prob <- predict(glm, newdata = test[,1:length(test)-1], type = "prob")
+
+## Evaluate
+perf <- data.frame(obs,pred,prob)
+defaultSummary(perf)
+twoClassSummary(perf, lev = levels(perf$obs), model = glm)
+mnLogLoss(perf, lev = levels(perf$obs))
+confusionMatrix(data = obs, reference = pred, positive = "Match")
+
+## Plot AUC Curve
+plot(performance(prediction(prob$Match, obs),"tpr","fpr"), colorize = T, main = "GLM3.AUC | ROC Curve",print.cutoffs.at=seq(0,1,by=0.1), text.adj=c(-0.2,1.7))
+abline(a=0,b=1)
+legend(0.8,0.4,round(twoClassSummary(perf, lev = levels(perf$obs), model = glm)[1],4),title="AUC")
+
+## Plot Accuracy Curve
+acc = performance(prediction(prob$Match, obs), measure = "acc")
+plot(acc, main = "GLM3.AUC | Accuracy vs. Cutoff")
+
+```
+
+```{r GLM4.AUC}
+
+## Repeated Cross-Validation (10-Fold | 5 Times)
+control <- trainControl(method = 'repeatedcv', number = 10, repeats = 5, savePredictions = TRUE, classProbs = TRUE, preProc = c("center","scale"), summaryFunction = twoClassSummary)
+
+## Train
+glm <- train(Match_Status ~ Type_of_medical_school + US_or_Canadian_Applicant + Age
+              + Citizenship + NIH_dollars + BLS + white_non_white + Count_of_Poster_Presentation
+              + Visa_Sponsorship_Needed + Gender + Medical_Education_or_Training_Interrupted 
+              + Couples_Match + Alpha_Omega_Alpha 
+              + Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published
+              + PALS + Count_of_Oral_Presentation + Count_of_Peer_Reviewed_Journal_Articles_Abstracts
+              + Count_of_Peer_Reviewed_Book_Chapter + ACLS + Count_of_Non_Peer_Reviewed_Online_Publication
+              , data=train, method='glm',family='binomial', trControl = control, tuneLength = 5)
+
+## Test
+obs <- test$Match_Status
+pred <- predict(glm, newdata = test[,1:length(test)-1], type = "raw")
+prob <- predict(glm, newdata = test[,1:length(test)-1], type = "prob")
+
+## Evaluate
+perf <- data.frame(obs,pred,prob)
+defaultSummary(perf)
+twoClassSummary(perf, lev = levels(perf$obs), model = glm)
+mnLogLoss(perf, lev = levels(perf$obs))
+confusionMatrix(data = obs, reference = pred, positive = "Match")
+
+## Plot AUC Curve
+plot(performance(prediction(prob$Match, obs),"tpr","fpr"), colorize = T, main = "GLM4.AUC | ROC Curve",print.cutoffs.at=seq(0,1,by=0.1), text.adj=c(-0.2,1.7))
+abline(a=0,b=1)
+legend(0.8,0.4,round(twoClassSummary(perf, lev = levels(perf$obs), model = glm)[1],4),title="AUC")
+
+## Plot Accuracy Curve
+acc = performance(prediction(prob$Match, obs), measure = "acc")
+plot(acc, main = "GLM4.AUC | Accuracy vs. Cutoff")
+
+```
+
+```{r LASSO.AUC}
+
+## Repeated Cross-Validation (10-Fold | 5 Times)
+control <- trainControl(method = 'repeatedcv', number = 10, repeats = 5, savePredictions = TRUE, classProbs = TRUE, preProc = c("center","scale"), summaryFunction = twoClassSummary)
+
+## Train
+## Caret: GLMNET
+lasso <- train(Match_Status~., data= train, method = "glmnet", preProc = c("center","scale") ,tuneGrid = expand.grid(alpha = 1, lambda = seq(0.00001,0.2, length =5)), trControl = control)
+lasso
+plot(lasso)
+plot(lasso$finalModel, xvar = 'norm', label = T)
+plot(lasso$finalModel, xvar = 'lambda', label = T)
+plot(lasso$finalModel, xvar = 'dev', label = T)
+plot(varImp(lasso))
+
+## Test
+obs <- test$Match_Status
+pred <- predict(lasso, newdata = test[,1:length(test)-1], type = "raw")
+prob <- predict(lasso, newdata = test[,1:length(test)-1], type = "prob")
+
+## Evaluate
+perf <- data.frame(obs,pred,prob)
+defaultSummary(perf)
+twoClassSummary(perf, lev = levels(perf$obs), model = glm)
+mnLogLoss(perf, lev = levels(perf$obs))
+confusionMatrix(data = obs, reference = pred, positive = "Match")
+
+## Plot AUC Curve
+plot(performance(prediction(prob$Match, obs),"tpr","fpr"), colorize = T, main = "LASSO.AUC | ROC Curve",print.cutoffs.at=seq(0,1,by=0.1), text.adj=c(-0.2,1.7))
+abline(a=0,b=1)
+legend(0.8,0.4,round(twoClassSummary(perf, lev = levels(perf$obs), model = lasso)[1],4),title="AUC")
+
+## Plot Accuracy Curve
+acc = performance(prediction(prob$Match, obs), measure = "acc")
+plot(acc, main = "LASSO.AUC | Accuracy vs. Cutoff")
+
+```
+
+```{r ELASTIC.AUC}
+fitControl <- trainControl(## 10-fold CV
+                           method = "repeatedcv",
+                           number = 10,
+                           repeats = 5,
+                           search = "random")
+
+elastic.cv <- train(Match_Status ~ .,
+               data = train,
+               method = "glmnet",
+               preProcess = c('scale', 'center'),
+               trControl = fitControl,
+               tuneGride = expand.grid(alpha=seq(0,1,length = 10), 
+                                       lambda = seq(0.0001, 1, length=5)))
+
+elastic.cv
+plot(elastic.cv)
+plot(elastic.cv$finalModel, xvar = 'norm', label = T)
+plot(elastic.cv$finalModel, xvar = 'lambda', label = T)
+plot(elastic.cv$finalModel, xvar = 'dev', label = T)
+plot(varImp(elastic.cv))
+
+
+## Test
+obs <- test$Match_Status
+pred <- predict(elastic.cv, newdata = test[,1:length(test)-1], type = "raw")
+prob <- predict(elastic.cv, newdata = test[,1:length(test)-1], type = "prob")
+
+## Evaluate
+perf <- data.frame(obs,pred,prob)
+defaultSummary(perf)
+twoClassSummary(perf, lev = levels(perf$obs), model = glm)
+mnLogLoss(perf, lev = levels(perf$obs))
+confusionMatrix(data = obs, reference = pred, positive = "Match")
+
+## Plot AUC Curve
+plot(performance(prediction(prob$Match, obs),"tpr","fpr"), colorize = T, main = "ELASTIC.AUC | ROC Curve",print.cutoffs.at=seq(0,1,by=0.1), text.adj=c(-0.2,1.7))
+abline(a=0,b=1)
+legend(0.8,0.4,round(twoClassSummary(perf, lev = levels(perf$obs), model = elastic.cv)[1],4),title="AUC")
+
+## Plot Accuracy Curve
+acc = performance(prediction(prob$Match, obs), measure = "acc")
+plot(acc, main = "ELASTIC.AUC | Accuracy vs. Cutoff")
+
+
+```
+
+```{r CompareModels}
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
