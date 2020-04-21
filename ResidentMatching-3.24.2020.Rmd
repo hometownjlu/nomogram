@@ -166,6 +166,73 @@ rm(split)
 
 After splitting, the training set consisted of `r dim(train)[1]` rows (`r round(dim(train)[1]/dim(data)[1] *100, 2)`%) and the test set consisted of `r dim(test)[1]` rows (`r round(dim(test)[1]/dim(data)[1]*100,2)`%).
 
+## Chose five vignettes at random from test
+```{r}
+
+library("dplyr")
+readr::write_rds(test, "~/Dropbox/Nomogram/nomogram/Data/test.rds")
+
+set.seed(123456789)  #reproducible
+survey_sample <- test %>% 
+  dplyr::filter(Age>25) %>% 
+  group_by(Match_Status, Gender) %>%
+  dplyr::sample_n(2) %>% 
+  as_tibble()
+
+
+library(exploratory)
+#Thrown to exploratory.io for survey_sample.  
+
+survey_sample <- read_rds("~/Dropbox/Nomogram/nomogram/data/survey_sample_mutate_6.rds") #brought back in from exploratory
+View(survey_sample)
+```
+
+
+```{r}
+survey_sample <- read_rds("~/Dropbox/Nomogram/nomogram/data/survey_sample_mutate_6.rds")
+#To do a loop in the future
+
+end_row <- nrow(survey_sample)
+for (i in 1:(end_row)) {  #i stands for index
+#print("Working through row/Doctor scenario:", i)
+print(i)
+vignette_1_intro <- paste0("Vignette #1, Doctor ", (survey_sample$id)[i], " is a ", survey_sample$Age[i]," year old ", tolower(survey_sample$Gender[i]), " applying to OBGYN residency programs across the United States. ",  survey_sample$heandshe[i], " describes her race and ethnicity as ", tolower(survey_sample$white_non_white[i]), ".  ",  survey_sample$heandshe[i], " has ", tolower(survey_sample$Visa_Sponsorship_Needed[i]), " visa sponsorship needs from ",  survey_sample$Pronouns[i], " future institution.  Dr. ", (survey_sample$id)[i], " has ", tolower(survey_sample$Misdemeanor_Conviction[i]), " history of misdemeanor convictions.")
+#print(vignette_1_intro)
+                     
+vignette_1_education <- paste0("Education Preparations: Doctor One attended a ", survey_sample$Type_of_medical_school[i],".  She is ",survey_sample$Alpha_Omega_Alpha[i]," a member of Alpha Omega Alpha academic honor society.  Her training during medical school was ", survey_sample$Medical_Education_or_Training_Interrupted[i], " ", survey_sample$heandshe[i], " passed USMLE Step 1 at a time when the test is graded pass/fail and ", survey_sample$heandshe[i], " has yet to take USMLE Step 2.")
+#vignette_1_education
+
+vignette_1_research <- paste0("Research Preparations:  Doctor ", (survey_sample$id)[i], " has presented ", as.english(survey_sample$Count_of_Oral_Presentation[i])," oral presentations, ", as.english(survey_sample$Count_of_Peer_Reviewed_Book_Chapter[i]), " peer-reviewed book chapters, ",
+as.english(survey_sample$Count_of_Peer_Reviewed_Journal_Articles_Abstracts[i]), " peer-reviewed journal articles, ",
+as.english(survey_sample$Count_of_Poster_Presentation[i]), " poster presentations, ",
+as.english(survey_sample$Count_of_Peer_Reviewed_Online_Publication[i]), " on-line publications, and ",
+as.english(survey_sample$Count_of_Scientific_Monograph[i]), " scientific monographs.")
+#vignette_1_research
+
+vignette_1_medical_certifications <- paste0("Medical Certification Preparations:  Doctor " , (survey_sample$id)[i], " has an ", (survey_sample$BLS[i])," basic life support (BLS) certification. In addition, her pediatric advanced life support (PALS) certification is ", (survey_sample$PALS[i]), ".  Finally, Doctor One listed that she has an ", (survey_sample$ACLS[i]))
+#vignette_1_medical_certifications
+
+vignette_1_obligations <- paste0("Military Obligations: Dr. ", (survey_sample$id)[i]," has ", (survey_sample$Military_Service_Obligation[i] %>% dplyr::recode(Yes = "an obligation to serve in the military following her residency training. ", No = "no military obligations following residency training.")))
+#vignette_1_obligations
+
+vignette_1_match <- paste0("Match Characteristics:  Dr. ", (survey_sample$id)[i]," is ", (survey_sample$Couples_Match[1]))
+#vignette_1_match
+
+vignette_1_sections <- c("Electronic Residency Application Data Provided: ",
+                     vignette_1_intro,
+                     vignette_1_education,
+                     vignette_1_research,
+                     vignette_1_medical_certifications,
+                     vignette_1_medical_certifications,
+                     vignette_1_obligations,
+                     vignette_1_match, 
+                     "Do you believe that Dr. ", (survey_sample$id)[i]," would match into a categorical OBGYN internship somewhere in the US?",
+                     "If yes:  Out of 100 applicants with these exact characteristics, estimate the number of applicants who would match at any OBGYN resident program in the US.")
+#vignette_1_sections
+write_lines(vignette_1_sections, path = paste0(results_folder, paste0("vignettes/vignette_",i,"_all_sections.txt")))
+}
+```
+
 ## Generalized Linear Models
 
 
