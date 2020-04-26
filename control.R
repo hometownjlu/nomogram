@@ -25,7 +25,6 @@ rmarkdown::render(input = here::here("00-Exploratory_Data_Analysis.Rmd"), output
 pander::openFileInOS(here::here("00-Exploratory_Data_Analysis.html"))
 #pander::openFileInOS(here::here("00-Exploratory_Data_Analysis.pdf"))
 
-
 #Split the Data
 #rmarkdown::render()
 rmarkdown::render(input = here::here("01-Split_Data.Rmd"), output_format = c("html_document"), clean = TRUE)
@@ -47,3 +46,6 @@ pander::openFileInOS(here::here("03-Feature_Selection.html"))
 rmarkdown::render(input = here::here("04-GLM_and_CART_models.Rmd"), output_format = c("html_document"), clean = TRUE)
 pander::openFileInOS(here::here("04-GLM_and_CART_models.html"))
 #pander::openFileInOS(here::here("04-GLM_and_CART_models.pdf"))
+
+#Final model
+source(here::here("Code/ResidentMatching-3.24.2020.Rmd"), echo=TRUE)  #may need to run by hand
