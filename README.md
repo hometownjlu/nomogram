@@ -138,4 +138,4 @@ docker-compose up -d
 The result should eventually be: `Creating rstudio_v3_rstudio_1 ... done`
 Open browser at http://localhost:8787 with user 'rstudio' and password 'password'
 
-The problem is that the docker image is not linked to the Dropbox directory where I keep the files so I have to download it from github every time.  
+The problem is that the docker image is not linked to the Dropbox directory where I keep the files so I have to download it from github every time.  Rstudio -> File -> New Project -> Check out version -> "https://github.com/mufflyt/nomogram/tree/dev_0.1"
