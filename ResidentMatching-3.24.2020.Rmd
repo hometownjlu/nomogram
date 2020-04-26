@@ -169,10 +169,13 @@ After splitting, the training set consisted of `r dim(train)[1]` rows (`r round(
 ## Chose five vignettes at random from test
 ```{r}
 library("dplyr")
-readr::write_rds(test, "~/Dropbox/Nomogram/nomogram/Data/test.rds")
+#readr::write_rds(test, "~/Dropbox/Nomogram/nomogram/Data/test.rds")
+
+#I need to bring in the full data set for 2018 without all the recoding and dichotomizing.  This way I can say what the actual race is and what the actual medical school was.  
 
 set.seed(123456789)  #reproducible
 survey_sample <- test %>% 
+  #dplyr::filter(Year =="2018") %>%
   dplyr::filter(Age>25) %>% 
   dplyr::group_by(Match_Status, Gender) %>%
   dplyr::sample_n(2) %>% 
@@ -189,7 +192,7 @@ end_row <- nrow(survey_sample)
 for (i in 1:(end_row)) {  #i stands for index
 #print("Working through row/Doctor scenario:", i)
 print(i)
-vignette_1_intro <- paste0("Doctor ", (survey_sample$id)[i], " is a ", survey_sample$Age[i],"-year-old ", tolower(survey_sample$Gender[i]), " applying to OBGYN residency programs across the United States. ",  survey_sample$heandshe[i], " describes ", (survey_sample$Possesive[i])  ," race as ", str_to_title(survey_sample$white_non_white[i]), ".  Doctor ", (survey_sample$id)[i], " is a ", survey_sample$Citizenship[i],  survey_sample$heandshe[i], " has ", tolower(survey_sample$Visa_Sponsorship_Needed[i]), " visa sponsorship needs from ",  survey_sample$Pronouns[i], " future institution.  Dr. ", (survey_sample$id)[i], " has ", tolower(survey_sample$Misdemeanor_Conviction[i]), " history of misdemeanor convictions.
+vignette_1_intro <- paste0("Doctor ", (survey_sample$id)[i], " is a ", survey_sample$Age[i],"-year-old ", tolower(survey_sample$Gender[i]), " applying to OBGYN residency programs across the United States. ",  survey_sample$heandshe[i], " describes ", (survey_sample$Possesive[i])  ," race as ", stringr::str_to_title(survey_sample$white_non_white[i]), ".  Doctor ", (survey_sample$id)[i], " is a ", survey_sample$Citizenship[i],  survey_sample$heandshe[i], " has ", tolower(survey_sample$Visa_Sponsorship_Needed[i]), " visa sponsorship needs from ",  survey_sample$Pronouns[i], " future institution.  Dr. ", (survey_sample$id)[i], " has ", tolower(survey_sample$Misdemeanor_Conviction[i]), " history of misdemeanor convictions.
                            
                            ")
 #print(vignette_1_intro)
@@ -238,6 +241,7 @@ vignette_1_sections <- c("Electronic Residency Application Data Provided: ",
 readr::write_lines(vignette_1_sections, path = paste0(results_folder, paste0("vignettes/vignette_",i,"_all_sections.txt")))
 }
 ```
+
 
 ## Generalized Linear Models
 

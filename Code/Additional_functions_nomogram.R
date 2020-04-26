@@ -1,8 +1,8 @@
 ########################################################################
-# This R script implements additional functions for the nomogram database
-#
-# Author: Tyler Muffly
-# Date: 10/19/2019
+# Logistic Regression Model to Predict Matching for medical students applying to OBGYN: Source All
+# This will source libraries and functions.  
+# Denver Health and Hospital Authority, 2020
+# Additional_functioins_nomogram.R
 
 #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
 #Install and Load needed R packages.

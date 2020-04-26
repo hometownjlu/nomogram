@@ -1,4 +1,9 @@
-  # *Objective: * We sought to construct and validate a model that predict a medical student's chances of matching into a categorical obstetrics and gynecology residency position.
+########################################################################
+# Logistic Regression Model to Predict Matching for medical students applying to OBGYN: Source All
+# All_ERAS_data_merged.R
+# Denver Health and Hospital Authority, 2020
+
+# *Objective: * We sought to construct and validate a model that predict a medical student's chances of matching into a categorical obstetrics and gynecology residency position.
   
   # This file is needed to bring together the data from all the years of match data available.  The data comes from the AAMC from the Archives section of the Residency Program Director Work Station.  
   # https://www.dropbox.com/s/wfv7oqpdhdzjlsr/AAMC%20download.mov?dl=0
@@ -16,9 +21,6 @@
 
 #They way we know that she is not an obgyn resident is because in the NPI database her taxonomy code shows up as "Family Medicine".  
 
-
-
-#Shiny output is text string with confidence intervals.  
 
 #Multi-collinearity?
 #Factor selection?
@@ -203,7 +205,10 @@
   readr::write_csv(all_a_dataframes, "~/Dropbox/Rui/data/all_a_dataframes.csv")
   all_a_dataframes <- readr::read_csv("~/Dropbox/Rui/data/all_a_dataframes.csv")
   
-  all_bound_together <- all_a_dataframes %>%
+######################################################################################
+# We needed this data because it is a check about who is an OBGYN.  The ERAS data only tells us who applied.  The GOBA list tells us who matched.  There is no public information about residents available on Physician Compare, NPPES or Doximity beyond the basics of address.  
+  
+all_bound_together <- all_a_dataframes %>%
     readr::type_convert() %>%
     exploratory::clean_data_frame() %>%
     dplyr::distinct(userid, .keep_all = TRUE) %>%
@@ -217,7 +222,11 @@
     dplyr::filter(certStatus %nin% c("Retired", "Not Currently Certified")) %>%
     dplyr::filter(!is.na(state)) %>%
     dplyr::filter(state != "ON") %>%
-    dplyr::filter(clinicallyActive !="No")
+    dplyr::filter(clinicallyActive !="No") %>%
+    tidyr::separate(name, into = c("name", "suffix"), sep = "\\s*\\,\\s*", remove = TRUE, convert = TRUE) %>%
+    mutate(firstname = humaniformat::first_name(name)) %>%
+    mutate(lastname = humaniformat::last_name(name)) %>%
+    select(-suffix, -city, -state, -startDate, -certStatus, -mocStatus, -sub1, -sub1startDate, -sub1certStatus, -sub1mocStatus, -sub2, -sub2startDate, -sub2certStatus, -sub2mocStatus, -clinicallyActive, -orig_sub, -x_sub_orig, -orig_bas, -unique_random_id)
   
   dim(all_bound_together)
   colnames(all_bound_together)
@@ -228,17 +237,10 @@
   # Write the final bound scraper to disk ----
   readr::write_rds(all_bound_together, "/Users/tylermuffly/Dropbox/Nomogram/nomogram/data/list of people who all matched into OBGYN.rds")
   
-  #We start with a list of FPMRS physicians and the year that they were boarded called all_bound_together.csv.  The data is filtered for providers who are retired, not in the United States, and has a unique random id.  
   
-  GOBA_list_of_people_who_all_matched_into_OBGYN <- 
-    # We needed this data because it is a check about who is an OBGYN.  The ERAS data only tells us who applied.  The GOBA list tells us who matched.  There is no public information about residents available on Physician Compare, NPPES or Doximity beyond the basics of address.  See Rui Project for file:  pulling_all_scrapes_together.R  
-    exploratory::read_rds_file(here::here("/data/list of people who all matched into OBGYN.rds")) %>%
-    readr::type_convert() %>%
-    exploratory::clean_data_frame() %>%
-    #arrange(desc(userid) %>%
-    dplyr::select(userid, firstname, lastname, name) #, city_state, state)
+############################################################
+#Bind each year of data together
   
- 
   #2019 archive ----
   # Steps to produce archive_2019_2
   `archive_2019_2` <- exploratory::read_excel_file( "/Users/tylermuffly/Dropbox/Nomogram/nomogram/data/Archives/2019 All Data 2.xlsx", sheet = "e79bee75-b572-4e23-ba50-6b5b42f", na = c('','NA'), skip=0, col_names=TRUE, trim_ws=TRUE, col_types="text") %>%

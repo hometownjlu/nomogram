@@ -1,4 +1,9 @@
-#Controller
+########################################################################
+# Logistic Regression Model to Predict Matching for medical students applying to OBGYN: Source All
+# This will source all files required to create data frames/tibbles
+# Denver Health and Hospital Authority, 2020
+
+
 #install.packages("here")
 library("here")
 here::set_here("~/Dropbox/Nomogram/nomogram")
@@ -9,7 +14,7 @@ rm(list = setdiff(ls(), lsf.str()))
 #Creates the custom functions
 source(here::here("Code/Additional_functions_nomogram.R"), echo=TRUE)  #may need to run by hand
 
-#Creates the data set
+#Build and Load the data set
 source(here::here("All_ERAS_data_merged.R"))
 print("Sanity check:  The all_years file exists:")
 file.exists(here::here("/data/All_ERAS_data_merged_output_2_1_2020.csv"))
