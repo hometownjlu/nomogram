@@ -62,6 +62,7 @@ AAMC ID number is a specific number that every applicant uses to apply to reside
 ## Installation and use
 
 ### Install packages from the Additional_functions_nomogram.R
+### Also please see docker image I created for this project below.  
 ```r
 rm(list = setdiff(ls(), lsf.str())). #cleans all environment except functions
 
@@ -120,5 +121,18 @@ These are all run with the single command above. They can be run separately if d
 * `Match_Status` (observation): One applicant per row
 * `All_ERAS_data_merged_output_2_1_2020.csv` - fully labelled raw dataset containing all rows.
 
+###`Model`
+Supervised learning is where you are the teacher in the model is the student. We are training our model to recognize patterns in the data using flashcards. The flashcards for the attributes of applicants to OB/GYN residency in on the back of the flash card is the matching status. Did the applicant match?  Yes or no.￼￼￼￼ Imagine you hand the model a stack of flashcards and we train the model to recognize this pattern future in the wild/with new data that it has never seen before.  
 
 Please contact me with any questions or concerns: tyler (dot) muffly (at) dhha (dot) org.  
+
+###Docker for reproducibilty
+Docker allows for stable versions of packages and a similar environment for all authors to work in.  The files to use this docker image are available in `rstudio_v3.tar`.  Unpack that file and 
+
+In terminal:  
+cd rstudio_v3
+docker-compose up -d
+
+Open browser at http://localhost:8787 with user 'rstudio' and password 'password'
+
+
