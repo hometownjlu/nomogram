@@ -127,12 +127,15 @@ Supervised learning is where you are the teacher in the model is the student. We
 Please contact me with any questions or concerns: tyler (dot) muffly (at) dhha (dot) org.  
 
 ###Docker for reproducibilty
-Docker allows for stable versions of packages and a similar environment for all authors to work in.  The files to use this docker image are available in `rstudio_v3.tar`.  Unpack that file and 
+Docker allows for stable versions of packages and a similar environment for all authors to work in.  The files to use this docker image are available in `rstudio_v3.tar`.  Thanks to Maksim Boyko.  
 
-In terminal:  
-cd rstudio_v3
+In terminal: 
+
+Make sure docker desktop is running.
+cd ~/Dropbox/Nomogram/docker/rstudio_v3
+At this point you should be in the same directory as the docker-compose.yaml file.  
 docker-compose up -d
-
+The result should eventually be: `Creating rstudio_v3_rstudio_1 ... done`
 Open browser at http://localhost:8787 with user 'rstudio' and password 'password'
 
-
+The problem is that the docker image is not linked to the Dropbox directory where I keep the files so I have to download it from github every time.  
