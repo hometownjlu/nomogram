@@ -8,7 +8,7 @@ ERAS is a centralized solution to the medical residency application and document
 Matching Data pull and preparation
 ==========
 
-* [Program Director Workstation Login](https://apps.aamc.org/account/#/login?gotoUrl=http:%2F%2Fapps.aamc.org%2Feras-pdws-web%2F&allowInternal=false)
+* [Electronic Residency Application Service Program Director Workstation Login](https://apps.aamc.org/account/#/login?gotoUrl=http:%2F%2Fapps.aamc.org%2Feras-pdws-web%2F&allowInternal=false)
 * [American Board of Obstetrics and Gynecology](http://www.abog.org/)
 
 These are scripts to pull and prepare data. This is an active project and scripts will change, so please always update to the latest version.
