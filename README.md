@@ -147,6 +147,8 @@ Open browser at http://localhost:8787 with user 'rstudio' and password 'password
 
 The problem is that the docker image is not linked to the Dropbox directory where I keep the files so I have to download it from github every time.  Rstudio -> File -> New Project -> Check out version -> "https://github.com/mufflyt/nomogram.git".  Please note most of the work I am doing currently is on the `dev_1` branch.  Click on `Git` and then select the branch: `dev_01`.
 
+[![Project flow Data first pass matching](https://github.com/mufflyt/nomogram/blob/dev_0.1/first_pass_who_matched.jpeg?raw=true)](https://github.com/mufflyt/nomogram/blob/dev_0.1/first_pass_who_matched.jpeg?raw=true)
+
 [![Project flow Matching Prediction](https://github.com/mufflyt/nomogram/blob/dev_0.1/project%20data%20flow%20Muffly%20et%20al.jpeg?raw=true)](https://github.com/mufflyt/nomogram/blob/dev_0.1/project%20data%20flow%20Muffly%20et%20al.jpeg?raw=true)
 
 * [REDCAP survey to clerkship directors](https://is.gd/predictingobgynmatching)
