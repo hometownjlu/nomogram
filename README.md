@@ -33,8 +33,5 @@ Packrat is in use to control package versions and a packrat.lock file is posted 
 
 Please contact me with any questions or concerns: tyler (dot) muffly (at) dhha (dot) org.  
 
-A list of medical schools are available at:
-https://members.aamc.org/eweb/DynamicPage.aspx?site=AAMC&webcode=AAMCOrgSearchResult&orgtype=Medical%20School
-
 A list of clinical OBGYN departments with amount of NIH dollars was found at:
 http://www.brimr.org/NIH_Awards/2019/NIH_Awards_2019.htm
