@@ -151,7 +151,7 @@ Identifying clerkship directors was challenging.  There is not an up to date lis
 * [Curated list of clerkship directors on a Google Drive Spreadsheet](https://docs.google.com/spreadsheets/d/1RRG9rTG8x4mSmO4hiX4AFa5O98WLwIAP92PllGMFdvI/edit?usp=sharing)
 
 * List of residency directors was easier to find with ACGME listings.  
-![Interactive map of OBGYN residency programs colored by accrediation status](https://github.com/mufflyt/nomogram/blob/dev_0.1/project%20data%20flow%20Muffly%20et%20al.jpeg?raw=true)](https://exploratory.io/viz/8171776323392484/Chart-1-WXe3SSx8Vu)
+![Interactive map of OBGYN residency programs colored by accrediation status](https://github.com/mufflyt/nomogram/blob/dev_0.1/Map%20of%20OBGYN%20residency%20programs.png?raw=true](https://exploratory.io/viz/8171776323392484/Chart-1-WXe3SSx8Vu)
 
 
 ###`Dynamic Nomogram`
