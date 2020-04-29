@@ -58,8 +58,6 @@ This data was cleaned in a separate R script with the help of exploratory.io.
 
 Packrat is in use to control package versions and a packrat.lock file is posted to my github repository.  This will allow for easier reproducibility.  Packrat records the exact package versions you depend on, and ensures those exact versions are the ones that get installed wherever you go.  We can also control the environment by deploying the project inside a Docker container as needed.  The project was created in R version 3.6.1 and run inside RStudio 1.2.5019.  
 
-A vector of quoted variable names is provided, `99_varnames.R`. 
-
 ### Events
 Within each year of Matching data there is one event.  This is **Match_Status**.  In the final dataset, every applicant gets his/her/their own row. 
 
