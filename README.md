@@ -12,7 +12,6 @@ Short Proposal
 
 Matching Data pull and preparation
 ==========
-
 * [University of Colorado Obstetrics and Gynecology Residency Program](http://www.ucdenver.edu/academics/colleges/medicalschool/departments/obgyn/Education/ResidentProgram/Pages/default.aspx)
 * [Electronic Residency Application Service Program Director Workstation Login](https://apps.aamc.org/account/#/login?gotoUrl=http:%2F%2Fapps.aamc.org%2Feras-pdws-web%2F&allowInternal=false)
 * [American Board of Obstetrics and Gynecology](http://www.abog.org/)
