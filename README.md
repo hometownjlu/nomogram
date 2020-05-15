@@ -34,17 +34,17 @@ It is the end-users responsibility to understand the processes contained in thes
 # Codebook
 A codebook is a technical description of the data that was collected for a particular purpose. It describes how the data are arranged in the computer file or files, what the various numbers and letters mean, and any special instructions on how to use the data properly.
 
-* Predictors under consideration:
+* Predictors under consideration: 2019, 2018
 1. `all_data$white_non_white` - Dichotomoized from ethnicity fields in ERAS data, 2 level categorical
-2. `all_data$Age` - Age at the time of the match, numerical variable
+2. `all_data$Age` - Age at the time of the match, numerical variable based on Date of Birth POSIXct
 3. `all_data$Year` - Year of participation in the match, 4 level categorical
 4. `all_data$Gender` - Male or Female, 2 level categorical
 5. `all_data$Couples_Match` - PArticipating in the couples match? 2 level categorical
 6. `all_data$US_or_Canadian_Applicant` - Are they a US Senior or an IMG, 2 level categorical 
 7. `all_data$Medical_Education_Interrupted` - Taking breaks, 2 level categorical
-8. `all_data$Alpha_Omega_Alpha` - Membership in AOA, 3 level categorical
+8. `all_data$Alpha_Omega_Alpha` - Membership in AOA, 2 level categorical
 9. `all_data$Military_Service_Obligation`
-10. `all_data$USMLE_Step_1_Score` - I did not use Step 2 score because most students will not have those numbers at the time they apply, numerical variable
+10. `all_data$USMLE_Step_1_Score` - I did not use Step 2 score because most students will not have those numbers at the time they apply, numerical variable.  Step 1 is going to pass/fail.  
 11. `all_data$Count_of_Poster_Presentation` - numerical variable
 12. `all_data$Count_of_Oral_Presentation` - numerical variable
 13. `all_data$Count_of_Articles_Abstracts` - numerical variable
@@ -54,6 +54,23 @@ A codebook is a technical description of the data that was collected for a parti
 17. `all_data$Medical_Degree` - Allopathic versus Osteopathic medical school education, 2 level categorical
 
 This data was cleaned in a separate R script with the help of exploratory.io.  
+
+Additional data not for analysis:
+18.  'AAMC_ID'
+19.  'Applicant Name'
+
+2017 and earlier does not have SOAP data:
+20.  'SOAP Applicant' 
+21.  'SOAP Reapply Applicant'
+22.  'SOAP Match Status'
+23.  'SOAP Reapply Track Applied'
+
+21.  'Track Applied by Applicant'
+22.  'Gold Humanism Honor Society'
+23.  'Medical School of Graduation'
+24.  'Medical School Type'
+25.  'Misdemeanor Conviction'
+26.  'Felony Conviction'
 
 Packrat is in use to control package versions and a packrat.lock file is posted to my github repository.  This will allow for easier reproducibility.  Packrat records the exact package versions you depend on, and ensures those exact versions are the ones that get installed wherever you go.  We can also control the environment by deploying the project inside a Docker container as needed.  The project was created in R version 3.6.1 and run inside RStudio 1.2.5019.  
 
