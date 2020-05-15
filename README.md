@@ -190,3 +190,14 @@ https://glassboxmedicine.com/2019/02/23/measuring-performance-auc-auroc/
 The area under the receiver operating characteristic (AUROC) is a performance metric that you can use to evaluate classification models. AUROC tells you whether your model is able to correctly rank examples:
 
 For a clinical risk prediction model, the AUROC tells you the probability that a randomly selected patient who experienced an event will have a higher predicted risk score than a randomly selected patient who did not experience an event.  For a binary handwritten digit classification model (“1” vs. “0”), the AUROC tells you the probability that a randomly selected “1” image will have a higher predicted probability of being a “1” than a randomly selected “0”.  AUROC is thus a performance metric for “discrimination”: it tells you about the model’s ability to discriminate between cases (positive examples) and non-cases (negative examples.) An AUROC of 0.8 means that the model has good discriminatory ability: 80% of the time, the model will correctly assign a higher absolute risk to a randomly selected patient with an event than to a randomly selected patient without an event.
+
+
+## Brier Score
+https://medium.com/@magoo/scoring-a-risk-forecast-58673bb6a05e
+A Brier Score allows us to measure and monitor the error of our forecasts. It’s described as the the sum of the squared error of outcomes (simple calculator math).
+
+I ultimately memorize it as:```r (outcome — belief) ^ 2 + ... = Brier Score```
+
+[![Brier Score](https://miro.medium.com/max/2608/1*OfJQVKwGbxiUtmpOSxHS5g.png)](https://miro.medium.com/max/2608/1*OfJQVKwGbxiUtmpOSxHS5g.png)
+
+A lower score is better. The more wrong a forecast is, the higher the Brier Score will be. We want to watch the scores of any forecast source (person, machine, panel, etc) to progressively shrink over time and show improvement of our methods.  A perfect score is 0. A total bust is 2.
