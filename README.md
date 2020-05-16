@@ -180,10 +180,35 @@ We will use DynNom, an R package, to create a Shiny interactive nomogram.  Demon
 
 [![Dynamic Nomogram](https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Flh6.googleusercontent.com%2FI9HnHUeH_ivyt3A3qnDpAXRpi4kfym4iXGdIraHY1fWzWyJ1beqMVcvAUUmDHFwjDuHRtxDKGzAh_owdQYL0HMAZ2anCfM8leE5-OZtuLX-D9-0NCP1agSMc8c0usox55-p6c0TxRG1vVgzc0g&f=1&nofb=1)](https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Flh6.googleusercontent.com%2FI9HnHUeH_ivyt3A3qnDpAXRpi4kfym4iXGdIraHY1fWzWyJ1beqMVcvAUUmDHFwjDuHRtxDKGzAh_owdQYL0HMAZ2anCfM8leE5-OZtuLX-D9-0NCP1agSMc8c0usox55-p6c0TxRG1vVgzc0g&f=1&nofb=1)
 
+## Machine Learning
+Excellent video from StatQuest:
+https://www.youtube.com/watch?v=yIYKR4sgzI8
+
+[![Machine Learning with Classification](https://www.mathworks.com/help/stats/machinelearning_supervisedunsupervised.png)](https://www.mathworks.com/help/stats/machinelearning_supervisedunsupervised.png)
+
+Classification versus Regression
+[![Regression vs. Classification](https://static.javatpoint.com/tutorial/machine-learning/images/regression-vs-classification-in-machine-learning.png)](https://static.javatpoint.com/tutorial/machine-learning/images/regression-vs-classification-in-machine-learning.png)
+
+We are going to use glm because that can be converted into a nomogram.  A nomogram can then be put up on a web site for applicants to use.  
+
+[![Course of Data](https://static.cambridge.org/binary/version/id/urn:cambridge.org:id:binary:20170912084613720-0715:9781139028271:fig16_10.png?pub-status=live)](https://static.cambridge.org/binary/version/id/urn:cambridge.org:id:binary:20170912084613720-0715:9781139028271:fig16_10.png?pub-status=live)
+
+
+## Evaluating the Model
+1. AIC (Akaike Information Criteria) – The analogous metric of adjusted R² in logistic regression is AIC. AIC is the measure of fit which penalizes model for the number of model coefficients. Therefore, we always prefer model with minimum AIC value.
+
+2. Null Deviance and Residual Deviance – Null Deviance indicates the response predicted by a model with nothing but an intercept. Lower the value, better the model. Residual deviance indicates the response predicted by a model on adding independent variables. Lower the value, better the model.
+
+3. Confusion Matrix: It is nothing but a tabular representation of Actual vs Predicted values. This helps us to find the accuracy of the model and avoid overfitting. This is how it looks like:
+
 ## Confusion Matrix
+[![Confusion Matrix](https://blog-c7ff.kxcdn.com/blog/wp-content/uploads/2017/01/myprobbb.jpg)](https://blog-c7ff.kxcdn.com/blog/wp-content/uploads/2017/01/myprobbb.jpg)
+
 [![Confusion Matrix](https://www.unite.ai/wp-content/uploads/2019/12/Preventive_Medicine-e1576294312614.png)](https://www.unite.ai/wp-content/uploads/2019/12/Preventive_Medicine-e1576294312614.png)
 
 ## AUC curve
+Receiver Operating Characteristic(ROC) summarizes the model’s performance by evaluating the trade offs between true positive rate (sensitivity) and false positive rate(1- specificity). For plotting ROC, it is advisable to assume p > 0.5 since we are more concerned about success rate. ROC summarizes the predictive power for all possible values of p > 0.5.  The area under curve (AUC), referred to as index of accuracy(A) or concordance index, is a perfect performance metric for ROC curve. Higher the area under curve, better the prediction power of the model. Below is a sample ROC curve. The ROC of a perfect predictive model has TP equals 1 and FP equals 0. This curve will touch the top left corner of the graph.
+
 [![AUC Curve](https://glassboxmedicine.files.wordpress.com/2019/02/roc-curve-v2.png)](https://glassboxmedicine.files.wordpress.com/2019/02/roc-curve-v2.png)
 https://glassboxmedicine.com/2019/02/23/measuring-performance-auc-auroc/
 
