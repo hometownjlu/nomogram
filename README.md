@@ -56,7 +56,7 @@ A codebook is a technical description of the data that was collected for a parti
 This data was cleaned in a separate R script with the help of exploratory.io.  
 
 Additional data not for analysis:
-18.  'AAMC_ID'
+18.  `AAMC_ID`
 19.  'Applicant Name'
 
 2017 and earlier does not have SOAP data:
@@ -85,6 +85,17 @@ AAMC ID number is a specific number that every applicant uses to apply to reside
 ### Install packages from the Additional_functions_nomogram.R
 ### Also please see docker image I created for this project below.  
 ```r
+########################################################################
+# Logistic Regression Model to Predict Matching for medical students applying to OBGYN: Source All
+# Denver Health and Hospital Authority, 2020
+
+#Created using R version 3.6.2
+#brew install cask
+#brew install wget
+#brew cask install basictex
+#brew install pandoc
+#brew install pkg-config
+
 rm(list = setdiff(ls(), lsf.str())). #cleans all environment except functions
 
 install.packages("devtools")
