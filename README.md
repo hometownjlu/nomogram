@@ -3,7 +3,7 @@
 *Objective:  *
 *We sought to construct and validate a model that predict a medical student's chances of matching into an obstetrics and gynecology residency.*
 
-ERAS is a centralized solution to the medical residency application and documents distribution process. The data source to be used for the project is the Electronic Residency Application Service data that was in discrete fields in the application.  No hand-searching of data was done. The data was exported from the ERAS Program Director Work Station under the Archives menu.The data is collected by the University of Colorado OBGYN residency that has both a categorical and a preliminary position.  Medical students who applied to the preliminary position were considered to be unmatched. The data set of years 2015, 2016, 2017, and 2018 applicants to the University of Colorado OBGYN residency. The data is contained in a data frame called 'all_data'. In advance, we might anticipate that USMLE Step 1 Score and US or Canadian Applicant will be key predictors.  Match Status is the dependent Variable and shows the medical students who applied to the OBGYN residency. 
+ERAS is a centralized solution to the medical residency application and documents distribution process. The data source to be used for the project is the Electronic Residency Application Service data that was in discrete fields in the application.  No hand-searching of data was done. The data was exported from the ERAS Program Director Work Station under the Archives menu.The data is collected by the University of Colorado OBGYN residency that has both a categorical and a preliminary position.  Medical students who applied to the preliminary position were considered to be unmatched. The data set of years 2016, 2017, 2018, 2019, and 2020 applicants to the University of Colorado OBGYN residency. The data is contained in a data frame called 'all_data'. In advance, we might anticipate that USMLE Step 1 Score and US or Canadian Applicant will be key predictors.  Match Status is the dependent Variable and shows the medical students who applied to the OBGYN residency. 
 
 Short Proposal
 ==========
@@ -57,20 +57,20 @@ This data was cleaned in a separate R script with the help of exploratory.io.
 
 Additional data not for analysis:
 18.  `AAMC_ID`
-19.  'Applicant Name'
+19.  `Applicant Name`
 
 2017 and earlier does not have SOAP data:
-20.  'SOAP Applicant' 
-21.  'SOAP Reapply Applicant'
-22.  'SOAP Match Status'
-23.  'SOAP Reapply Track Applied'
+20.  `SOAP Applicant` 
+21.  `SOAP Reapply Applicant`
+22.  `SOAP Match Status`
+23.  `SOAP Reapply Track Applied`
 
-21.  'Track Applied by Applicant'
-22.  'Gold Humanism Honor Society'
-23.  'Medical School of Graduation'
-24.  'Medical School Type'
-25.  'Misdemeanor Conviction'
-26.  'Felony Conviction'
+21.  `Track Applied by Applicant`
+22.  `Gold Humanism Honor Society`
+23.  `Medical School of Graduation`
+24.  `Medical School Type`
+25.  `Misdemeanor Conviction`
+26.  `Felony Conviction`
 
 Packrat is in use to control package versions and a packrat.lock file is posted to my github repository.  This will allow for easier reproducibility.  Packrat records the exact package versions you depend on, and ensures those exact versions are the ones that get installed wherever you go.  We can also control the environment by deploying the project inside a Docker container as needed.  The project was created in R version 3.6.1 and run inside RStudio 1.2.5019.  
 
@@ -126,7 +126,7 @@ rm(pkgs)
 
 These are all run with the single command above. They can be run separately if desired (obvi, :) )
 
-### `Additional_functioins_nomogram.R`
+### `Additional_functions_nomogram.R`
 
 **Description**: Bespoke functions used in scripts.
 
@@ -138,14 +138,21 @@ These are all run with the single command above. They can be run separately if d
 
 **Output**: various functions.
 
+
 ### `All_ERAS_data_merged.R`
 
 **Description**: Pulls data and merges column names
 
 **Use**: `source("All_ERAS_data_merged.R")` 
 
-1. GOBA pull from Dropbox to show who is in residency.
-2. Binds each of the years of Matching Data together from 2019 to 2015 while creating column names.  
+1. Determine 'Match_Status'
+* From ERAS data anyone who applied for a preliminary position ('Ob-Gyn/Preliminary|1076220P0 (Preliminary)') did not match.  This is clearly an assumption and will get checked below. 
+* GOBA pull from Dropbox to show who is in an OBGYN residency.
+* Cross-reference with Match Lists from various medical schools.  
+
+2. Binds each of the years of Matching Data together from 2020 to 2016 while standardizing column names with parsed case.  Standardize data types.  Age was calculated.  Year columns was added for every year of applicants.  
+* Imputed minimal number of 'Self-Identity', 
+
 3. Removes applicants who applied multiple years by using only unique AAMC identification numbers.  
 4. Filters applicant age to be greater than 26 years old to account for 6-year undergrad and med school programs.  
 
