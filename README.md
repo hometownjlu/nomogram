@@ -65,7 +65,7 @@ Additional data not for analysis:
 22.  `SOAP Match Status`
 23.  `SOAP Reapply Track Applied`
 
-21.  `Track Applied by Applicant`
+21.  `Track Applied by Applicant` - This variable is complete for all years.  
 22.  `Gold Humanism Honor Society`
 23.  `Medical School of Graduation`
 24.  `Medical School Type`
