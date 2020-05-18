@@ -151,7 +151,7 @@ These are all run with the single command above. They can be run separately if d
 * Cross-reference with Match Lists from various medical schools.  
 
 2. Binds each of the years of Matching Data together from 2020 to 2016 while standardizing column names with parsed case.  Standardize data types.  Age was calculated.  Year columns was added for every year of applicants.  
-* Imputed minimal number of 'Self-Identity', 
+* Imputed minimal number of 'Self-Identity', some of the number of poster/peer-reviewed articles.  
 
 3. Removes applicants who applied multiple years by using only unique AAMC identification numbers.  
 4. Filters applicant age to be greater than 26 years old to account for 6-year undergrad and med school programs.  
