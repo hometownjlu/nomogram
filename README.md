@@ -17,7 +17,6 @@ Matching Data pull and preparation
 * [American Board of Obstetrics and Gynecology](http://www.abog.org/)
 * [Blue Ridge Funding of OBGYN Clinical Departments](http://www.brimr.org/NIH_Awards/2019/NIH_Awards_2019.htm)
 
-
 These are scripts to pull and prepare data. This is an active project and scripts will change, so please always update to the latest version.
 
 ## Caution
@@ -34,12 +33,12 @@ It is the end-users responsibility to understand the processes contained in thes
 # Codebook
 A codebook is a technical description of the data that was collected for a particular purpose. It describes how the data are arranged in the computer file or files, what the various numbers and letters mean, and any special instructions on how to use the data properly.
 
-* Predictors under consideration: 2019, 2018
-1. `all_data$white_non_white` - Dichotomoized from ethnicity fields in ERAS data, 2 level categorical
+* Predictors under consideration: 2020, 2019, 2018, 2017
+1. `all_data$white_non_white` - Dichotomoized from ethnicity fields in ERAS data, 2 level categorical: white vs. non-white.  
 2. `all_data$Age` - Age at the time of the match, numerical variable based on Date of Birth POSIXct
 3. `all_data$Year` - Year of participation in the match, 4 level categorical
 4. `all_data$Gender` - Male or Female, 2 level categorical
-5. `all_data$Couples_Match` - PArticipating in the couples match? 2 level categorical
+5. `all_data$Couples_Match` - Participating in the couples match? 2 level categorical
 6. `all_data$US_or_Canadian_Applicant` - Are they a US Senior or an IMG, 2 level categorical 
 7. `all_data$Medical_Education_Interrupted` - Taking breaks, 2 level categorical
 8. `all_data$Alpha_Omega_Alpha` - Membership in AOA, 2 level categorical
@@ -70,9 +69,23 @@ Additional data not for analysis:
 23.  `Medical School of Graduation`
 24.  `Medical School Type`
 25.  `Misdemeanor Conviction`
-26.  `Felony Conviction`
+26.  `Felony Conviction` - Zero variance with no one reporting a history of felonies.  
+27.  `Malpractice_Cases_Pending` - Near zero variance with only one person with a pending malpractice case.  
 
-Packrat is in use to control package versions and a packrat.lock file is posted to my github repository.  This will allow for easier reproducibility.  Packrat records the exact package versions you depend on, and ensures those exact versions are the ones that get installed wherever you go.  We can also control the environment by deploying the project inside a Docker container as needed.  The project was created in R version 3.6.1 and run inside RStudio 1.2.5019.  
+To create a clean data set for analysis then remove:
+* `Date_of_Birth_year`
+* `Self_Identify`
+* `Medical_School_of_Graduation`
+* `Felony_Conviction`
+* `Malpractice_Cases_Pending`
+* `Year_numeric`
+* `SOAP_Match_Status`
+* `Tracks_Considered_by_Program_1`
+* `Year`
+* `USMLE_Step_1_Score` - We will assume that all students passed at a score of >= 194.  
+* `Applicant Name`
+
+We can also control the environment by deploying the project inside a Docker container as needed.  The project was created in R version 3.6.1 and run inside RStudio 1.2.5019.  
 
 ### Events
 Within each year of Matching data there is one event.  This is **Match_Status**.  In the final dataset, every applicant gets his/her/their own row. 
