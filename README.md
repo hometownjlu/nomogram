@@ -169,6 +169,18 @@ These are all run with the single command above. They can be run separately if d
 3. Removes applicants who applied multiple years by using only unique AAMC identification numbers.  
 4. Filters applicant age to be greater than 26 years old to account for 6-year undergrad and med school programs.  
 
+Name Cleaning in order to match by name:
+```r
+  distinct(userid, .keep_all = TRUE) %>%
+  mutate(suffix = humaniformat::suffix(name)) %>%
+  separate(name, into = c("name", "suffix"), sep = "\\s*\\,\\s*", remove = TRUE, convert = TRUE) %>%
+  mutate(period_format = humaniformat::format_period(name)) %>%
+  mutate(first_name = humaniformat::first_name(period_format)) %>%
+  distinct(period_format, .keep_all = TRUE) %>%
+  mutate(middle_name = humaniformat::middle_name(period_format)) %>%
+  mutate(last_name = humaniformat::last_name(period_format))
+```
+
 **Output**: 
 * `Match_Status` (observation): One applicant per row
 * `All_ERAS_data_merged_output_2_1_2020.csv` - fully labelled raw dataset containing all rows.
