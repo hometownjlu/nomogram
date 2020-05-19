@@ -163,8 +163,26 @@ These are all run with the single command above. They can be run separately if d
 * From ERAS data anyone who applied for a preliminary position `('Ob-Gyn/Preliminary|1076220P0 (Preliminary)')` did not match OR **applied to the prelim as a "backup plan".  Prelim applicants not matching is clearly an assumption and will get checked below.**
 
 * Pull to show who is in an OBGYN residency. `this one works.R` and clean data to look for residents based on NPPES taxonomy code and consecutive order in list.  Make sure pull is up to date by running `this one works.R` with the `startID` at the last known number and `startID` plus 1,000.  
+
 * We need to do a match between names of the applicants and `list_of_people_who_all_matched_into_OBGYN`. See code snippet below about using `humaniformat` to standardize the format of names.    
-** Do an inner_join by last_name then by first_name between `this one works.R` list and ERAS data.  
+
+* `All_Years` has 3,904 residents from `this one works.R`
+
+** Do an inner_join by first_name then by middle_name then last_name between `this one works.R` list and ERAS applicant `All_Years` data: 794/3,904
+
+** Do an inner_join by first_name then last_name: 1,599/3,904
+
+** Do an inner_join by first_name, last_name, suffix: 1,571/3,904
+
+
+UCLA - 3 prelims
+Hawaii - 1 prelim
+NY Cornell - 1 prelim
+LIJ - 1 prelim
+Tufts - 1 prelim
+Colorado - 1 prelim
+
+
 ** Do an inner_join by last_name then by first_name then by middle_name
 **When downloading files from Dropbox make sure that the suffix is changed from 
 * Cross-reference with Match Lists from various medical schools.  Lists are stored on Dropbox at `~/Dropbox/`.
@@ -194,7 +212,8 @@ Full Name Cleaning in order to match by name it gets split into the parts of `fi
   mutate_at(vars(period_format, first_name, middle_name, last_name), funs(str_to_title) %>%
   mutate(middle_name = str_remove(middle_name, regex("\\.", ignore_case = TRUE)) %>%
   mutate(suffix = recode(suffix, M.D. = "MD", MD = "MD", D.O. = "DO", DO = "DO", M.D = "MD", Md = "MD", `M. D.` = "MD")) %>%
-  mutate(suffix = str_remove(suffix, regex("\\.", ignore_case = TRUE)))
+  mutate(suffix = str_remove(suffix, regex("\\.", ignore_case = TRUE)) %>%
+  mutate(middlename = impute_na(middlename, type = "value", val = ""), middlename = na_if(middlename, "Na"), middlename = impute_na(middlename, type = "value", val = "")))
 ```
 
 **Output**: 
