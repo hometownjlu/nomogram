@@ -166,6 +166,7 @@ These are all run with the single command above. They can be run separately if d
 * We need to do a match between names of the applicants and `list_of_people_who_all_matched_into_OBGYN`. See code snippet below about using `humaniformat` to standardize the format of names.    
 ** Do an inner_join by last_name then by first_name between `this one works.R` list and ERAS data.  
 ** Do an inner_join by last_name then by first_name then by middle_name
+**When downloading files from Dropbox make sure that the suffix is changed from 
 * Cross-reference with Match Lists from various medical schools.  Lists are stored on Dropbox at `~/Dropbox/`.
 
 2. Binds each of the years of Matching Data together from 2020 to 2016 while standardizing column names with parsed case.  Standardize data types.  Age was calculated from date of birth to the year they applied.  Year columns was added for every year of applicants.  
