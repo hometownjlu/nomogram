@@ -169,7 +169,7 @@ These are all run with the single command above. They can be run separately if d
 3. Removes applicants who applied multiple years by using only unique AAMC identification numbers.  
 4. Filters applicant age to be greater than 26 years old to account for 6-year undergrad and med school programs.  
 
-Name Cleaning in order to match by name:
+Full Name Cleaning in order to match by name it gets split:
 ```r
   distinct(userid, .keep_all = TRUE) %>%
   mutate(suffix = humaniformat::suffix(name)) %>%
@@ -178,7 +178,12 @@ Name Cleaning in order to match by name:
   mutate(first_name = humaniformat::first_name(period_format)) %>%
   distinct(period_format, .keep_all = TRUE) %>%
   mutate(middle_name = humaniformat::middle_name(period_format)) %>%
-  mutate(last_name = humaniformat::last_name(period_format))
+  mutate(last_name = humaniformat::last_name(period_format)) %>%
+  mutate(middle_name = impute_na(middle_name, type = "value", val = "") %>%
+  mutate_at(vars(period_format, first_name, middle_name, last_name), funs(str_to_title) %>%
+  mutate(middle_name = str_remove(middle_name, regex("\\.", ignore_case = TRUE)) %>%
+  mutate(suffix = recode(suffix, M.D. = "MD", MD = "MD", D.O. = "DO", DO = "DO", M.D = "MD", Md = "MD", `M. D.` = "MD")) %>%
+  mutate(suffix = str_remove(suffix, regex("\\.", ignore_case = TRUE)))
 ```
 
 **Output**: 
@@ -187,8 +192,6 @@ Name Cleaning in order to match by name:
 
 ###`Model`
 Supervised learning is where you are the teacher in the model is the student. We are training our model to recognize patterns in the data using flashcards. The flashcards for the attributes of applicants to OB/GYN residency in on the back of the flash card is the matching status. Did the applicant match?  Yes or no.￼￼￼￼ Imagine you hand the model a stack of flashcards and we train the model to recognize this pattern future in the wild/with new data that it has never seen before.  
-
-Please contact me with any questions or concerns: tyler (dot) muffly (at) dhha (dot) org.  
 
 ###Docker for reproducibilty
 Docker allows for stable versions of packages and a similar environment for all authors to work in.  The files to use this docker image are available in `rstudio_v3.tar`.  Thanks to Maksim Boyko.  
@@ -269,3 +272,6 @@ I ultimately memorize it as:```r (outcome — belief) ^ 2 + ... = Brier Score```
 [![Brier Score](https://miro.medium.com/max/2608/1*OfJQVKwGbxiUtmpOSxHS5g.png)](https://miro.medium.com/max/2608/1*OfJQVKwGbxiUtmpOSxHS5g.png)
 
 A lower score is better. The more wrong a forecast is, the higher the Brier Score will be. We want to watch the scores of any forecast source (person, machine, panel, etc) to progressively shrink over time and show improvement of our methods.  A perfect score is 0. A total bust is 2.
+
+
+Please contact me with any questions or concerns: tyler (dot) muffly (at) dhha (dot) org.  
