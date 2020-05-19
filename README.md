@@ -143,7 +143,7 @@ These are all run with the single command above. They can be run separately if d
 
 **Description**: Bespoke functions used in scripts.
 
-**Use**: `source("Additional_functioins_nomogram.R")` 
+**Use**: `source("Additional_functions_nomogram.R")` 
 
 1. Library installation.  Sets relative folder paths.  
 2. Creation of directory structure.
@@ -159,18 +159,28 @@ These are all run with the single command above. They can be run separately if d
 **Use**: `source("All_ERAS_data_merged.R")` 
 
 1. Determine 'Match_Status'
-* From ERAS data anyone who applied for a preliminary position ('Ob-Gyn/Preliminary|1076220P0 (Preliminary)') did not match.  This is clearly an assumption and will get checked below. 
-* GOBA pull from Dropbox to show who is in an OBGYN residency.
-* Cross-reference with Match Lists from various medical schools.  
+* Applicants can apply to prelim or categorical positions in the ERAS match.  This is defined as the `Tracks_Applied_by_Applicant` variable.  Christine was really helpful in understanding how the ERAS data is used in practice. 
+* From ERAS data anyone who applied for a preliminary position `('Ob-Gyn/Preliminary|1076220P0 (Preliminary)')` did not match OR **applied to the prelim as a "backup plan".  Prelim applicants not matching is clearly an assumption and will get checked below.**
 
-2. Binds each of the years of Matching Data together from 2020 to 2016 while standardizing column names with parsed case.  Standardize data types.  Age was calculated.  Year columns was added for every year of applicants.  
+* Pull to show who is in an OBGYN residency. `this one works.R` and clean data to look for residents based on NPPES taxonomy code and consecutive order in list.  Make sure pull is up to date by running `this one works.R` with the `startID` at the last known number and `startID` plus 1,000.  
+* We need to do a match between names of the applicants and `list_of_people_who_all_matched_into_OBGYN`. See code snippet below about using `humaniformat` to standardize the format of names.    
+** Do an inner_join by last_name then by first_name between `this one works.R` list and ERAS data.  
+** Do an inner_join by last_name then by first_name then by middle_name
+* Cross-reference with Match Lists from various medical schools.  Lists are stored on Dropbox at `~/Dropbox/`.
+
+2. Binds each of the years of Matching Data together from 2020 to 2016 while standardizing column names with parsed case.  Standardize data types.  Age was calculated from date of birth to the year they applied.  Year columns was added for every year of applicants.  
 * Imputed minimal number of 'Self-Identity', some of the number of poster/peer-reviewed articles.  
 
 3. Removes applicants who applied multiple years by using only unique AAMC identification numbers.  
 4. Filters applicant age to be greater than 26 years old to account for 6-year undergrad and med school programs.  
 
-Full Name Cleaning in order to match by name it gets split:
+Full Name Cleaning in order to match by name it gets split into the parts of `first_name`, `middle_name`, `last_name`, and `suffix` using the awesome package `humaniformat`:
 ```r
+  install.packages("humaniformat")
+  library(humaniformat)
+  library(dplyr)
+  library(tidyr)
+  library(stringr)
   distinct(userid, .keep_all = TRUE) %>%
   mutate(suffix = humaniformat::suffix(name)) %>%
   separate(name, into = c("name", "suffix"), sep = "\\s*\\,\\s*", remove = TRUE, convert = TRUE) %>%
@@ -199,11 +209,11 @@ Docker allows for stable versions of packages and a similar environment for all 
 In terminal: 
 
 Make sure docker desktop is running.
-cd ~/Dropbox/Nomogram/docker/rstudio_v3
+```r cd ~/Dropbox/Nomogram/docker/rstudio_v3```
 At this point you should be in the same directory as the docker-compose.yaml file.  
-docker-compose up -d
+```r docker-compose up -d```
 The result should eventually be: `Creating rstudio_v3_rstudio_1 ... done`
-Open browser at http://localhost:8787 with user 'rstudio' and password 'password'
+Open browser at ```r http://localhost:8787``` with user 'rstudio' and password 'password'
 
 The problem is that the docker image is not linked to the Dropbox directory where I keep the files so I have to download it from github every time.  Rstudio -> File -> New Project -> Check out version -> "https://github.com/mufflyt/nomogram.git".  Please note most of the work I am doing currently is on the `dev_1` branch.  Click on `Git` and then select the branch: `dev_01`.
 
@@ -211,6 +221,8 @@ The problem is that the docker image is not linked to the Dropbox directory wher
 
 [![Project flow Matching Prediction](https://github.com/mufflyt/nomogram/blob/dev_0.1/project%20data%20flow%20Muffly%20et%20al.jpeg?raw=true)](https://github.com/mufflyt/nomogram/blob/dev_0.1/project%20data%20flow%20Muffly%20et%20al.jpeg?raw=true)
 
+
+# Man vs. Machine: Comparing Clerkship Directors to the Model
 * [REDCAP survey to clerkship directors](https://is.gd/predictingobgynmatching)
 UC Denver REDCAP was used due to ease of use.  
 
