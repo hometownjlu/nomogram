@@ -308,3 +308,13 @@ A lower score is better. The more wrong a forecast is, the higher the Brier Scor
 
 
 Please contact me with any questions or concerns: tyler (dot) muffly (at) dhha (dot) org.  
+
+Questions:
+In GOBA, what year did each person match? - Could decrease the number of people in applicant side trying to match to.  
+In GOBA, which residency did each person match? - Could do with a join on state, city to residency programs.  
+
+Determining match_status - Anyone who applied prelim did not match into a categorical position is a fair assumption.  
+
+We do not have as much overlap between applicants and obgyn residents because not everyone applied to CU OBGYN residency.  
+
+Filter out fellows if they have a lower userid number?
