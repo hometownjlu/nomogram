@@ -221,6 +221,20 @@ Full Name Cleaning in order to match by name it gets split into the parts of `fi
 * `Match_Status` (observation): One applicant per row
 * `All_ERAS_data_merged_output_2_1_2020.csv` - fully labelled raw dataset containing all rows.
 
+
+### `google_search.R`
+**Description**: Automatic search of Google for the residency program location of OBGYN residents.  Takes data from exploratory `residents` dataframe and runs it through Google to see if there is a hit for the program because they have duplicate rows.  The data is created as a URL that is fed to google based on this tutorial: https://medium.com/@curiositybits/automating-the-google-search-for-the-web-presence-of-8000-organizations-54775e9f6097.  The URL is created with "https://www.google.com/search?q="name[i], suffix[i], city[i], state[i], ProgramName[i]".  It may be giving Google too much information but seems to work well.  Once the data is output then we will need to go through each person by hand to see what is the most promising link.  
+
+There are duplicate rows because there are multiple programs in Philadelphia, PA or Chicago, IL.  The code could be expanded to search Twitter and Facebook as well.  At the bottom of `google_search.R` there is some code from the original example that can be used this way. 
+
+Create clickable url links in excel by highlighting the column called `website` and go to style box and select hyperlink.  
+
+**Use**: `source("google_search.R")` 
+
+**Output**: 
+* The output will be an RDS file called `google_search_results.R` with a "underscore 2" suffix on the end to denote the output of results.  
+
+
 ###`Model`
 Supervised learning is where you are the teacher in the model is the student. We are training our model to recognize patterns in the data using flashcards. The flashcards for the attributes of applicants to OB/GYN residency in on the back of the flash card is the matching status. Did the applicant match?  Yes or no.￼￼￼￼ Imagine you hand the model a stack of flashcards and we train the model to recognize this pattern future in the wild/with new data that it has never seen before.  
 
@@ -314,7 +328,7 @@ Please contact me with any questions or concerns: tyler (dot) muffly (at) dhha (
 
 Questions:
 In GOBA, what year did each person match? - Could decrease the number of people in applicant side trying to match to.  
-In GOBA, which residency did each person match? - Could do with a join on state, city to residency programs.  
+In GOBA, which residency did each person match? - Could do with a join on state, city to residency programs.  For duplicate matches like matching to ten residency programs in New York, NY then we can google search for their name and each residency program name.  
 
 Determining match_status - Anyone who applied prelim did not match into a categorical position is a fair assumption.  
 
