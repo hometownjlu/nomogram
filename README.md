@@ -242,6 +242,9 @@ The problem is that the docker image is not linked to the Dropbox directory wher
 
 [![Project flow Matching Prediction](https://github.com/mufflyt/nomogram/blob/dev_0.1/project%20data%20flow%20Muffly%20et%20al.jpeg?raw=true)](https://github.com/mufflyt/nomogram/blob/dev_0.1/project%20data%20flow%20Muffly%20et%20al.jpeg?raw=true)
 
+* We can identify residents by their taxonomy code in the NPI database: `Student Health Care (390200000X`.  
+* [AAMC Statement on Residents Needing NPI Numbers](https://www.aamc.org/professional-development/affinity-groups/gir/viewpoint-provider-identifiers)
+
 
 # Man vs. Machine: Comparing Clerkship Directors to the Model
 * [REDCAP survey to clerkship directors](https://is.gd/predictingobgynmatching)
@@ -317,4 +320,4 @@ Determining match_status - Anyone who applied prelim did not match into a catego
 
 We do not have as much overlap between applicants and obgyn residents because not everyone applied to CU OBGYN residency.  
 
-Filter out fellows if they have a lower userid number?
+Filter out fellows because they will have a lower userid number?
