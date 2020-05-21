@@ -304,6 +304,32 @@ grid.arrange(gTree(children=venn.plot), top="Applicants and Residents")
 **Output**: 
 * The output will be an RDS file called `google_search_results.R` with a "underscore 2" suffix on the end to denote the output of results.  
 
+* Geocoding of location.  
+```r
+# Google geocoding of FPMRS physician locations ----
+#Google map API, https://console.cloud.google.com/google/maps-apis/overview?pli=1
+
+#Allows us to map the residency programs to street address, city, state
+library(ggmap)
+gc(verbose = FALSE)
+ggmap::register_google(key = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
+ggmap::ggmap_show_api_key()
+ggmap::has_google_key()
+colnames(full_list)
+
+View(full_list$place_city_state)
+dim(full_list)
+sum(is.na(full_list$place_city_state))
+
+locations_df <- ggmap::mutate_geocode(data = full_list, location = place_city_state, output="more", source="google")
+locations <- tibble::as_tibble(locations_df) %>%
+   tidyr::separate(place_city_state, into = c("city", "state"), sep = "\\s*\\,\\s*", convert = TRUE) %>%
+   dplyr::mutate(state = statecode(state, output_type = "name"))
+ colnames(locations)
+ write_rds(locations, "geocoded_file_2.rds")
+
+head(locations)
+```
 
 ###`Model`
 Supervised learning is where you are the teacher in the model is the student. We are training our model to recognize patterns in the data using flashcards. The flashcards for the attributes of applicants to OB/GYN residency in on the back of the flash card is the matching status. Did the applicant match?  Yes or no.￼￼￼￼ Imagine you hand the model a stack of flashcards and we train the model to recognize this pattern future in the wild/with new data that it has never seen before.  
