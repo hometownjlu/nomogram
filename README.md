@@ -279,7 +279,25 @@ There are duplicate rows because there are multiple programs in Philadelphia, PA
 Create clickable url links in excel by highlighting the column called `website` and go to style box and select hyperlink.  
 
 Our goal is to create a Venn diagram of who applied to CU OBGYN residency program and who is an OBGYN resident.  
+```r
 
+set.seed(12)
+set1 <-  applicants 
+set2 <- residents
+colors <- c("#6b7fff", "#c3db0f")
+
+require(gridExtra)
+grid.newpage()
+venn.plot <- draw.pairwise.venn(length(set1), length(set2), length(intersect(set1,set2)), 
+				c("Applicants", "Residents"), 
+				fill =  c("red", "blue"), 
+				cat.pos = c(0, 0), 
+				cat.dist = rep(0.025, 2),
+				scaled = FALSE, );
+
+
+grid.arrange(gTree(children=venn.plot), top="Applicants and Residents")
+```
 
 **Use**: `source("google_search.R")` 
 
