@@ -313,6 +313,16 @@ for (i in dim(d)[1]:1) {
  gc() #take out the garbage
 ```
 
+Exclusions
+```r
+mutate(calculation_1 = case_when(
+    str_detect(Website, "onc") |  str_detect(Website, "anesthesia") | str_detect(Website, "internal") | str_detect(Website, "npiprofile") |  str_detect(Website, "infectious") | str_detect(Website, "emergency") | str_detect(Website, "eye") | str_detect(Website, "zola") | str_detect(Website, "psych") | str_detect(Website, "cardiology") | str_detect(Website, "dental") | str_detect(Website, "urology") | str_detect(Website, "cardiology") | str_detect(Website, "npino") | str_detect(Website, "pediatrics") | str_detect(Website, "annualmeeting.") | str_detect(Website, "caredash") | str_detect(Website, "nursing") | str_detect(Website, "apply") | str_detect(Website, "fmigs") ~ "unlikely to be obgyn",
+    TRUE ~ "more likely to be obgyn site, non-obgyn terms ruled out")) %>%
+    filter(calculation_1 != "unlikely to be obgyn")
+```
+
+#Can we match url of program to a list of URLs for obgyn residencies?
+
 There are duplicate rows because there are multiple programs in Philadelphia, PA or Chicago, IL.  The code could be expanded to search Twitter and Facebook as well.  At the bottom of `google_search.R` there is some code from the original example that can be used this way. 
 
 Create clickable url links in excel by highlighting the column called `website` and go to style box and select hyperlink.  
