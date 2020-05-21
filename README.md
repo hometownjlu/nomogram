@@ -91,7 +91,7 @@ We can also control the environment by deploying the project inside a Docker con
 Within each year of Matching data there is one event.  This is **Match_Status**.  In the final dataset, every applicant gets his/her/their own row. 
 
 ### Applicant Identification Number
-AAMC ID number is a specific number that every applicant uses to apply to residency, fellowship, etc. (e.g. 12345678)
+AAMC ID number is a specific number that every applicant uses to apply to residency, fellowship, etc. (e.g. 12345678).  Download the data from ERAS:  https://www.dropbox.com/s/wfv7oqpdhdzjlsr/AAMC%20download.mov?dl=0.  
 
 ## Installation and use
 
@@ -164,7 +164,42 @@ These are all run with the single command above. They can be run separately if d
 
 Determining `Match_status` - Anyone who applied prelim did not match into a categorical position is a fair assumption.  But in case they applied to both with a prelim as a backup then we need to do something different.  
 
-In GOBA, what year did each person match? - Could decrease the number of people in applicant side trying to match to.  Look at year graduated from medical school in the NPCd and that will tell you what year they started residency.  Alos all the years should be consecutive.  
+In GOBA, what year did each person match? - Could decrease the number of people in applicant side trying to match to.  Look at year graduated from medical school in the PCND (Physician Compare National Download) and that will tell you what year they started residency.  Alos all the years should be consecutive.  
+
+```r
+#Physician Compare ----
+#https://data.medicare.gov/Physician-Compare/Physician-Compare-National-Downloadable-File/mj5m-pzi6
+#The API is nice because you do not have to store a huge file or take the time to download it.  
+
+PCND1 <- 
+  #read.csv("/Volumes/Projects/Pharma_Influence/Data/Physician_Compare/Physician_Compare_National_Downloadable_File.csv") %>%
+   read.socrata(
+     "https://data.medicare.gov/resource/mj5m-pzi6.json",
+     app_token = "vZUBqP0g0i4Lr3vXOqNxCjzyL",
+     email     = "tyler.muffly@dhha.org",
+     password  = "*************"
+  # ) %>%
+  distinct(NPI, .keep_all = TRUE) %>%
+  tidyr::drop_na(NPI) %>%
+  dplyr::select(NPI, lst_nm, frst_nm, mid_nm, Cred, gndr, Med_sch, Grd_yr, pri_spec, sec_spec_1, sec_spec_2, sec_spec_3, sec_spec_4, adr_ln_1, cty, st, zip) %>%
+  dplyr::rename(State = st, City = cty, Zip.Code = zip, First.Name = frst_nm, Last.Name = lst_nm, Middle.Name = mid_nm, Primary.specialty = pri_spec, Secondary.specialty.1 = sec_spec_1, Secondary.specialty.2 = sec_spec_2, Secondary.specialty.3 = sec_spec_3, Secondary.specialty.4 = sec_spec_4, Line.1.Street.Address = adr_ln_1, Gender = gndr, Medical.School.Name = Med_sch, Graduation.year = Grd_yr) %>%
+  dplyr::filter(State %nin% c("AP","AE", "AS", "FM", "GU", "MH","MP", "PR","PW","UM","VI", "ZZ")) %>%
+  dplyr::filter(Primary.specialty %in% c("GYNECOLOGICAL ONCOLOGY", "OBSTETRICS/GYNECOLOGY") | (Secondary.specialty.1 %in% c("GYNECOLOGICAL ONCOLOGY", "OBSTETRICS/GYNECOLOGY")) | (Secondary.specialty.2 %in% c("GYNECOLOGICAL ONCOLOGY", "OBSTETRICS/GYNECOLOGY")) | (Secondary.specialty.3 %in% c("GYNECOLOGICAL ONCOLOGY", "OBSTETRICS/GYNECOLOGY")) | (Secondary.specialty.4 %in% c("GYNECOLOGICAL ONCOLOGY", "OBSTETRICS/GYNECOLOGY"))) %>%
+  #substr(x = Zip.Code, start =1, stop =5) %>%
+  dplyr::arrange (Last.Name) %>%
+  #tolower(c(Last.Name, First.Name, Middle.Name, Line.1.Street.Address, City, State)) %>%
+  distinct(NPI, .keep_all = TRUE) %>%
+  dplyr::mutate_at(vars(Last.Name, First.Name, Middle.Name, Line.1.Street.Address), funs(str_to_title)) %>%
+  dplyr::mutate(Middle.Name = impute_na(Middle.Name, type = "value", val = "")) %>%
+  dplyr::mutate_at(vars(Last.Name, First.Name, Middle.Name), funs(str_clean)) %>%
+  tidyr::unite(full.name.1, First.Name, Middle.Name, Last.Name, sep = " ", remove = FALSE, na.rm = FALSE) %>%
+  tidyr::unite(full.name.2, First.Name, Middle.Name, Last.Name, State, sep = " ", remove = FALSE, na.rm = FALSE) %>%
+  tidyr::unite(full.name.3, Line.1.Street.Address, State, Last.Name, sep = " ", remove = FALSE, na.rm = FALSE) %>%
+  dplyr::mutate(Line.1.Street.Address = str_to_title(Line.1.Street.Address)) %>%
+  tidyr::unite(full.name.5, Line.1.Street.Address, State, Last.Name, sep = " ", remove = FALSE, na.rm = FALSE) %>%
+  readr::write_csv("Physician_Compare_National_Downloadable_File2.csv")  
+
+```
 
 In GOBA, which residency did each person match? - I did a join on state, city to residency programs and had about a third with exact name matches.  For duplicate matches like matching to ten residency programs in New York, NY then we can google search for their name and each residency program name.  This info needs to be put in by hand and then fed back into the Match_Status variable.  
 
