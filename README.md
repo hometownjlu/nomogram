@@ -228,7 +228,13 @@ Full Name Cleaning in order to match by name it gets split into the parts of `fi
 
 
 ### `google_search.R`
-**Description**: Automatic search of Google for the residency program location of OBGYN residents.  Takes data from exploratory `residents` dataframe and runs it through Google to see if there is a hit for the program because they have duplicate rows.  The data is created as a URL that is fed to google based on this tutorial: https://medium.com/@curiositybits/automating-the-google-search-for-the-web-presence-of-8000-organizations-54775e9f6097.  The URL is created with "https://www.google.com/search?q="name[i], suffix[i], city[i], state[i], ProgramName[i]".  It may be giving Google too much information but seems to work well.  Once the data is output then we will need to go through each person by hand to see what is the most promising link.  I used **https://selectorgadget.com/** for identifying the CSS codes to scrape.  Of note, selector gadget is a Chrome plugin.  For the cleaning the URL `exploratory::url_domain` we are going to need exploratory functions:
+**Description**: Automatic search of Google for the residency program location of OBGYN residents.  Takes data from exploratory `residents` dataframe and runs it through Google to see if there is a hit for the program because they have duplicate rows.  The data is created as a URL that is fed to google based on this tutorial: https://medium.com/@curiositybits/automating-the-google-search-for-the-web-presence-of-8000-organizations-54775e9f6097.  The URL is created with "https://www.google.com/search?q="name[i], suffix[i], city[i], state[i], ProgramName[i]".  It may be giving Google too much information but seems to work well.  Once the data is output then we will need to go through each person by hand to see what is the most promising link.  I used **https://selectorgadget.com/** for identifying the CSS codes to scrape.  Of note, selector gadget is a Chrome plugin.  
+
+[![SelectorGadget](https://blog-c7ff.kxcdn.com/blog/wp-content/uploads/2017/01/myprobbb.jpg)](https://blog-c7ff.kxcdn.com/blog/wp-content/uploads/2017/01/myprobbb.jpg)
+
+selectorgadget.JPG
+
+For the cleaning the URL `exploratory::url_domain` we are going to need exploratory functions:
 
 ```r
 # Installing
