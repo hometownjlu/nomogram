@@ -318,16 +318,49 @@ Exclusions
 mutate(calculation_1 = case_when(
     str_detect(Website, "onc") |  str_detect(Website, "anesthesia") | str_detect(Website, "internal") | str_detect(Website, "npiprofile") |  str_detect(Website, "infectious") | str_detect(Website, "emergency") | str_detect(Website, "eye") | str_detect(Website, "zola") | str_detect(Website, "psych") | str_detect(Website, "cardiology") | str_detect(Website, "dental") | str_detect(Website, "urology") | str_detect(Website, "cardiology") | str_detect(Website, "npino") | str_detect(Website, "pediatrics") | str_detect(Website, "annualmeeting.") | str_detect(Website, "caredash") | str_detect(Website, "nursing") | str_detect(Website, "apply") | str_detect(Website, "fmigs") ~ "unlikely to be obgyn",
     TRUE ~ "more likely to be obgyn site, non-obgyn terms ruled out")) %>%
-    filter(calculation_1 != "unlikely to be obgyn")
+    filter(calculation_1 != "unlikely to be obgyn") %>%
+    mutate(from_domain = urltools::domain(Website)) %>%
+  mutate(from_domain = str_remove(from_domain, regex("^www\\.", ignore_case = TRUE))) %>%
+  rename(url_domain = from_domain) %>%
+  readr::write_rds("~/Dropbox/Nomogram/nomogram/results/google_search_results_2.rds", compress = "none") 
 ```
 
-#Can we match url of program to a list of URLs for obgyn residencies?
+#Can we match url of program to a list of e-mail suffixes for obgyn residency coordinators?
+Match email suffix from residency coordinator address to google searched url.  The residency coordinator e-mail for UMKC is "xyz@umkc.edu". So we search "tyler muffly md" using google_search.R then it returns a url where the name is found.  Let's say that url is www.umkc.edu/obgyn_residency you would then get extracted url_domain of "umkc.edu".  This way we can identify residency program URLs by residency e-mail addresses.  
+https://blog.exploratory.io/access-log-data-analysis-part-2-understanding-customer-behavior-on-your-web-site-4bea68d4d1e1
 
 There are duplicate rows because there are multiple programs in Philadelphia, PA or Chicago, IL.  The code could be expanded to search Twitter and Facebook as well.  At the bottom of `google_search.R` there is some code from the original example that can be used this way. 
 
+## Create list of residency programs:
+```r
+# Steps to produce ACGME_OBGYN_Programs_ACGME_OBGYN_Programs_2
+`ACGME_OBGYN_Programs_ACGME_OBGYN_Programs_2` <- exploratory::read_delim_file("/Users/tylermuffly/Downloads/ACGME_OBGYN Programs - ACGME_OBGYN Programs (2).csv" , ",", quote = "\"", skip = 0 , col_names = TRUE , na = c('','NA') , locale=readr::locale(encoding = "UTF-8", decimal_mark = ".", grouping_mark = "," ), trim_ws = TRUE , progress = FALSE) %>%
+  readr::type_convert() %>%
+  exploratory::clean_data_frame() %>%
+  select(ProgramNumber, ProgramName, `Clerkship Director Email`, `Clerkship Coordinator email`, email, email_suffix, city, `A state`, email_name) %>%
+  rename(state = `A state`, residency_program_email_suffix = email_suffix) %>%
+  mutate(merged_e_mails = coalesce(`Clerkship Coordinator email`, `Clerkship Director Email`, email, email_name)) %>%
+  distinct(merged_e_mails, .keep_all = TRUE) %>%
+  mutate(merged_e_mails_domain = url_domain(merged_e_mails)) %>%
+  filter(merged_e_mails_domain %nin% c("gmail.com", "aol.com")) %>%
+  distinct(merged_e_mails_domain, .keep_all = TRUE)
+```
+
+## Match the google_search_result url domain to the e-mail domain of the coordinator, PD, etc.  
+```r
+# Steps to produce the output
+ exploratory::read_rds_file("/Users/tylermuffly/Dropbox/Nomogram/nomogram/results/google_search_results_2.rds") %>%
+  readr::type_convert() %>%
+  exploratory::clean_data_frame() %>%
+  mutate(from_domain = urltools::domain(Website)) %>%
+  mutate(from_domain = str_remove(from_domain, regex("^www\\.", ignore_case = TRUE))) %>%
+  rename(url_domain = from_domain) %>%
+  inner_join(ACGME_OBGYN_Programs_ACGME_OBGYN_Programs_2, by = c("url_domain" = "merged_e_mails_domain"), ignorecase=TRUE)
+```
+
 Create clickable url links in excel by highlighting the column called `website` and go to style box and select hyperlink.  
 
-Our goal is to create a Venn diagram of who applied to CU OBGYN residency program and who is an OBGYN resident.  
+## Our goal is to create a Venn diagram of who applied to CU OBGYN residency program and who is an OBGYN resident.  
 ```r
 
 set.seed(12)
