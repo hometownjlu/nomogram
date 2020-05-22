@@ -417,23 +417,22 @@ head(matchNames)
 
 
 ####Start the Venn Diagram here.  
-set.seed(12)
-set1 <-  applicants 
-set2 <- residents
-colors <- c("#6b7fff", "#c3db0f")
+# Venn diagram with dist<=1
+library(VennDiagram)
 
 require(gridExtra)
 grid.newpage()
-venn.plot <- draw.pairwise.venn(length(set1), length(set2), length(intersect(set1,set2)), 
-				c("Applicants", "Residents"), 
-				fill =  c("red", "blue"), 
-				cat.pos = c(0, 0), 
-				cat.dist = rep(0.025, 2),
-				scaled = FALSE, );
 
+venn.plot <- draw.pairwise.venn(dim(set1)[1], dim(set1)[1], dim(matchNames[matchNames$dist<=1,])[1],
+c("Applicants", "Residents"),
+fill = c("red", "blue"),
+cat.pos = c(0, 0),
+cat.dist = rep(0.025, 2),
+scaled = FALSE, );
 
 grid.arrange(gTree(children=venn.plot), top="Applicants and Residents")
 ```
+Thanks to Sneha Gupta for her help with this code.  
 
 **Use**: `source("google_search.R")` 
 
