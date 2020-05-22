@@ -164,40 +164,35 @@ These are all run with the single command above. They can be run separately if d
 
 Determining `Match_status` - Anyone who applied prelim did not match into a categorical position is a fair assumption.  But in case they applied to both with a prelim as a backup then we need to do something different.  
 
-In GOBA, what year did each person match? - Could decrease the number of people in applicant side trying to match to.  Look at year graduated from medical school in the PCND (Physician Compare National Download) and that will tell you what year they started residency.  Alos all the years should be consecutive.  
+In GOBA, what year did each person match? - Could decrease the number of people in applicant side trying to match to.  Look at year graduated from medical school in the NPPES and that will tell you what year they started residency.  Alos all the years should be consecutive.  
 
 ```r
-#Physician Compare ----
-#https://data.medicare.gov/Physician-Compare/Physician-Compare-National-Downloadable-File/mj5m-pzi6
-#The API is nice because you do not have to store a huge file or take the time to download it.  
+#NPPES ----
+NPPES1 <- read.csv("/Volumes/Projects/Pharma_Influence/Data/NPPES_Data_Dissemination_April_2020/npidata_pfile_20050523-20200412.csv") #This takes 20 minutes to load.  Christ have mercy!  There is no RSocrata API so I downloaded the file.  
+  Sys.time()
 
-PCND1 <- 
-  #read.csv("/Volumes/Projects/Pharma_Influence/Data/Physician_Compare/Physician_Compare_National_Downloadable_File.csv") %>%
-   read.socrata(
-     "https://data.medicare.gov/resource/mj5m-pzi6.json",
-     app_token = "vZUBqP0g0i4Lr3vXOqNxCjzyL",
-     email     = "tyler.muffly@dhha.org",
-     password  = "*************"
-  # ) %>%
+NPPES <- NPPES1 %>%
+dplyr::filter(Entity.Type.Code == "1") %>%  #Remove all hospitals and nursing homes
+dplyr::filter(Provider.Business.Practice.Location.Address.State.Name %nin% c("ZZ", "AS", "FM", "GU", "MH", "MP", "PW", "VI")) %>% #Take out the places are not in the United States
   distinct(NPI, .keep_all = TRUE) %>%
-  tidyr::drop_na(NPI) %>%
-  dplyr::select(NPI, lst_nm, frst_nm, mid_nm, Cred, gndr, Med_sch, Grd_yr, pri_spec, sec_spec_1, sec_spec_2, sec_spec_3, sec_spec_4, adr_ln_1, cty, st, zip) %>%
-  dplyr::rename(State = st, City = cty, Zip.Code = zip, First.Name = frst_nm, Last.Name = lst_nm, Middle.Name = mid_nm, Primary.specialty = pri_spec, Secondary.specialty.1 = sec_spec_1, Secondary.specialty.2 = sec_spec_2, Secondary.specialty.3 = sec_spec_3, Secondary.specialty.4 = sec_spec_4, Line.1.Street.Address = adr_ln_1, Gender = gndr, Medical.School.Name = Med_sch, Graduation.year = Grd_yr) %>%
-  dplyr::filter(State %nin% c("AP","AE", "AS", "FM", "GU", "MH","MP", "PR","PW","UM","VI", "ZZ")) %>%
-  dplyr::filter(Primary.specialty %in% c("GYNECOLOGICAL ONCOLOGY", "OBSTETRICS/GYNECOLOGY") | (Secondary.specialty.1 %in% c("GYNECOLOGICAL ONCOLOGY", "OBSTETRICS/GYNECOLOGY")) | (Secondary.specialty.2 %in% c("GYNECOLOGICAL ONCOLOGY", "OBSTETRICS/GYNECOLOGY")) | (Secondary.specialty.3 %in% c("GYNECOLOGICAL ONCOLOGY", "OBSTETRICS/GYNECOLOGY")) | (Secondary.specialty.4 %in% c("GYNECOLOGICAL ONCOLOGY", "OBSTETRICS/GYNECOLOGY"))) %>%
-  #substr(x = Zip.Code, start =1, stop =5) %>%
-  dplyr::arrange (Last.Name) %>%
-  #tolower(c(Last.Name, First.Name, Middle.Name, Line.1.Street.Address, City, State)) %>%
+  mutate(Provider.Credential.Text = str_remove_all(Provider.Credential.Text, "[[:punct:]]+")) %>%
+  mutate(Provider.Credential.Text = exploratory::str_clean(Provider.Credential.Text)) %>%
+  filter(Provider.Business.Practice.Location.Address.Country.Code..If.outside.U.S.. == "US" & Provider.Business.Mailing.Address.Country.Code..If.outside.U.S.. == "US") %>%
+  mutate_at(vars(Provider.Last.Name..Legal.Name., Provider.First.Name, Provider.Middle.Name, Provider.Other.Last.Name, Provider.Other.First.Name, Provider.Other.Middle.Name), funs(str_to_title)) %>%
+  tidyr::drop_na(Provider.Last.Name..Legal.Name., Provider.First.Name) %>%
+  mutate(Provider.Middle.Name = impute_na(Provider.Middle.Name, type = "value", val = ""), Provider.Middle.Name = exploratory::str_clean(Provider.Middle.Name)) %>%
+  mutate(Provider.Business.Mailing.Address.State.Name = str_remove_all(Provider.Business.Mailing.Address.State.Name, "[[:punct:]]+")) %>%
+  filter(Provider.Business.Mailing.Address.State.Name %in% c("AK", "AR", "AL", "AZ", "CA", "CO", "CT", "DC", "DE", "FL", "GA", "GU", "HI", "IA", "ID", "IL", "IN", "KS", "KY", "LA", "MA", "MD", "ME", "MI", "MN", "MO", "MS", "MT", "NC", "ND", "NE", "NH", "NJ", "NV", "NY", "OH", "NM", "OK", "OR", "PA", "PR", "RI", "SC", "SD", "TN", "TX", "UT", "VA", "VT", "WA", "WI", "WV")) %>%
+  filter(Provider.Business.Practice.Location.Address.State.Name %in% c("AK", "AR", "AL", "AZ", "CA", "CO", "CT", "DC", "DE", "FL", "GA", "GU", "HI", "IA", "ID", "IL", "IN", "KS", "KY", "LA", "MA", "MD", "ME", "MI", "MN", "MO", "MS", "MT", "NC", "ND", "NE", "NH", "NJ", "NV", "NY", "OH", "NM", "OK", "OR", "PA", "PR", "RI", "SC", "SD", "TN", "TX", "UT", "VA", "VT", "WA", "WI", "WV")) %>%
   distinct(NPI, .keep_all = TRUE) %>%
-  dplyr::mutate_at(vars(Last.Name, First.Name, Middle.Name, Line.1.Street.Address), funs(str_to_title)) %>%
-  dplyr::mutate(Middle.Name = impute_na(Middle.Name, type = "value", val = "")) %>%
-  dplyr::mutate_at(vars(Last.Name, First.Name, Middle.Name), funs(str_clean)) %>%
-  tidyr::unite(full.name.1, First.Name, Middle.Name, Last.Name, sep = " ", remove = FALSE, na.rm = FALSE) %>%
-  tidyr::unite(full.name.2, First.Name, Middle.Name, Last.Name, State, sep = " ", remove = FALSE, na.rm = FALSE) %>%
-  tidyr::unite(full.name.3, Line.1.Street.Address, State, Last.Name, sep = " ", remove = FALSE, na.rm = FALSE) %>%
-  dplyr::mutate(Line.1.Street.Address = str_to_title(Line.1.Street.Address)) %>%
-  tidyr::unite(full.name.5, Line.1.Street.Address, State, Last.Name, sep = " ", remove = FALSE, na.rm = FALSE) %>%
-  readr::write_csv("Physician_Compare_National_Downloadable_File2.csv")  
+  filter(Provider.Credential.Text %in% c("MD", "DO")) %>%
+  mutate(Provider.Name.Suffix.Text = impute_na(Provider.Name.Suffix.Text, type = "value", val = ""), Provider.Other.Last.Name = impute_na(Provider.Other.Last.Name, type = "value", val = ""), Provider.Other.First.Name = impute_na(Provider.Other.First.Name, type = "value", val = ""), Provider.Other.Middle.Name = impute_na(Provider.Other.Middle.Name, type = "value", val = "")) %>%
+  unite(nppes.full.name.1, Provider.First.Name, Provider.Middle.Name, Provider.Last.Name..Legal.Name., sep = " ", remove = FALSE, na.rm = FALSE) %>%
+  unite(nppes.full.name.2, Provider.First.Name, Provider.Middle.Name, Provider.Last.Name..Legal.Name., Provider.Name.Suffix.Text, sep = " ", remove = FALSE, na.rm = FALSE) %>%
+  unite(nppes.full.name.3, Provider.Other.First.Name, Provider.Other.Middle.Name, Provider.Other.Last.Name, sep = " ", remove = FALSE, na.rm = FALSE) %>%
+  unite(nppes.full.name.state, Provider.First.Name, Provider.Middle.Name, Provider.Last.Name..Legal.Name., Provider.Business.Mailing.Address.State.Name, sep = " ", remove = FALSE, na.rm = FALSE) %>%
+  mutate(nppes.full.name.state = str_clean(nppes.full.name.state))%>%
+  readr::write_csv("/Volumes/Projects/Pharma_Influence/Data/NPPES_Data_Dissemination_April_2020/npidata_pfile_20050523-20200412_2.csv")
 
 ```
 
