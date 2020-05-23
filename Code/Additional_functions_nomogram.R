@@ -7,8 +7,6 @@
 #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### 
 #Install and Load needed R packages.
 #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### ####
-# Set  libPaths.
-.libPaths("/Users/tylermuffly/.exploratory/R/3.6")
 
 rm(list = setdiff(ls(), lsf.str()))
 
@@ -22,8 +20,6 @@ pkgs <- (c('caret', 'readxl', 'XML', 'reshape2', 'devtools', 'purrr', 'readr', '
 lapply(pkgs, require, character.only = TRUE)
 rm(pkgs)
 doMC::registerDoMC(cores = detectCores()-1) #Use multiple cores for processing
-
-
 
 # Load required packages.
 library(janitor)
