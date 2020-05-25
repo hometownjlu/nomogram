@@ -91,7 +91,7 @@ We can also control the environment by deploying the project inside a Docker con
 Within each year of Matching data there is one event.  This is **Match_Status**.  In the final dataset, every applicant gets his/her/their own row. 
 
 ### Applicant Identification Number
-AAMC ID number is a specific number that every applicant uses to apply to residency, fellowship, etc. (e.g. 12345678)
+AAMC ID number is a specific number that every applicant uses to apply to residency, fellowship, etc. (e.g. 12345678).  Download the data from ERAS:  https://www.dropbox.com/s/wfv7oqpdhdzjlsr/AAMC%20download.mov?dl=0.  
 
 ## Installation and use
 
@@ -162,7 +162,45 @@ These are all run with the single command above. They can be run separately if d
 * Applicants can apply to prelim or categorical positions in the ERAS match.  This is defined as the `Tracks_Applied_by_Applicant` variable.  Christine was really helpful in understanding how the ERAS data is used in practice. 
 * From ERAS data anyone who applied for a preliminary position `('Ob-Gyn/Preliminary|1076220P0 (Preliminary)')` did not match OR **applied to the prelim as a "backup plan".  Prelim applicants not matching is clearly an assumption and will get checked below.**
 
-* Pull to show who is in an OBGYN residency. `this one works.R` and clean data to look for residents based on NPPES taxonomy code and consecutive order in list.  Make sure pull is up to date by running `this one works.R` with the `startID` at the last known number and `startID` plus 1,000.  
+Determining `Match_status` - Anyone who applied prelim did not match into a categorical position is a fair assumption.  But in case they applied to both with a prelim as a backup then we need to do something different.  
+
+In GOBA, what year did each person match? - Could decrease the number of people in applicant side trying to match to.  Look at year graduated from medical school in the NPPES and that will tell you what year they started residency.  Alos all the years should be consecutive.  
+
+```r
+#NPPES ----
+NPPES1 <- read.csv("/Volumes/Projects/Pharma_Influence/Data/NPPES_Data_Dissemination_April_2020/npidata_pfile_20050523-20200412.csv") #This takes 20 minutes to load.  Christ have mercy!  There is no RSocrata API so I downloaded the file.  
+  Sys.time()
+
+NPPES <- NPPES1 %>%
+dplyr::filter(Entity.Type.Code == "1") %>%  #Remove all hospitals and nursing homes
+dplyr::filter(Provider.Business.Practice.Location.Address.State.Name %nin% c("ZZ", "AS", "FM", "GU", "MH", "MP", "PW", "VI")) %>% #Take out the places are not in the United States
+  distinct(NPI, .keep_all = TRUE) %>%
+  mutate(Provider.Credential.Text = str_remove_all(Provider.Credential.Text, "[[:punct:]]+")) %>%
+  mutate(Provider.Credential.Text = exploratory::str_clean(Provider.Credential.Text)) %>%
+  filter(Provider.Business.Practice.Location.Address.Country.Code..If.outside.U.S.. == "US" & Provider.Business.Mailing.Address.Country.Code..If.outside.U.S.. == "US") %>%
+  mutate_at(vars(Provider.Last.Name..Legal.Name., Provider.First.Name, Provider.Middle.Name, Provider.Other.Last.Name, Provider.Other.First.Name, Provider.Other.Middle.Name), funs(str_to_title)) %>%
+  tidyr::drop_na(Provider.Last.Name..Legal.Name., Provider.First.Name) %>%
+  mutate(Provider.Middle.Name = impute_na(Provider.Middle.Name, type = "value", val = ""), Provider.Middle.Name = exploratory::str_clean(Provider.Middle.Name)) %>%
+  mutate(Provider.Business.Mailing.Address.State.Name = str_remove_all(Provider.Business.Mailing.Address.State.Name, "[[:punct:]]+")) %>%
+  filter(Provider.Business.Mailing.Address.State.Name %in% c("AK", "AR", "AL", "AZ", "CA", "CO", "CT", "DC", "DE", "FL", "GA", "GU", "HI", "IA", "ID", "IL", "IN", "KS", "KY", "LA", "MA", "MD", "ME", "MI", "MN", "MO", "MS", "MT", "NC", "ND", "NE", "NH", "NJ", "NV", "NY", "OH", "NM", "OK", "OR", "PA", "PR", "RI", "SC", "SD", "TN", "TX", "UT", "VA", "VT", "WA", "WI", "WV")) %>%
+  filter(Provider.Business.Practice.Location.Address.State.Name %in% c("AK", "AR", "AL", "AZ", "CA", "CO", "CT", "DC", "DE", "FL", "GA", "GU", "HI", "IA", "ID", "IL", "IN", "KS", "KY", "LA", "MA", "MD", "ME", "MI", "MN", "MO", "MS", "MT", "NC", "ND", "NE", "NH", "NJ", "NV", "NY", "OH", "NM", "OK", "OR", "PA", "PR", "RI", "SC", "SD", "TN", "TX", "UT", "VA", "VT", "WA", "WI", "WV")) %>%
+  distinct(NPI, .keep_all = TRUE) %>%
+  filter(Provider.Credential.Text %in% c("MD", "DO")) %>%
+  mutate(Provider.Name.Suffix.Text = impute_na(Provider.Name.Suffix.Text, type = "value", val = ""), Provider.Other.Last.Name = impute_na(Provider.Other.Last.Name, type = "value", val = ""), Provider.Other.First.Name = impute_na(Provider.Other.First.Name, type = "value", val = ""), Provider.Other.Middle.Name = impute_na(Provider.Other.Middle.Name, type = "value", val = "")) %>%
+  unite(nppes.full.name.1, Provider.First.Name, Provider.Middle.Name, Provider.Last.Name..Legal.Name., sep = " ", remove = FALSE, na.rm = FALSE) %>%
+  unite(nppes.full.name.2, Provider.First.Name, Provider.Middle.Name, Provider.Last.Name..Legal.Name., Provider.Name.Suffix.Text, sep = " ", remove = FALSE, na.rm = FALSE) %>%
+  unite(nppes.full.name.3, Provider.Other.First.Name, Provider.Other.Middle.Name, Provider.Other.Last.Name, sep = " ", remove = FALSE, na.rm = FALSE) %>%
+  unite(nppes.full.name.state, Provider.First.Name, Provider.Middle.Name, Provider.Last.Name..Legal.Name., Provider.Business.Mailing.Address.State.Name, sep = " ", remove = FALSE, na.rm = FALSE) %>%
+  mutate(nppes.full.name.state = str_clean(nppes.full.name.state))%>%
+  readr::write_csv("/Volumes/Projects/Pharma_Influence/Data/NPPES_Data_Dissemination_April_2020/npidata_pfile_20050523-20200412_2.csv")
+
+```
+
+In GOBA, which residency did each person match? - I did a join on state, city to residency programs and had about a third with exact name matches.  For duplicate matches like matching to ten residency programs in New York, NY then we can google search for their name and each residency program name.  This info needs to be put in by hand and then fed back into the Match_Status variable.  
+
+We do not have as much overlap between applicants and obgyn residents because not everyone applied to CU OBGYN residency.  
+
+* Pull to show who is in an OBGYN residency. `this one works.R` and clean data to look for residents based on NPPES taxonomy code and consecutive order in list.  Make sure pull is up to date by running `this one works.R` with the `startID` at the last known number and `startID` plus 1,200.  
 
 * We need to do a match between names of the applicants and `list_of_people_who_all_matched_into_OBGYN`. See code snippet below about using `humaniformat` to standardize the format of names.    
 
@@ -174,7 +212,6 @@ These are all run with the single command above. They can be run separately if d
 
 ** Do an inner_join by first_name, last_name, suffix: 1,571/3,904
 
-
 UCLA - 3 prelims
 Hawaii - 1 prelim
 NY Cornell - 1 prelim
@@ -182,13 +219,11 @@ LIJ - 1 prelim
 Tufts - 1 prelim
 Colorado - 1 prelim
 
-
-
 ** Do an inner_join by last_name then by first_name then by middle_name
 **When downloading files from Dropbox make sure that the suffix is changed from 
 * Cross-reference with Match Lists from various medical schools.  Lists are stored on Dropbox at `~/Dropbox/`.
 
-2. Binds each of the years of Matching Data together from 2020 to 2016 while standardizing column names with parsed case.  Standardize data types.  Age was calculated from date of birth to the year they applied.  Year columns was added for every year of applicants.  
+2. Binds each of the years of Matching Data together from 2020 to 2017 while standardizing column names with parsed case.  Standardize data types.  Age was calculated from date of birth to the year they applied.  Year columns was added for every year of applicants.  
 * Imputed minimal number of 'Self-Identity', some of the number of poster/peer-reviewed articles.  
 
 3. Removes applicants who applied multiple years by using only unique AAMC identification numbers.  
@@ -223,17 +258,208 @@ Full Name Cleaning in order to match by name it gets split into the parts of `fi
 
 
 ### `google_search.R`
-**Description**: Automatic search of Google for the residency program location of OBGYN residents.  Takes data from exploratory `residents` dataframe and runs it through Google to see if there is a hit for the program because they have duplicate rows.  The data is created as a URL that is fed to google based on this tutorial: https://medium.com/@curiositybits/automating-the-google-search-for-the-web-presence-of-8000-organizations-54775e9f6097.  The URL is created with "https://www.google.com/search?q="name[i], suffix[i], city[i], state[i], ProgramName[i]".  It may be giving Google too much information but seems to work well.  Once the data is output then we will need to go through each person by hand to see what is the most promising link.  
+**Description**: Automatic search of Google for the residency program location of OBGYN residents.  Takes data from exploratory `residents` dataframe and runs it through Google to see if there is a hit for the program because they have duplicate rows.  The data is created as a URL that is fed to google based on this tutorial: https://medium.com/@curiositybits/automating-the-google-search-for-the-web-presence-of-8000-organizations-54775e9f6097.  The URL is created with "https://www.google.com/search?q="name[i], suffix[i], city[i], state[i], ProgramName[i]".  It may be giving Google too much information but seems to work well.  Once the data is output then we will need to go through each person by hand to see what is the most promising link.  I used **https://selectorgadget.com/** for identifying the CSS codes to scrape.  Of note, selector gadget is a Chrome plugin.  
+
+[![SelectorGadget used for Google first hyperlink](https://github.com/mufflyt/nomogram/blob/dev_0.1/selectorgadget.JPG?raw=true)](https://github.com/mufflyt/nomogram/blob/dev_0.1/selectorgadget.JPG?raw=true)
+
+For the cleaning the URL `exploratory::url_domain` we are going to need exploratory functions:
+
+```r
+# Installing
+if (packageVersion("devtools") < 1.6) {
+  install.packages("devtools")
+}
+devtools::install_github("paulhendricks/anonymizer")
+library(anonymizer)
+
+devtools::install_github("tidyverse/glue")
+library(glue)
+
+install.packages("backports")
+library(backports)
+
+devtools::install_github("exploratory-io/exploratory_func")
+library(exploratory)
+```
+
+Build a Google search tool:
+```r
+timer_value <- runif(dim(d)[1], min=0, max=10)
+# new code
+for (i in dim(d)[1]:1) {
+  
+  print(paste0("finding the url for:",d$name[i], d$suffix[i], d$city[i], d$state[i], d$ProgramName[i]))
+  Sys.sleep(timer_value)
+  
+  url1 = utils::URLencode(paste("https://www.google.com/search?q=",d$name[i], d$suffix[i], d$city[i], d$state[i], d$ProgramName[i]))  
+
+  page1 <- xml2::read_html(url1) #reads the html of the page from `url1`
+
+  nodes <- rvest::html_nodes(page1, "a") #reads the nodes with the "a"
+  links <- rvest::html_attr(nodes,"href") #reads the hyperlink
+ 
+  link <- links[startsWith(links, "/url?q=")]  #cleans the links
+
+  link <- sub("^/url\\?q\\=(.*?)\\&sa.*$","\\1", link)
+
+  result1 <- as.character(link)
+  d$Website[i] <- result1[1]  #writes back to original dataframe called d
+}
+ gc() #take out the garbage
+```
+
+Exclusions
+```r
+mutate(calculation_1 = case_when(
+    str_detect(Website, "onc") |  str_detect(Website, "anesthesia") | str_detect(Website, "internal") | str_detect(Website, "npiprofile") |  str_detect(Website, "infectious") | str_detect(Website, "emergency") | str_detect(Website, "eye") | str_detect(Website, "zola") | str_detect(Website, "psych") | str_detect(Website, "cardiology") | str_detect(Website, "dental") | str_detect(Website, "urology") | str_detect(Website, "cardiology") | str_detect(Website, "npino") | str_detect(Website, "pediatrics") | str_detect(Website, "annualmeeting.") | str_detect(Website, "caredash") | str_detect(Website, "nursing") | str_detect(Website, "apply") | str_detect(Website, "fmigs") ~ "unlikely to be obgyn",
+    TRUE ~ "more likely to be obgyn site, non-obgyn terms ruled out")) %>%
+    filter(calculation_1 != "unlikely to be obgyn") %>%
+    mutate(from_domain = urltools::domain(Website)) %>%
+  mutate(from_domain = str_remove(from_domain, regex("^www\\.", ignore_case = TRUE))) %>%
+  rename(url_domain = from_domain) %>%
+  readr::write_rds("~/Dropbox/Nomogram/nomogram/results/google_search_results_2.rds", compress = "none") 
+```
+
+#Can we match url of program to a list of e-mail suffixes for obgyn residency coordinators?
+Match email suffix from residency coordinator address to google searched url.  The residency coordinator e-mail for UMKC is "xyz@umkc.edu". So we search "tyler muffly md" using google_search.R then it returns a url where the name is found.  Let's say that url is www.umkc.edu/obgyn_residency you would then get extracted url_domain of "umkc.edu".  This way we can identify residency program URLs by residency e-mail addresses.  
+https://blog.exploratory.io/access-log-data-analysis-part-2-understanding-customer-behavior-on-your-web-site-4bea68d4d1e1
 
 There are duplicate rows because there are multiple programs in Philadelphia, PA or Chicago, IL.  The code could be expanded to search Twitter and Facebook as well.  At the bottom of `google_search.R` there is some code from the original example that can be used this way. 
 
+## Create list of residency programs:
+```r
+# Steps to produce ACGME_OBGYN_Programs_ACGME_OBGYN_Programs_2
+`ACGME_OBGYN_Programs_ACGME_OBGYN_Programs_2` <- exploratory::read_delim_file("/Users/tylermuffly/Downloads/ACGME_OBGYN Programs - ACGME_OBGYN Programs (2).csv" , ",", quote = "\"", skip = 0 , col_names = TRUE , na = c('','NA') , locale=readr::locale(encoding = "UTF-8", decimal_mark = ".", grouping_mark = "," ), trim_ws = TRUE , progress = FALSE) %>%
+  readr::type_convert() %>%
+  exploratory::clean_data_frame() %>%
+  select(ProgramNumber, ProgramName, `Clerkship Director Email`, `Clerkship Coordinator email`, email, email_suffix, city, `A state`, email_name) %>%
+  rename(state = `A state`, residency_program_email_suffix = email_suffix) %>%
+  mutate(merged_e_mails = coalesce(`Clerkship Coordinator email`, `Clerkship Director Email`, email, email_name)) %>%
+  distinct(merged_e_mails, .keep_all = TRUE) %>%
+  mutate(merged_e_mails_domain = url_domain(merged_e_mails)) %>%
+  filter(merged_e_mails_domain %nin% c("gmail.com", "aol.com")) %>%
+  distinct(merged_e_mails_domain, .keep_all = TRUE)
+```
+
+## Match the google_search_result url domain to the e-mail domain of the coordinator, PD, etc.  
+```r
+# Steps to produce the output
+ exploratory::read_rds_file("/Users/tylermuffly/Dropbox/Nomogram/nomogram/results/google_search_results_2.rds") %>%
+  readr::type_convert() %>%
+  exploratory::clean_data_frame() %>%
+  mutate(from_domain = urltools::domain(Website)) %>%
+  mutate(from_domain = str_remove(from_domain, regex("^www\\.", ignore_case = TRUE))) %>%
+  rename(url_domain = from_domain) %>%
+  inner_join(ACGME_OBGYN_Programs_ACGME_OBGYN_Programs_2, by = c("url_domain" = "merged_e_mails_domain"), ignorecase=TRUE)
+```
+
 Create clickable url links in excel by highlighting the column called `website` and go to style box and select hyperlink.  
+
+## Our goal is to create a Venn diagram of who applied to CU OBGYN residency program and who is an OBGYN resident.  
+```r
+install.packages("stringdist")
+library(stringdist)
+library(dplyr)
+
+applicants <- read.csv
+residents <- read.csv
+
+set1 <-  applicants 
+set2 <- residents
+
+
+fuzzymatch<-function(dat1,dat2,string1,string2,meth,id1,id2){
+  #initialize Variables:
+  matchfile <-NULL #iterate appends
+  x<-nrow(dat1) #count number of rows in input, for max number of runs
+  
+  #Check to see if function has ID values. Allows for empty values for ID variables, simple list match
+  if(missing(id1)){id1=NULL}
+  if(missing(id2)){id2=NULL}
+     
+  #### lowercase text only
+  dat1[,string1]<-as.character(tolower(dat1[,string1]))#force character, if values are factors
+  dat2[,string2]<-as.character(tolower(dat2[,string2]))
+  
+    #Loop through dat1 dataset iteratively. This is a work around to allow for large datasets to be matched
+    #Can run as long as dat2 dataset fits in memory. Avoids full Cartesian join.
+    for(i in 1:x) {
+      d<-merge(dat1[i,c(string1,id1), drop=FALSE],dat2[,c(string2,id2), drop=FALSE])#drop=FALSE to preserve 1var dataframe
+      
+      #Calculate String Distatnce based method specified "meth"
+      d$dist <- stringdist(d[,string1],d[,string2], method=meth)
+      
+      #dedupes A_names selects on the smallest distatnce.
+      d<- d[order(d[,string1], d$dist, decreasing = FALSE),]
+      d<- d[!duplicated(d[,string1]),]
+      
+      #append demos on matched file
+      matchfile <- rbind(matchfile,d)
+     # print(paste(round(i/x*100,2),"% complete",sep=''))
+      
+    }
+  return(matchfile)
+}
+
+fuzzymatch
+set1<-data.frame(set1)
+set2<-data.frame(set2)
+
+matchNames<- fuzzymatch(set1,set2,"set1","set2",meth="osa") %>% 
+  arrange(dist)
+
+head(matchNames)
+
+
+####Start the Venn Diagram here.  
+# Venn diagram with dist<=1
+library(VennDiagram)
+
+require(gridExtra)
+grid.newpage()
+
+venn.plot <- draw.pairwise.venn(dim(set1)[1], dim(set1)[1], dim(matchNames[matchNames$dist<=1,])[1],
+c("Applicants", "Residents"),
+fill = c("red", "blue"),
+cat.pos = c(0, 0),
+cat.dist = rep(0.025, 2),
+scaled = FALSE, );
+
+grid.arrange(gTree(children=venn.plot), top="Applicants and Residents")
+```
+Thanks to Sneha Gupta for her help with this code.  
 
 **Use**: `source("google_search.R")` 
 
 **Output**: 
 * The output will be an RDS file called `google_search_results.R` with a "underscore 2" suffix on the end to denote the output of results.  
 
+* Geocoding of location.  
+```r
+# Google geocoding of FPMRS physician locations ----
+#Google map API, https://console.cloud.google.com/google/maps-apis/overview?pli=1
+
+#Allows us to map the residency programs to street address, city, state
+library(ggmap)
+gc(verbose = FALSE)
+ggmap::register_google(key = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
+ggmap::ggmap_show_api_key()
+ggmap::has_google_key()
+colnames(full_list)
+
+View(full_list$place_city_state)
+dim(full_list)
+sum(is.na(full_list$place_city_state))
+
+locations_df <- ggmap::mutate_geocode(data = full_list, location = place_city_state, output="more", source="google")
+locations <- tibble::as_tibble(locations_df) %>%
+   tidyr::separate(place_city_state, into = c("city", "state"), sep = "\\s*\\,\\s*", convert = TRUE) %>%
+   dplyr::mutate(state = statecode(state, output_type = "name"))
+ colnames(locations)
+ write_rds(locations, "geocoded_file_2.rds")
+
+head(locations)
+```
 
 ###`Model`
 Supervised learning is where you are the teacher in the model is the student. We are training our model to recognize patterns in the data using flashcards. The flashcards for the attributes of applicants to OB/GYN residency in on the back of the flash card is the matching status. Did the applicant match?  Yes or no.￼￼￼￼ Imagine you hand the model a stack of flashcards and we train the model to recognize this pattern future in the wild/with new data that it has never seen before.  
@@ -257,7 +483,7 @@ The problem is that the docker image is not linked to the Dropbox directory wher
 [![Project flow Matching Prediction](https://github.com/mufflyt/nomogram/blob/dev_0.1/project%20data%20flow%20Muffly%20et%20al.jpeg?raw=true)](https://github.com/mufflyt/nomogram/blob/dev_0.1/project%20data%20flow%20Muffly%20et%20al.jpeg?raw=true)
 
 * We can identify residents by their taxonomy code in the NPI database: `Student Health Care (390200000X`.  
-* [AAMC Statement on Residents Needing NPI Numbers](https://www.aamc.org/professional-development/affinity-groups/gir/viewpoint-provider-identifiers)
+* [AAMC Statement on Residents and Medical Students Needing NPI Numbers](https://www.aamc.org/professional-development/affinity-groups/gir/viewpoint-provider-identifiers)
 
 
 # Man vs. Machine: Comparing Clerkship Directors to the Model
@@ -327,11 +553,7 @@ A lower score is better. The more wrong a forecast is, the higher the Brier Scor
 Please contact me with any questions or concerns: tyler (dot) muffly (at) dhha (dot) org.  
 
 Questions:
-In GOBA, what year did each person match? - Could decrease the number of people in applicant side trying to match to.  
-In GOBA, which residency did each person match? - Could do with a join on state, city to residency programs.  For duplicate matches like matching to ten residency programs in New York, NY then we can google search for their name and each residency program name.  
 
-Determining match_status - Anyone who applied prelim did not match into a categorical position is a fair assumption.  
 
-We do not have as much overlap between applicants and obgyn residents because not everyone applied to CU OBGYN residency.  
 
 Filter out fellows because they will have a lower userid number?
