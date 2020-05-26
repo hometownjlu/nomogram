@@ -5,7 +5,7 @@
 # Steps to produce GOBA_list_of_people_who_all_matched_into_OBGYN ----
   
   # Read in all data of GOBA scrapes ----
-  # We start with a list of FPMRS physicians and the year that they were boarded called all_bound_together.csv.  The data is filtered for providers who are retired, not in the United States, and has a unique random id.  
+  # We start with a list of  physicians and the year that they were boarded called all_bound_together.csv.  The data is filtered for providers who are retired, and not in the United States.
   
   # #Read directly from Dropbox, workforce, scraper, Scraper_results_2019
   a1 <- read.csv(url("https://www.dropbox.com/s/81s4sfltiqwymq1/Downloaded%20%289035315-9050954%29%20%282019-08-13%2022.csv?raw=1"))
@@ -152,46 +152,56 @@
     bind_rows(a63, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
     bind_rows(a64, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
     bind_rows(a65, id_column_name = "ID", current_df_name = "Physicians_9037048_9032048_2019_12_22_13_22_42", force_data_type = TRUE) %>%
-    select(-contains("new"))
-  
-  readr::write_csv(all_a_dataframes, "~/Dropbox/Rui/data/all_a_dataframes.csv")
-  all_a_dataframes <- readr::read_csv("~/Dropbox/Rui/data/all_a_dataframes.csv")
-  
+    select(-contains("new") %>%
+    distinct(userid, .keep_all = TRUE))
+
+  dim(all_a_dataframes)  
+
+write_rds(all_a_dataframes, "~/Desktop/all_a_dataframes.rds")
 ######################################################################################
 # We needed this data because it is a check about who is an OBGYN.  The ERAS data only tells us who applied.  The GOBA list tells us who matched.  There is no public information about residents available on Physician Compare, NPPES or Doximity beyond the basics of address.  
+  all_bound_together <- all_a_dataframes %>%
+    readr::type_convert() %>%
+    exploratory::clean_data_frame() %>%
+    dplyr::distinct(userid, .keep_all = TRUE) %>%
+    dplyr::mutate(firstname = humaniformat::first_name(name)) %>%
+    arrange(desc(userid))
+  
+  
+View(head(all_a_dataframes))  
+dim(all_a_dataframes)
   
 all_bound_together <- all_a_dataframes %>%
     readr::type_convert() %>%
     exploratory::clean_data_frame() %>%
     dplyr::distinct(userid, .keep_all = TRUE) %>%
     dplyr::select(-starts_with("ID.new")) %>%
-    #dplyr::filter(sub1 %in% c("FPM", "Female Pelvic Medicine & Reconstructive Surgery")) %>%
     dplyr::arrange(name) %>%
     dplyr::select(userid:orig_bas) %>%
-    dplyr::mutate(unique_random_id = (userid*3.1415926535) - 3, unique_random_id = round(unique_random_id, digits = 0)) %>%
     dplyr::filter(sub1certStatus %nin% c("Retired", "Not Currently Certified")) %>%
     dplyr::filter(sub2certStatus %nin% c("Retired", "Not Currently Certified")) %>%
     dplyr::filter(certStatus %nin% c("Retired", "Not Currently Certified")) %>%
     dplyr::filter(!is.na(state)) %>%
     dplyr::filter(state != "ON") %>%
-    dplyr::filter(clinicallyActive !="No") %>%
-    tidyr::separate(name, into = c("name", "suffix"), sep = "\\s*\\,\\s*", remove = TRUE, convert = TRUE) %>%
-    mutate(firstname = humaniformat::first_name(name)) %>%
-    mutate(lastname = humaniformat::last_name(name)) %>%
-    select(-suffix, -city, -state, -startDate, -certStatus, -mocStatus, -sub1, -sub1startDate, -sub1certStatus, -sub1mocStatus, -sub2, -sub2startDate, -sub2certStatus, -sub2mocStatus, -clinicallyActive, -orig_sub, -x_sub_orig, -orig_bas, -unique_random_id)
+    dplyr::filter(clinicallyActive !="No") #%>%
+    # tidyr::separate(name, into = c("name", "suffix"), sep = "\\s*\\,\\s*", remove = TRUE, convert = TRUE) %>%
+    # mutate(firstname = humaniformat::first_name(name)) %>%
+    # mutate(lastname = humaniformat::last_name(name)) %>%
+    dplyr::select(-city, -startDate, -certStatus, -mocStatus, -sub1, -sub1startDate, -sub1certStatus, -sub1mocStatus, -sub2, -sub2startDate, -sub2certStatus, -sub2mocStatus, -clinicallyActive, -orig_sub, -x_sub_orig, -orig_bas)
   
   dim(all_bound_together)
   colnames(all_bound_together)
   head(all_bound_together, 200)
   dplyr::glimpse(all_bound_together)
-  #View(all_bound_together)
+  View(all_bound_together)
   
   # Write the final bound scraper to disk ----
-  readr::write_rds(all_bound_together, "/Users/tylermuffly/Dropbox/Nomogram/nomogram/data/list of people who all matched into OBGYN.rds")
+  readr::write_rds(all_bound_together, "~/Desktop/list of people who all matched into OBGYN.rds")
   
   
-############################################################
+
 #Bind each year of data together
+<<<<<<< HEAD
   
   #2019 archive ----
   # Steps to produce the second half of 2019 archive
@@ -260,51 +270,37 @@ all_bound_together <- all_a_dataframes %>%
   # 2018_archive ----
   #2018 does pull in Medical_School_of_Graduation
   archive2018 <- exploratory::read_delim_file(here::here("/data/Archives/2018_archive.csv") , ",", quote = "\"", skip = 0 , col_names = TRUE , na = c('','NA') , locale=readr::locale(encoding = "UTF-8", decimal_mark = ".", grouping_mark = "," ), trim_ws = TRUE , progress = FALSE) %>%
+=======
+  # 2017 ----
+  # Steps to produce 2017_archive
+  `2017_archive` <- exploratory::read_delim_file("/Users/tylermuffly/Downloads/Archives/2017_archive.csv" , ",", quote = "\"", skip = 0 , col_names = TRUE , na = c('','NA') , locale=readr::locale(encoding = "UTF-8", decimal_mark = ".", grouping_mark = "," ), trim_ws = TRUE , progress = FALSE) %>%
     readr::type_convert() %>%
     exploratory::clean_data_frame() %>%
-    dplyr::select(`AAMC ID`, `Applicant Name`, `Medical Education or Training Interrupted`, ACLS, BLS, `Malpractice Cases Pending`, `Medical Licensure Problem`, PALS, `Felony Conviction`, `Alpha Omega Alpha`, Citizenship, `Date of Birth`, Gender, `Gold Humanism Honor Society`, `Military Service Obligation`, `Participating as a Couple in NRMP`, `Self Identify`, `Sigma Sigma Phi`, `US or Canadian Applicant`, `Visa Sponsorship Needed`, #`Higher Education Degree`, 
-           `Medical Degree`, `Medical School of Graduation`, `USMLE Step 1 Score`, `Tracks Applied by Applicant`, `Count of Non Peer Reviewed Online Publication`, `Count of Oral Presentation`, `Count of Other Articles`, `Count of Peer Reviewed Book Chapter`, `Count of Peer Reviewed Journal Articles/Abstracts`, `Count of Peer Reviewed Journal Articles/Abstracts(Other than Published)`, `Count of Peer Reviewed Online Publication`, `Count of Poster Presentation`, `Count of Scientific Monograph`, #`OBGYN Grade--10`, 
-           `Applicant Name`, `Misdemeanor Conviction`,
-        
-           #New variables to include for feature engineering.  Must be included for each year of data.   
-           `Medical School Type`, `USMLE Step 2 CK Score`, #`Language Fluency`, 
-           #`Higher Education Degree_1`, `Higher Education Degree_2`
-           ) %>%
-    #dplyr::rename(`Applicant Name` = PERSONAL_31) %>%
-    dplyr::rename(`Step_2_CK` = `USMLE Step 2 CK Score`) %>%
-    dplyr::mutate(`US or Canadian Applicant` = factor(`US or Canadian Applicant`)) %>%
-    dplyr::mutate(Gender = dplyr::recode(Gender, Female = "Female"), Gender = dplyr::recode(Gender, Female = "Female", Male = "Male", `No Response` = "Female")) %>%
-    dplyr::mutate(BLS = dplyr::recode(BLS, Yes = "Yes", .missing = "No")) %>%
-    dplyr::mutate(`Medical Education or Training Interrupted` = factor(`Medical Education or Training Interrupted`), ACLS = factor(ACLS), BLS = factor(BLS), `Malpractice Cases Pending` = factor(`Malpractice Cases Pending`), `Medical Licensure Problem` = factor(`Medical Licensure Problem`), PALS = factor(PALS), `Alpha Omega Alpha` = dplyr::recode(`Alpha Omega Alpha`, `Alpha Omega Alpha (AOA) elections held during senior year` = "Elections_Senior_Year", `Alpha Omega Alpha (Member of AOA)` = "Yes", `No Alpha Omega Alpha (AOA) chapter at my school` = "No"), `Alpha Omega Alpha` = dplyr::recode(`Alpha Omega Alpha`, , .missing = "No"), `Alpha Omega Alpha` = factor(`Alpha Omega Alpha`)) %>%
-    #filter(!is.na(`Limiting Factors`)) %>%
-    dplyr::mutate(`Visa Sponsorship Needed` = dplyr::recode(`Visa Sponsorship Needed`, No = "No", Yes = "Yes", .missing = "No")) %>%
-    dplyr::mutate(`Gold Humanism Honor Society` = dplyr::recode(`Gold Humanism Honor Society`, `Gold Humanism Honor Society (Member of GHHS)` = "Yes", .missing = "Not a Member")) %>%
-    dplyr::mutate(`Gold Humanism Honor Society` = factor(`Gold Humanism Honor Society`)) %>%
-    dplyr::mutate(`Gold Humanism Honor Society` = factor(`Gold Humanism Honor Society`), `Participating as a Couple in NRMP` = factor(`Participating as a Couple in NRMP`), `Visa Sponsorship Needed` = factor(`Visa Sponsorship Needed`), Match_Status = dplyr::recode(`Tracks Applied by Applicant`, `Ob-Gyn/Preliminary|1076220P0 (Preliminary)` = "Did not match")) %>%
-    reorder_cols(Match_Status) %>%
-    dplyr::mutate(Match_Status = dplyr::recode(Match_Status, `Obstetrics-Gynecology|1076220C0 (Categorical)` = "Matched"), `Gold Humanism Honor Society` = dplyr::recode(`Gold Humanism Honor Society`, `No Gold Humanism Honor Society (GHHS) chapter at my school` = "No", `Not a Member` = "Not_a_Member", Yes = "Yes")) %>%
-    dplyr::mutate(Match_Status = dplyr::recode(Match_Status, `Did not match` = "Did_Not_Match", Matched = "Matched")) %>%
-    dplyr::select(-`Tracks Applied by Applicant`) %>%
-    dplyr::mutate(`Alpha Omega Alpha` = dplyr::recode(`Alpha Omega Alpha`, `Elections in Senior year` = "Senior_Year_Elections", No = "No", `No chapter` = "No_Chapter", Yes = "Yes"), Citizenship = dplyr::recode(Citizenship, `U.S. Citizen` = "US_Citizen", .default = "Not_A_Citizen"), `Self Identify` = dplyr::recode(`Self Identify`, White = "White", `White|Other: Arab-American` = "White", `White|Other: Guyanese` = "White", `White|Other: Lebanese-American` = "White", `White|Other: Middle Eastern` = "White", `White|Other: Middle-Eastern (Jewish)` = "White", `White|Other: Persian` = "White", `White|Other: Portuguese` = "White", `White|Other: Turkish` = "White", .default = "Not_White")) %>%
-    #filter(!is.na(`Self Identify`)) %>%
-    dplyr::mutate(`Sigma Sigma Phi` = dplyr::recode(`Sigma Sigma Phi`, `No Sigma Sigma Phi (SSP) chapter at my school` = "No_Chapter", `Sigma Sigma Phi (Member of SSP)` = "Yes_Member", .default = "No")) %>%
-    #dplyr::select(-`Higher Education Degree`) %>%
-    dplyr::mutate(`Medical Degree` = dplyr::recode(`Medical Degree`, `B.A./M.D.` = "MD", D.O. = "DO", `B.S./M.D.` = "MD", `DO/MA` = "DO", `DO/MBA` = "DO", `DO/MPH` = "DO", M.D. = "MD", `M.D./M.B.A.` = "MD", `M.D./M.P.H.` = "MD", `M.D./Other` = "MD", `M.D./Ph.D.` = "MD", `M.S./M.D.` = "MD", M.B. = "MD", `M.B.,B.S.` = "MD", M.B.B.Ch. = "MD", M.B.B.Ch.B = "MD", M.B.Ch.B. = "MD", B.A.O. = "MD", M.C. = "MD", M.Med. = "MD")) %>%
-    filter(!is.na(`Medical Degree`)) %>%
-    dplyr::mutate(`Medical Degree` = factor(`Medical Degree`), `Sigma Sigma Phi` = dplyr::recode(`Sigma Sigma Phi`, , .missing = "Not_a_member"), `Sigma Sigma Phi` = factor(`Sigma Sigma Phi`), `Self Identify` = factor(`Self Identify`), `Military Service Obligation` = factor(`Military Service Obligation`), Citizenship = factor(Citizenship)) %>%
-    dplyr::select(-`Felony Conviction`) %>%
-    #dplyr::mutate(`OBGYN Grade--10` = factor(`OBGYN Grade--10`)) %>%
-    #dplyr::select(-`OBGYN Grade--10`) %>%
-    dplyr::mutate(Year = 2018) %>%
-    dplyr::mutate(Positions_offered = 1336, Year = factor(Year)) %>%
-    dplyr::mutate(Year = dplyr::recode(Year, `2018` = "2017"), `Date of Birth` = mdy(`Date of Birth`)) %>%
-    dplyr::rename(DOB = `Date of Birth`) %>%
-    dplyr::mutate(`Current date` = mdy("01/01/2017")) %>%
-    dplyr::mutate(Age = `Current date`- DOB, Age = as.numeric(Age)/365) %>%
-    filter(!is.na(Age) & Age >= 24) %>%
-    dplyr::select(-`Current date`, - DOB, - Positions_offered) %>%
-    dplyr::mutate(Match_Status = factor(Match_Status)) %>%
+    select(`AAMC ID`, `Applicant Name`, `Medical Education or Training Interrupted`, `Malpractice Cases Pending`, `Felony Conviction`, `Misdemeanor Conviction`, `Alpha Omega Alpha (Yes/No)`, `Date of Birth`, `First Name`, Gender, `Gold Humanism Honor Society (Yes/No)`, `Last Name`, `Middle Name`, `Military Service Obligation`, `Participating as a Couple in NRMP`, `Self Identify`, `US or Canadian Applicant`, `Visa Sponsorship Needed`, `Medical Degree`, `Medical School of Graduation`, `Medical School Type`, `USMLE Step 1 Score`, `Tracks Applied by Applicant`, `Count of Oral Presentation`, `Count of Peer Reviewed Book Chapter`, `Count of Peer Reviewed Journal Articles/Abstracts`, `Count of Peer Reviewed Journal Articles/Abstracts(Other than Published)`, `Count of Poster Presentation`, `Count of Scientific Monograph`, `Selected for Prelim Rank`, `Selected track for Ranked`, `Ranking Status Name`) %>%
     clean_names(case = "parsed") %>%
+    mutate(Year = 2017) %>%
+    separate(Applicant_Name, into = c("Last_name", "First_name"), sep = "\\s+", remove = TRUE, convert = TRUE) %>%
+    mutate(Last_name = str_remove(Last_name, regex(",", ignore_case = TRUE))) %>%
+    unite(Applicant_Name, First_name, Middle_Name, Last_name, sep = " ", remove = TRUE, na.rm = FALSE) %>%
+    select(-First_Name, -Last_Name) %>%
+    mutate(Date_of_Birth = lubridate::lubridate::mdy(Date_of_Birth), Date_of_Birth_year = lubridate::year(Date_of_Birth)) %>%
+    filter(Date_of_Birth_year > 1900)
+  
+  # 2018 ----
+  # Steps to produce 2018_archive
+  `2018_archive` <- exploratory::read_delim_file("/Users/tylermuffly/Downloads/Archives/2018_archive.csv" , ",", quote = "\"", skip = 0 , col_names = TRUE , na = c('','NA') , locale=readr::locale(encoding = "UTF-8", decimal_mark = ".", grouping_mark = "," ), trim_ws = TRUE , progress = FALSE) %>%
+>>>>>>> fb4497ba0fb56ac479a7404eaf83d120acb63b6f
+    readr::type_convert() %>%
+    exploratory::clean_data_frame() %>%
+    select(`AAMC ID`, `Applicant Name`, `Medical Education or Training Interrupted`, `Malpractice Cases Pending`, `Felony Conviction`, `Misdemeanor Conviction`, `Alpha Omega Alpha (Yes/No)`, Citizenship, `Date of Birth`, `First Name`, Gender, `Gold Humanism Honor Society (Yes/No)`, `Last Name`, `Middle Name`, `Military Service Obligation`, `Participating as a Couple in NRMP`, `Self Identify`, `US or Canadian Applicant`, `Visa Sponsorship Needed`, `SOAP Reviewed`, `Medical Degree`, `Medical School of Graduation`, `Medical School Type`, `USMLE Step 1 Score`, `Tracks Applied by Applicant`, `Tracks Applied by Applicant_1`, `Tracks Applied by Applicant_2`, `Tracks Applied by Applicant_3`, `Tracks Applied by Applicant_4`, `Tracks Applied by Applicant_5`, `Tracks Considered by Program`, `Tracks Considered by Program_1`, `Count of Oral Presentation`, `Count of Peer Reviewed Book Chapter`, `Count of Peer Reviewed Journal Articles/Abstracts`, `Count of Peer Reviewed Journal Articles/Abstracts(Other than Published)`, `Count of Poster Presentation`) %>%
+    filter(`Tracks Applied by Applicant` %nin% c("Atkins, Samantha; Burroughs, Sarah; Cacioppo, Joseph", "Larson, Kaitlin; Ghadiri, Ali", "Potential for Autoimmune Pathogenesis of Rift Valley Fever Virus Retinitis")) %>%
+    filter(`Tracks Applied by Applicant_2` %nin% c("CA", "Gur, Tamar L.; Shay, Lena A.; Vadodkar Palkar, Aditi; Fisher, Sydney; Varaljay, Vanessa A.; Dowd, Scot; Bailey, Michael T.")) %>%
+    filter(`Tracks Applied by Applicant_3` %nin% c("Adam Langer, MSII, Alise Carlson MSIII, Janet Fitzakerly, PhD", "Chemical Signals in Vertebrates 12", "Cooke C.M., O'Sullivan O.E. & O'Reilly B.A.", "Kanani, Nura", "Khurana, T., Newman-Lindsay, S., Young, P.R., Slater, J.E.", "Mantilla, C., Jones, T., Decker, K., Jacobo, A., Sontheimer, S., Mirro, M., Hare, M., Han, J.", "04/01/2017", "12/01/2014", "Rawal, R., Westrich, D., Leung, C., Amorado, P., Faibisoff, I., Chadaga, R., Park, A., Martin, D., Shah, B.", "Ritchie CA, Renkes RI, Burkhalter LS, Pak SW, Bliss DP", "Truong, S., Lalchandani, N.A., & Lategan, H.E", "Unger, Emily MS4, Karimi, Shirin MD, and Jain, Priyank MD")) %>%
+    filter(`Count of Peer Reviewed Book Chapter` != "Obstetrics-Gynecology|1076220C0 (Categorical)") %>%
+    filter(Gender %in% c("Female", "Male")) %>%
+    mutate(`Date of Birth` = lubridate::mdy(`Date of Birth`)) %>%
+    clean_names(case = "parsed") %>%
+<<<<<<< HEAD
     dplyr::mutate(Year = dplyr::recode(Year, `2017` = "2018"), Sigma_Sigma_Phi = dplyr::recode(Sigma_Sigma_Phi, No_Chapter = "No", Not_a_member = "No", Yes_Member = "Yes"), Medical_Licensure_Problem = dplyr::recode(Medical_Licensure_Problem, N = "No", Y = "Yes")) %>%
     dplyr::rename(`Medical Licensure Problem` = Medical_Licensure_Problem) %>%
     dplyr::rename(Type_of_medical_school = `Medical_School_Type`)
@@ -361,78 +357,33 @@ all_bound_together <- all_a_dataframes %>%
     dplyr::rename(`Medical Licensure Problem` = Medical_Licensure_Problem)
   dim(archive2017)
   names(archive2017)  
+=======
+    mutate(Year = 2018) %>%
+    separate(Applicant_Name, into = c("Applicant_Name_1", "Applicant_Name_2"), sep = "\\s+", remove = TRUE, convert = TRUE) %>%
+    mutate(Applicant_Name_1 = str_remove(Applicant_Name_1, regex(",", ignore_case = TRUE))) %>%
+    unite(Applicant_Name, Applicant_Name_2, Middle_Name, Applicant_Name_1, sep = " ", remove = TRUE, na.rm = FALSE) %>%
+    select(-First_Name, -Last_Name) %>%
+    mutate(Date_of_Birth_year = year(Date_of_Birth))
   
-  # 2016_archive ----
-  # archive2016$Medical_School_of_Graduation
-  archive2016 <- exploratory::read_delim_file(here::here("/data/Archives/2016_archive.csv"), ",", quote = "\"", skip = 0 , col_names = TRUE , na = c('','NA') , locale=readr::locale(encoding = "UTF-8", decimal_mark = "."), trim_ws = TRUE , progress = FALSE) %>%
+  # 2019 ----
+  # Steps to produce 2019_All_Data_2
+  `2019_All_Data_2` <- exploratory::read_excel_file( "/Users/tylermuffly/Downloads/Archives/2019 All Data 2.xlsx", sheet = "e79bee75-b572-4e23-ba50-6b5b42f", na = c('','NA'), skip=0, col_names=TRUE, trim_ws=TRUE, tzone='America/Denver') %>%
     readr::type_convert() %>%
     exploratory::clean_data_frame() %>%
-    dplyr::mutate(`Current date` = mdy("01/01/2019")) %>%
-    dplyr::select(PERSONAL, PERSONAL_4, PERSONAL_6, PERSONAL_8, PERSONAL_19, PERSONAL_26, PERSONAL_28, PERSONAL_31, PERSONAL_34, PERSONAL_45, PERSONAL_51, PERSONAL_52, PERSONAL_59, PERSONAL_65, PERSONAL_79, PERSONAL_80, PERSONAL_82, PERSONAL_84, 
-          SCORE_S1, # Step 1 score
-          SCORE_CK, #Step 2 CK score
-          MEDICAL, MEDICAL_6, MEDICAL_8, EXPERIENCE_12, TRACKSAPPLICANT, TRACKSAPPLICANT_1, PUB_COUNT, PUB_COUNT_1, PUB_COUNT_2, PUB_COUNT_3, PUB_COUNT_4, PUB_COUNT_5, PUB_COUNT_6, PUB_COUNT_7, PUB_COUNT_8, PERSONAL_14, PERSONAL_16, PERSONAL_31,
-           
-           #`PERSONAL_55`#, `EDUCATION_1`
-           
-           ) %>%
-    dplyr::rename(`Malpractice Cases Pending` = PERSONAL_14) %>%
-    dplyr::rename(`Step_2_CK` = SCORE_CK) %>%
-    dplyr::mutate(`Malpractice Cases Pending` = dplyr::recode(`Malpractice Cases Pending`, `Malpractice Cases Pending` = "No", N = "No", .missing = "No")) %>%
-    dplyr::filter(!is.na(MEDICAL_8)) %>%
-    dplyr::rename(`Visa Sponsorship Needed` = PERSONAL_84) %>%
-    dplyr::select(-EXPERIENCE_12) %>%
-    dplyr::rename(BLS = PERSONAL_8, PALS = PERSONAL_19) %>%
-    dplyr::rename(ACLS = PERSONAL_6) %>%
-    dplyr::rename(AAMCID = PERSONAL, CouplesMatch = PERSONAL_65) %>%
-    filter(ACLS %in% c("Yes", "No")) %>%
-    dplyr::mutate(BLS = dplyr::recode(BLS, Yes = "Yes", .missing = "No")) %>%
-    dplyr::rename(`Alpha Omega Alpha` = PERSONAL_28) %>%
-    dplyr::rename(`Applicant Name` = PERSONAL_31) %>%
-    dplyr::mutate(`Alpha Omega Alpha` = dplyr::recode(`Alpha Omega Alpha`, `Alpha Omega Alpha (Member of AOA)` = "Yes", `AOA elections held during Senior year` = "Elections_Senior_Year", `No AOA Chapter At My School` = "No", .missing = "No")) %>%
-    dplyr::rename(`Gold Humanism Honor Society` = PERSONAL_52) %>%
-    dplyr::mutate(`Gold Humanism Honor Society` = dplyr::recode(`Gold Humanism Honor Society`, `GHHS (Member of GHHS)` = "Yes", `No GHHS chapter at my school` = "No", .missing = "Not_a_Member")) %>%
-    dplyr::rename(`USMLE Step 1 Score` = SCORE_S1) %>%
-    dplyr::mutate(`USMLE Step 1 Score` = parse_number(`USMLE Step 1 Score`)) %>%
-    filter(!is.na(`USMLE Step 1 Score`)) %>%
-    dplyr::mutate(Year2016 = 2016) %>%
-    dplyr::mutate(Positions_offered = 1265, AAMCID = parse_number(AAMCID), ACLS = factor(ACLS), BLS = factor(BLS), PALS = factor(PALS), `Alpha Omega Alpha` = factor(`Alpha Omega Alpha`), Positions_offered = factor(Positions_offered)) %>%
-    dplyr::rename(Citizenship = PERSONAL_34) %>%
-    dplyr::mutate(Citizenship = dplyr::recode(Citizenship, `U.S. Citizen` = "US_Citizen", .default = "Not_A_Citizen"), Citizenship = factor(Citizenship)) %>%
-    dplyr::rename(`Participating as a Couple in NRMP` = CouplesMatch) %>%
-    dplyr::mutate(`Participating as a Couple in NRMP` = dplyr::recode(`Participating as a Couple in NRMP`, False = "No", True = "Yes", .missing = "No"), `Gold Humanism Honor Society` = factor(`Gold Humanism Honor Society`), `Participating as a Couple in NRMP` = factor(`Participating as a Couple in NRMP`)) %>%
-    dplyr::rename(`Self Identify` = PERSONAL_79) %>%
-    filter(ACLS %in% c("Yes", "No")) %>%
-    dplyr::mutate(`Self Identify` = dplyr::recode(`Self Identify`, White = "White", `White|Other: Arab-American` = "White", `White|Other: Guyanese` = "White", `White|Other: Lebanese-American` = "White", `White|Other: Middle Eastern` = "White", `White|Other: Middle-Eastern (Jewish)` = "White", `White|Other: Persian` = "White", `White|Other: Portuguese` = "White", `White|Other: Turkish` = "White", .default = "Not_White", .missing = "White")) %>%
-    dplyr::rename(`Medical Degree` = MEDICAL) %>%
-    dplyr::mutate(`Medical Degree` = dplyr::recode(`Medical Degree`, `B.A./M.D.` = "MD", D.O. = "DO", `B.S./M.D.` = "MD", `DO/MA` = "DO", `DO/MBA` = "DO", `DO/MPH` = "DO", M.D. = "MD", `M.D./M.B.A.` = "MD", `M.D./M.P.H.` = "MD", `M.D./Other` = "MD", `M.D./Ph.D.` = "MD", `M.S./M.D.` = "MD", M.B. = "MD", `M.B.,B.S.` = "MD", M.B.B.Ch. = "MD", M.B.B.Ch.B = "MD", M.B.Ch.B. = "MD", B.A.O. = "MD", M.C. = "MD", M.Med. = "MD", .default = "MD")) %>%
-    dplyr::rename(`Sigma Sigma Phi` = PERSONAL_80) %>%
-    dplyr::mutate(`Sigma Sigma Phi` = dplyr::recode(`Sigma Sigma Phi`, `Sigma Sigma Phi (Member of SSP)` = "Yes_Member", `No SSP Chapter At My School` = "No_Chapter", .default = "Not_a_member", .missing = "Not_a_member"), `Self Identify` = factor(`Self Identify`), `Sigma Sigma Phi` = factor(`Sigma Sigma Phi`), `Medical Degree` = factor(`Medical Degree`)) %>%
-    dplyr::mutate(`Visa Sponsorship Needed` = dplyr::recode(`Visa Sponsorship Needed`, No = "No", Yes = "Yes", .missing = "No"), `Visa Sponsorship Needed` = factor(`Visa Sponsorship Needed`)) %>%
-    dplyr::rename(`AAMC ID` = AAMCID, `Medical Education or Training Interrupted` = PERSONAL_4, `Misdemeanor Conviction` = PERSONAL_26, `US or Canadian Applicant` = PERSONAL_82) %>%
-    filter(TRACKSAPPLICANT %in% c("Ob-Gyn/Preliminary|1076220P0 (Preliminary)", "Obstetrics-Gynecology|1076220C0 (Categorical)")) %>%
-    dplyr::select(-TRACKSAPPLICANT_1) %>%
-    dplyr::rename(Match_Status = TRACKSAPPLICANT) %>%
-    dplyr::mutate(Match_Status = dplyr::recode(Match_Status, `Ob-Gyn/Preliminary|1076220P0 (Preliminary)` = "Did_Not_Match", `Obstetrics-Gynecology|1076220C0 (Categorical)` = "Matched")) %>%
-    dplyr::rename(`Count of Non Peer Reviewed Online Publication` = PUB_COUNT, `Count of Oral Presentation` = PUB_COUNT_1, `Count of Other Articles` = PUB_COUNT_2, `Count of Peer Reviewed Book Chapter` = PUB_COUNT_3, `Count of Peer Reviewed Journal Articles/Abstracts` = PUB_COUNT_4, `Count of Peer Reviewed Journal Articles/Abstracts(Other than Published)` = PUB_COUNT_5, `Count of Peer Reviewed Online Publication` = PUB_COUNT_6, `Count of Poster Presentation` = PUB_COUNT_7, `Count of Scientific Monograph` = PUB_COUNT_8) %>%
-    reorder_cols(Match_Status) %>%
-    dplyr::mutate(Match_Status = factor(Match_Status), `Medical Education or Training Interrupted` = factor(`Medical Education or Training Interrupted`), `Misdemeanor Conviction` = factor(`Misdemeanor Conviction`), `Count of Non Peer Reviewed Online Publication` = parse_number(`Count of Non Peer Reviewed Online Publication`)) %>%
-    filter(!is.na(`Count of Non Peer Reviewed Online Publication`)) %>%
-    dplyr::mutate(`Count of Oral Presentation` = parse_number(`Count of Oral Presentation`), `Count of Other Articles` = parse_number(`Count of Other Articles`), `Count of Peer Reviewed Book Chapter` = parse_number(`Count of Peer Reviewed Book Chapter`), `Count of Peer Reviewed Journal Articles/Abstracts` = parse_number(`Count of Peer Reviewed Journal Articles/Abstracts`), `Count of Peer Reviewed Journal Articles/Abstracts(Other than Published)` = parse_number(`Count of Peer Reviewed Journal Articles/Abstracts(Other than Published)`), `Count of Peer Reviewed Online Publication` = parse_number(`Count of Peer Reviewed Online Publication`)) %>%
-    filter(!is.na(`Count of Peer Reviewed Online Publication`)) %>%
-    dplyr::mutate(`Count of Poster Presentation` = parse_number(`Count of Poster Presentation`), `Count of Scientific Monograph` = parse_number(`Count of Scientific Monograph`)) %>%
-    dplyr::rename(`Date of Birth` = PERSONAL_45) %>%
-    dplyr::mutate(`Date of Birth` = mdy(`Date of Birth`)) %>%
-    dplyr::rename(DOB = `Date of Birth`) %>%
-    dplyr::mutate(`Current date` = mdy("01/01/2016")) %>%
-    dplyr::mutate(Age = `Current date`- DOB, Age = as.numeric(Age/365)) %>%
-    filter(Age >= 24) %>%
-    filter(!is.na(Age)) %>%
-    dplyr::select(-`Current date`) %>%
-    dplyr::select(-DOB) %>%
-    dplyr::rename(Gender = PERSONAL_51, `Military Service Obligation` = PERSONAL_59, `Malpractice Cases Pending` = `Malpractice Cases Pending`) %>%
-    dplyr::mutate(`Malpractice Cases Pending` = factor(`Malpractice Cases Pending`), Gender = factor(Gender), `Military Service Obligation` = factor(`Military Service Obligation`), `US or Canadian Applicant` = factor(`US or Canadian Applicant`)) %>%
+    select(-PMID, -`Publication Type`, -Status, -Title, -`Medical Degree_1`, -`Medical Degree Expected or Earned_1`, -`Medical School Attendance Dates_1`, -`Medical School Clinical Campus_1`, -`Medical School Country_1`, -`Medical School Degree Date of Graduation_1`, -`Medical School State/Province_1`, -`Medical School Type_1`, -`Medical School of Graduation_1`, -Author_1, -City_1, -PMID_1, -`Publication Type_1`, -Status_1, -Title_1, -`Medical Degree_2`, -`Medical Degree Expected or Earned_2`, -`Medical School Attendance Dates_2`, -`Medical School Country_2`, -`Medical School Degree Date of Graduation_2`, -`Medical School Type_2`, -`Medical School of Graduation_2`, -Author_2, -City_2, -PMID_2, -`Publication Type_2`, -Status_2, -Title_2, -Author_3, -City_3, -PMID_3, -`Publication Type_3`, -Status_3, -Title_3, -Author_4, -City_4, -PMID_4, -`Publication Type_4`, -Status_4, -Title_4, -Author_5, -City_5, -PMID_5, -`Publication Type_5`, -Status_5, -Title_5, -Author_6, -City_6, -PMID_6, -`Publication Type_6`, -Status_6, -Title_6, -Author_7, -City_7, -PMID_7, -`Publication Type_7`, -Status_7, -Title_7, -Author_8, -City_8, -PMID_8, -`Publication Type_8`, -Status_8, -Title_8, -Author_9, -City_9, -PMID_9, -`Publication Type_9`, -Status_9, -Title_9, -Author_10, -City_10, -PMID_10, -`Publication Type_10`, -Status_10, -Title_10, -Author_11, -City_11, -PMID_11, -`Publication Type_11`, -Status_11, -Title_11, -Author_12, -City_12, -PMID_12, -`Publication Type_12`, -Status_12, -Title_12, -Author_13, -City_13, -PMID_13, -`Publication Type_13`, -Status_13, -Title_13, -Author_14, -City_14, -PMID_14, -`Publication Type_14`, -Status_14, -Title_14, -Author_15, -City_15, -PMID_15, -`Publication Type_15`, -Status_15, -Title_15, -Author_16, -City_16, -PMID_16, -`Publication Type_16`, -Status_16, -Title_16, -Author_17, -City_17, -PMID_17, -`Publication Type_17`, -Status_17, -Title_17, -Author_18, -City_18, -PMID_18, -`Publication Type_18`, -Status_18, -Title_18, -Author_19, -City_19, -PMID_19, -`Publication Type_19`, -Status_19, -Title_19, -Author_20, -City_20, -PMID_20, -`Publication Type_20`, -Status_20, -Title_20, -Author_21, -City_21, -PMID_21, -`Publication Type_21`, -Status_21, -Title_21, -Author_22, -City_22, -PMID_22, -`Publication Type_22`, -Status_22, -Title_22, -Author_23, -City_23, -PMID_23, -`Publication Type_23`, -Status_23, -Title_23, -Author_24, -City_24, -PMID_24, -`Publication Type_24`, -Status_24, -Title_24, -Author_25, -City_25, -PMID_25, -`Publication Type_25`, -Status_25, -Title_25, -Author_26, -City_26, -PMID_26, -`Publication Type_26`, -Status_26, -Title_26, -Author_27, -City_27, -PMID_27, -`Publication Type_27`, -Status_27, -Title_27, -Author_28, -City_28, -PMID_28, -`Publication Type_28`, -Status_28, -Title_28, -Author_29, -City_29, -PMID_29, -`Publication Type_29`, -Status_29, -Title_29, -Author_30, -City_30, -PMID_30, -`Publication Type_30`, -Status_30, -Title_30, -Author_31, -City_31, -PMID_31, -`Publication Type_31`, -Status_31, -Title_31, -Author_32, -City_32, -PMID_32, -`Publication Type_32`, -Status_32, -Title_32, -Author_33, -City_33, -PMID_33, -`Publication Type_33`, -Status_33, -Title_33, -Author_34, -City_34, -PMID_34, -`Publication Type_34`, -Status_34, -Title_34, -Author_35, -City_35, -PMID_35, -`Publication Type_35`, -Status_35, -Title_35, -Author_36, -City_36, -PMID_36, -`Publication Type_36`, -Status_36, -Title_36, -Author_37, -City_37, -PMID_37, -`Publication Type_37`, -Status_37, -Title_37, -Author_38, -City_38, -`Publication Type_38`, -Status_38, -Title_38, -Author_39, -City_39, -PMID_39, -`Publication Type_39`, -Status_39, -Title_39, -Author_40, -City_40, -`Publication Type_40`, -Status_40, -Title_40, -Author_41, -City_41, -`Publication Type_41`, -Status_41, -Title_41, -Author_42, -City_42, -`Publication Type_42`, -Status_42, -Title_42, -Author_43, -City_43, -`Publication Type_43`, -Status_43, -Title_43, -Author_44, -City_44, -`Publication Type_44`, -Status_44, -Title_44, -Author_45, -City_45, -`Publication Type_45`, -Status_45, -Title_45, -Author_46, -City_46, -`Publication Type_46`, -Status_46, -Title_46, -Author_47, -City_47, -`Publication Type_47`, -Status_47, -Title_47, -Author_48, -City_48, -`Publication Type_48`, -Status_48, -Title_48, -Author_49, -City_49, -`Publication Type_49`, -Status_49, -Title_49, -Author_50, -City_50, -`Publication Type_50`, -Status_50, -Title_50, -Author_51, -City_51, -`Publication Type_51`, -Status_51, -Title_51, -Author_52, -City_52, -`Publication Type_52`, -Status_52, -Title_52, -Author_53, -City_53, -`Publication Type_53`, -Status_53, -Title_53, -Author_54, -City_54, -`Publication Type_54`, -Title_54, -Author_55, -City_55, -`Publication Type_55`, -Title_55, -Author_56, -City_56, -`Publication Type_56`, -Title_56, -Author_57, -City_57, -`Publication Type_57`, -Title_57, -Author_58, -City_58, -`Publication Type_58`, -Status_58, -Title_58, -Author_59, -City_59, -`Publication Type_59`, -Status_59, -Title_59, -Author_60, -City_60, -`Publication Type_60`, -Title_60, -Author_61, -City_61, -`Publication Type_61`, -Title_61, -Author_62, -City_62, -`Publication Type_62`, -Title_62, -Author_63, -City_63, -PMID_63, -`Publication Type_63`, -Status_63, -Title_63, -Author_64, -City_64, -`Publication Type_64`, -Status_64, -Title_64, -Author_65, -City_65, -`Publication Type_65`, -Status_65, -Title_65, -Author_66, -City_66, -`Publication Type_66`, -Status_66, -Title_66, -Author_67, -`Publication Type_67`, -Status_67, -Title_67, -Author_68, -`Publication Type_68`, -Status_68, -Title_68, -Author_69, -`Publication Type_69`, -Status_69, -Title_69, -Author_70, -`Publication Type_70`, -Status_70, -Title_70, -Author_71, -`Publication Type_71`, -Status_71, -Title_71, -Author_72, -`Publication Type_72`, -Status_72, -Title_72, -Author_73, -`Publication Type_73`, -Status_73, -Title_73, -Author_74, -`Publication Type_74`, -Status_74, -Title_74, -Author_75, -`Publication Type_75`, -Status_75, -Title_75, -Author_76, -`Publication Type_76`, -Status_76, -Title_76, -Author_77, -`Publication Type_77`, -Status_77, -Title_77, -Author_78, -`Publication Type_78`, -Status_78, -Title_78, -Author_79, -City_79, -`Publication Type_79`, -Title_79) %>%
+    select(-Author, -City)
+>>>>>>> fb4497ba0fb56ac479a7404eaf83d120acb63b6f
+  
+  # Steps to produce 2019_All_Data_1
+  `2019_All_Data_1` <- exploratory::read_excel_file( "/Users/tylermuffly/Downloads/Archives/2019 All Data 1.xlsx", sheet = "642b9f43-7b4c-4ea1-8df7-00a8b42", na = c('','NA'), skip=0, col_names=TRUE, trim_ws=TRUE, tzone='America/Denver') %>%
+    readr::type_convert() %>%
+    exploratory::clean_data_frame() %>%
+    left_join(`2019_All_Data_2`, by = c("AAMC ID" = "AAMC ID")) %>%
+    unite(`Applicant Name`, `First Name`, `Last Name`, sep = " ", remove = TRUE, na.rm = FALSE) %>%
+    select(`AAMC ID`, `Applicant Name`, `Alpha Omega Alpha (Yes/No)`, `Date of Birth`, Gender, `Gold Humanism Honor Society (Yes/No)`, `Military Service Obligation`, `Participating as a Couple in NRMP`, `SOAP Applicant`, `SOAP Reapply Applicant`, `Self Identify`, `SOAP Match Status`, `SOAP Reapply Track applied by Applicant`, `SOAP Track applied by Applicant`, `Tracks Applied by Applicant`, `US or Canadian Applicant`, `Visa Sponsorship Needed`, `Tracks Applied by Applicant_1`, `Medical Degree.x`, `Medical Education or Training Interrupted.x`, `Medical School Type.x`, `Medical School of Graduation.x`, `Felony Conviction.x`, `Misdemeanor Conviction.x`, `Malpractice Cases Pending.x`, `USMLE Step 1 Score.x`, `Count of Oral Presentation.x`, `Count of Peer Reviewed Book Chapter.x`, `Count of Peer Reviewed Journal Articles/Abstracts.x`, `Count of Peer Reviewed Journal Articles/Abstracts(Other than Published).x`, `Count of Poster Presentation.x`) %>%
+    rename(`USMLE Step 1 Score` = `USMLE Step 1 Score.x`, `Malpractice Cases Pending` = `Malpractice Cases Pending.x`) %>%
     clean_names(case = "parsed") %>%
+<<<<<<< HEAD
     dplyr::mutate(Year = 2016, Year = factor(Year)) %>%
     dplyr::select(-Year2016) %>%
     dplyr::rename(Type_of_medical_school = MEDICAL_8) %>%
@@ -447,16 +398,21 @@ all_bound_together <- all_a_dataframes %>%
   # 2015_archive  ----
   #archive2015$Medical_School_of_Graduation
   archive2015 <- exploratory::read_delim_file(here::here("data/Archives/2015_archive.csv") , ",", quote = "\"", skip = 0 , col_names = TRUE , na = c('','NA') , locale=readr::locale(encoding = "UTF-8", decimal_mark = "."), trim_ws = TRUE , progress = FALSE) %>%
+=======
+    mutate(Year = 2019) %>%
+    mutate(Date_of_Birth = as_date(Date_of_Birth), Date_of_Birth_year = year(Date_of_Birth)) %>%
+    rename(Medical_Degree = Medical_Degree_x, Medical_School_Type = Medical_School_Type_x, Felony_Conviction = Felony_Conviction_x, Misdemeanor_Conviction = Misdemeanor_Conviction_x, Medical_School_of_Graduation = Medical_School_of_Graduation_x, Medical_Education_or_Training_Interrupted = Medical_Education_or_Training_Interrupted_x, Count_of_Oral_Presentation = Count_of_Oral_Presentation_x, Count_of_Peer_Reviewed_Book_Chapter = Count_of_Peer_Reviewed_Book_Chapter_x, Count_of_Peer_Reviewed_Journal_Articles_Abstracts = Count_of_Peer_Reviewed_Journal_Articles_Abstracts_x, Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published = Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published_x, Count_of_Poster_Presentation = Count_of_Poster_Presentation_x)
+  
+  # 2020 ----
+  # Steps to produce 2020_All_Applicants_Data_2
+  `2020_All_Applicants_Data_2` <- exploratory::read_delim_file("/Users/tylermuffly/Downloads/Archives/2020 All Applicants Data 2.csv" , ",", quote = "\"", skip = 0 , col_names = TRUE , na = c('','NA') , locale=readr::locale(encoding = "UTF-8", decimal_mark = ".", grouping_mark = "," ), trim_ws = TRUE , progress = FALSE) %>%
+>>>>>>> fb4497ba0fb56ac479a7404eaf83d120acb63b6f
     readr::type_convert() %>%
     exploratory::clean_data_frame() %>%
-    dplyr::select(PERSONAL, PERSONAL_4, PERSONAL_6, PERSONAL_12, PERSONAL_14, PERSONAL_17, PERSONAL_24, PERSONAL_26, PERSONAL_31, PERSONAL_35, PERSONAL_46, PERSONAL_52, PERSONAL_58, PERSONAL_64, PERSONAL_78, PERSONAL_80, PERSONAL_81, PERSONAL_83, USMLE, MEDICAL, MEDICAL_8, TRACKSAPPLICANT, PUB_COUNT, PUB_COUNT_1, PUB_COUNT_2, PUB_COUNT_3, PUB_COUNT_4, PUB_COUNT_5, PUB_COUNT_6, PUB_COUNT_7, PUB_COUNT_8,
+    select(-PMID, -`Publication Type`, -Status, -Title, -`Medical Degree_1`, -`Medical Degree Expected or Earned_1`, -`Medical School Attendance Dates_1`, -`Medical School Country_1`, -`Medical School Degree Date of Graduation_1`, -`Medical School State/Province_1`, -`Medical School Type_1`, -`Medical School of Graduation_1`, -Author_1, -City_1, -PMID_1, -`Publication Type_1`, -Status_1, -Title_1, -`Medical Degree Expected or Earned_2`, -`Medical School Attendance Dates_2`, -`Medical School Country_2`, -`Medical School State/Province_2`, -`Medical School Type_2`, -`Medical School of Graduation_2`, -Author_2, -City_2, -PMID_2, -`Publication Type_2`, -Status_2, -Title_2, -`Medical Degree Expected or Earned_3`, -`Medical School Attendance Dates_3`, -`Medical School Country_3`, -`Medical School Type_3`, -`Medical School of Graduation_3`, -Author_3, -City_3, -PMID_3, -`Publication Type_3`, -Status_3, -Title_3, -`Medical Degree Expected or Earned_4`, -`Medical School Attendance Dates_4`, -`Medical School Country_4`, -`Medical School Type_4`, -`Medical School of Graduation_4`, -Author_4, -City_4, -PMID_4, -`Publication Type_4`, -Status_4, -Title_4, -Author_5, -City_5, -PMID_5, -`Publication Type_5`, -Status_5, -Title_5, -Author_6, -City_6, -PMID_6, -`Publication Type_6`, -Status_6, -Title_6, -Author_7, -City_7, -PMID_7, -`Publication Type_7`, -Status_7, -Title_7, -Author_8, -City_8, -PMID_8, -`Publication Type_8`, -Status_8, -Title_8, -Author_9, -City_9, -PMID_9, -`Publication Type_9`, -Status_9, -Title_9, -Author_10, -City_10, -PMID_10, -`Publication Type_10`, -Status_10, -Title_10, -Author_11, -City_11, -PMID_11, -`Publication Type_11`, -Status_11, -Title_11, -Author_12, -City_12, -PMID_12, -`Publication Type_12`, -Status_12, -Title_12, -Author_13, -City_13, -PMID_13, -`Publication Type_13`, -Status_13, -Title_13, -Author_14, -City_14, -PMID_14, -`Publication Type_14`, -Status_14, -Title_14, -Author_15, -City_15, -PMID_15, -`Publication Type_15`, -Status_15, -Title_15, -Author_16, -City_16, -PMID_16, -`Publication Type_16`, -Status_16, -Title_16, -Author_17, -City_17, -PMID_17, -`Publication Type_17`, -Status_17, -Title_17, -Author_18, -City_18, -PMID_18, -`Publication Type_18`, -Status_18, -Title_18, -Author_19, -City_19, -PMID_19, -`Publication Type_19`, -Status_19, -Title_19, -Author_20, -City_20, -PMID_20, -`Publication Type_20`, -Status_20, -Title_20, -Author_21, -City_21, -PMID_21, -`Publication Type_21`, -Status_21, -Title_21, -Author_22, -City_22, -PMID_22, -`Publication Type_22`, -Status_22, -Title_22, -Author_23, -City_23, -PMID_23, -`Publication Type_23`, -Status_23, -Title_23, -Author_24, -City_24, -PMID_24, -`Publication Type_24`, -Status_24, -Title_24, -Author_25, -City_25, -PMID_25, -`Publication Type_25`, -Status_25, -Title_25, -Author_26, -City_26, -PMID_26, -`Publication Type_26`, -Status_26, -Title_26, -Author_27, -City_27, -PMID_27, -`Publication Type_27`, -Status_27, -Title_27, -Author_28, -City_28, -PMID_28, -`Publication Type_28`, -Status_28, -Title_28, -Author_29, -City_29, -PMID_29, -`Publication Type_29`, -Status_29, -Title_29, -Author_30, -City_30, -PMID_30, -`Publication Type_30`, -Status_30, -Title_30, -Author_31, -City_31, -PMID_31, -`Publication Type_31`, -Status_31, -Title_31, -Author_32, -City_32, -PMID_32, -`Publication Type_32`, -Status_32, -Title_32, -Author_33, -City_33, -PMID_33, -`Publication Type_33`, -Status_33, -Title_33, -Author_34, -City_34, -PMID_34, -`Publication Type_34`, -Status_34, -Title_34, -Author_35, -PMID_35, -`Publication Type_35`, -Status_35, -Title_35, -Author_36, -PMID_36, -`Publication Type_36`, -Status_36, -Title_36, -Author_37, -PMID_37, -`Publication Type_37`, -Status_37, -Title_37, -Author_38, -PMID_38, -`Publication Type_38`, -Status_38, -Title_38, -Author_39, -PMID_39, -`Publication Type_39`, -Status_39, -Title_39, -Author_40, -PMID_40, -`Publication Type_40`, -Status_40, -Title_40, -Author_41, -City_41, -PMID_41, -`Publication Type_41`, -Status_41, -Title_41, -Author_42, -City_42, -PMID_42, -`Publication Type_42`, -Status_42, -Title_42, -Author_43, -PMID_43, -`Publication Type_43`, -Status_43, -Title_43, -Author_44, -PMID_44, -`Publication Type_44`, -Status_44, -Title_44, -Author_45, -PMID_45, -`Publication Type_45`, -Status_45, -Title_45, -Author_46, -PMID_46, -`Publication Type_46`, -Status_46, -Title_46, -Author_47, -PMID_47, -`Publication Type_47`, -Status_47, -Title_47, -Author_48, -PMID_48, -`Publication Type_48`, -Status_48, -Title_48, -Author_49, -PMID_49, -`Publication Type_49`, -Status_49, -Title_49, -Author_50, -City_50, -PMID_50, -`Publication Type_50`, -Status_50, -Title_50, -Author_51, -City_51, -PMID_51, -`Publication Type_51`, -Status_51, -Title_51, -Author_52, -City_52, -PMID_52, -`Publication Type_52`, -Status_52, -Title_52, -Author_53, -City_53, -PMID_53, -`Publication Type_53`, -Status_53, -Title_53, -Author_54, -City_54, -PMID_54, -`Publication Type_54`, -Status_54, -Title_54, -Author_55, -City_55, -PMID_55, -`Publication Type_55`, -Status_55, -Title_55, -Author_56, -City_56, -PMID_56, -`Publication Type_56`, -Status_56, -Title_56, -Author_57, -City_57, -PMID_57, -`Publication Type_57`, -Status_57, -Title_57, -Author_58, -City_58, -PMID_58, -`Publication Type_58`, -Status_58, -Title_58, -Author_59, -City_59, -PMID_59, -`Publication Type_59`, -Status_59, -Title_59, -Author_60, -City_60, -PMID_60, -`Publication Type_60`, -Status_60, -Title_60, -Author_61, -City_61, -PMID_61, -`Publication Type_61`, -Status_61, -Title_61, -Author_62, -City_62, -PMID_62, -`Publication Type_62`, -Status_62, -Title_62, -Author_63, -City_63, -PMID_63, -`Publication Type_63`, -Status_63, -Title_63, -Author_64, -City_64, -PMID_64, -`Publication Type_64`, -Status_64, -Title_64, -Author_65, -City_65, -`Publication Type_65`, -Status_65, -Title_65, -Author_66, -City_66, -`Publication Type_66`, -Status_66, -Title_66, -Author_67, -City_67, -`Publication Type_67`, -Status_67, -Title_67, -Author_68, -City_68, -`Publication Type_68`, -Status_68, -Title_68, -Author_69, -City_69, -`Publication Type_69`, -Status_69, -Title_69, -Author_70, -City_70, -`Publication Type_70`, -Status_70, -Title_70, -Author_71, -City_71, -PMID_71, -`Publication Type_71`, -Status_71, -Title_71, -Author_72, -City_72, -PMID_72, -`Publication Type_72`, -Status_72, -Title_72, -Author_73, -City_73, -`Publication Type_73`, -Status_73, -Title_73, -Author_74, -City_74, -`Publication Type_74`, -Status_74, -Title_74, -Author_75, -City_75, -PMID_75, -`Publication Type_75`, -Status_75, -Title_75, -Author_76, -City_76, -`Publication Type_76`, -Status_76, -Title_76, -Author_77, -City_77, -`Publication Type_77`, -Status_77, -Title_77, -Author_78, -City_78, -`Publication Type_78`, -Status_78, -Title_78, -Author_79, -City_79, -`Publication Type_79`, -Status_79, -Title_79, -Author_80, -City_80, -`Publication Type_80`, -Status_80, -Title_80, -Author_81, -City_81, -`Publication Type_81`, -Status_81, -Title_81, -Author_82, -City_82, -`Publication Type_82`, -Status_82, -Title_82, -Author_83, -City_83, -`Publication Type_83`, -Status_83, -Title_83, -Author_84, -City_84, -`Publication Type_84`, -Status_84, -Title_84, -Author_85, -City_85, -`Publication Type_85`, -Status_85, -Title_85, -Author_86, -City_86, -`Publication Type_86`, -Title_86, -Author_87, -City_87, -`Publication Type_87`, -Title_87, -Author_88, -City_88, -`Publication Type_88`, -Title_88, -Author_89, -City_89, -`Publication Type_89`, -Title_89, -Author_90, -City_90, -`Publication Type_90`, -Title_90, -Author_91, -City_91, -`Publication Type_91`, -Title_91, -Author_92, -City_92, -`Publication Type_92`, -Title_92, -Author_93, -City_93, -`Publication Type_93`, -Title_93, -Author_94, -City_94, -`Publication Type_94`, -Title_94, -Author_95, -City_95, -`Publication Type_95`, -Title_95, -Author_96, -City_96, -`Publication Type_96`, -Title_96, -Author_97, -City_97, -`Publication Type_97`, -Title_97, -Author_98, -City_98, -`Publication Type_98`, -Title_98) %>%
+           select(-`Explanation of why Medical Education or Training Interrupted`, -`Medical School Attendance Dates`, -`Medical School Clinical Campus`, -`Medical School Country`, -`Medical School Degree Date of Graduation`, -`Medical School State/Province`, -`Membership in Honorary or Professional Societies`, -`Felony Conviction Reason`, -`Limitations Description`, -`Limiting Factors`, -`Misdemeanor Conviction Reason`, -`Malpractice Cases Pending Reason`, -`USMLE Step 2 CK Score`, -`USMLE Step 2 CS Score`, -`USMLE Step 3 Score`, -Author, -City))
            
-            MEDICAL_8, #Medical school type         
-           `MEDICAL_6`, #Medical school name
-           `SCORE_CK`, #`SCORE_S1`, #Step 1 and Step 2 scores
-           #`PERSONAL_54`, #Language fluency
-           #`EDUCATION_1`
-           
+<<<<<<< HEAD
            ) %>%
     dplyr::rename(Medical_School_of_Graduation = MEDICAL_6) %>%
     dplyr::rename(Applicant_Name = PERSONAL_31) %>%
@@ -529,6 +485,67 @@ all_bound_together <- all_a_dataframes %>%
   names(archive2015)
   
   
+=======
+           # Steps to produce the output
+           exploratory::read_delim_file("/Users/tylermuffly/Downloads/Archives/2020 All Applicants Data 1.csv" , ",", quote = "\"", skip = 0 , col_names = TRUE , na = c('','NA') , locale=readr::locale(encoding = "UTF-8", decimal_mark = ".", grouping_mark = "," ), trim_ws = TRUE , progress = FALSE) %>%
+             readr::type_convert() %>%
+             exploratory::clean_data_frame() %>%
+             select(-`Alpha Omega Alpha`, -`Couples - Partner Specialty`, -`Expected Visa Status`, -`Explanation of Other Service Obligation`, -`Gold Humanism Honor Society`, -`Military Service Years Remaining`, -`Other Service Obligation`, -`Awards & Recognitions - Medical School`, -`Awards & Recognitions - Others`, -`Higher Education Attendance Dates`, -`Higher Education Degree`, -`Higher Education Degree Date Earned`, -`Higher Education Degree Earned`, -`Higher Education Institution`, -`Higher Education Location`, -`Higher Education Major`, -`Higher Education Attendance Dates_1`, -`Higher Education Degree_1`, -`Higher Education Degree Date Earned_1`, -`Higher Education Degree Earned_1`, -`Higher Education Institution_1`, -`Higher Education Location_1`, -`Higher Education Major_1`, -`Higher Education Attendance Dates_2`, -`Higher Education Degree_2`, -`Higher Education Degree Date Earned_2`, -`Higher Education Degree Earned_2`, -`Higher Education Institution_2`, -`Higher Education Location_2`, -`Higher Education Major_2`, -`Higher Education Attendance Dates_3`, -`Higher Education Degree_3`, -`Higher Education Degree Date Earned_3`, -`Higher Education Degree Earned_3`, -`Higher Education Institution_3`, -`Higher Education Location_3`, -`Higher Education Major_3`) %>%
+             select(-`Higher Education Attendance Dates_4`, -`Higher Education Degree_4`, -`Higher Education Degree Date Earned_4`, -`Higher Education Degree Earned_4`, -`Higher Education Institution_4`, -`Higher Education Location_4`, -`Higher Education Major_4`, -`Higher Education Attendance Dates_5`, -`Higher Education Degree_5`, -`Higher Education Degree Date Earned_5`, -`Higher Education Degree Earned_5`, -`Higher Education Institution_5`, -`Higher Education Location_5`, -`Higher Education Major_5`) %>%
+             left_join(`2020_All_Applicants_Data_2`, by = c("AAMC ID" = "AAMC ID")) %>%
+             clean_names(case = "parsed") %>%
+             unite(Applicant_Name, First_Name, Last_Name, sep = " ", remove = TRUE, na.rm = FALSE) %>%
+             mutate(Year = 2020, Date_of_Birth = lubridate::mdy(Date_of_Birth), Date_of_Birth = year(Date_of_Birth)) %>%
+             clean_names(case = "parsed") %>%
+             rename(US_or_Canadian_Applicant = Graduate_of_US_or_Canadian_Medical_School) %>%
+             filter(Date_of_Birth < 2000) %>%
+             rename(Date_of_Birth_year = Date_of_Birth) %>%
+             bind_rows(`2019_All_Data_1`, `2018_archive`, `2017_archive`, id_column_name = "ID", current_df_name = "All_Years", force_data_type = TRUE) %>%
+             distinct(AAMC_ID, .keep_all = TRUE) %>%
+             select(-Medical_Degree_Expected_or_Earned) %>%
+             select(-ID, -Citizenship) %>%
+             filter(AAMC_ID > 0) %>%
+             mutate(Alpha_Omega_Alpha_Yes_No = recode(Alpha_Omega_Alpha_Yes_No, `No Response` = "No")) %>%
+             filter(Gender %in% c("Female", "Male")) %>%
+             mutate(Gold_Humanism_Honor_Society_Yes_No = recode(Gold_Humanism_Honor_Society_Yes_No, `No Response` = "No"), Medical_School_Type = recode(Medical_School_Type, `Canadian School` = "U.S. Public School", `International School,International School` = "International School", `International School,International School,International School` = "International School", `U.S. Public School,U.S. Public School` = "U.S. Public School", `U.S. Private School,International School` = "U.S. Private School", `U.S. Private School,International School,U.S. Private School,U.S. Private School` = "U.S. Private School")) %>%
+             drop_na(USMLE_Step_1_Score) %>%
+             mutate_at(vars(Alpha_Omega_Alpha_Yes_No, Gender, Gold_Humanism_Honor_Society_Yes_No, Military_Service_Obligation, Participating_as_a_Couple_in_NRMP, US_or_Canadian_Applicant, Visa_Sponsorship_Needed, Medical_Education_or_Training_Interrupted, Medical_School_Type, Felony_Conviction, Misdemeanor_Conviction, Malpractice_Cases_Pending, Year), funs(factor)) %>%
+             fill(Self_Identify, .direction = "down") %>%
+             filter(Tracks_Applied_by_Applicant %in% c("Ob-Gyn/Preliminary|1076220P0 (Preliminary)", "Obstetrics-Gynecology|1076220C0 (Categorical)")) %>%
+             mutate(Visa_Sponsorship_Needed = impute_na(Visa_Sponsorship_Needed, type = "value", val = "No")) %>%
+             mutate(Medical_Degree = recode(Medical_Degree, M.D. = "MD", `M.B.,B.S.` = "MD", M.C. = "MD", `M.D./Ph.D.` = "MD", D.O. = "DO", `DO/MBA` = "DO", M.B.B.Ch.B = "MD", `DO/PhD` = "DO", `M.D./M.P.H.` = "MD", M.B.B.Ch. = "MD", `M.A./M.D.` = "MD", `M.D./Other` = "MD", `M.S./M.D.` = "MD", `DO/MPH` = "DO", `M.D./M.B.A.` = "MD", M.B. = "MD", `B.A./M.D.` = "MD", `B.S./M.D.` = "MD", M.B.Ch.B. = "MD", B.MED = "MD", M.Surg. = "MD", M.Med. = "MD", `M.D.,C.M.` = "MD", B.A.O. = "MD", `M.Surg.,M.B.,B.S.` = "MD", `M.D./Ph.D.,M.D.` = "MD", `M.S./M.D.,M.B.,B.S.` = "MD", `M.B.,B.S.,M.D.` = "MD", `M.B.,B.S.,M.B.,B.S.` = "MD", `M.D./Ph.D.,M.B.B.Ch.,M.Med.` = "MD", `DO/MA` = "DO", `M.D.,M.B.,B.S.` = "MD", `M.D.,M.D.` = "MD", `M.B.B.Ch.,M.D.,M.Med.` = "MD", `DO/MS` = "DO")) %>%
+             mutate(Medical_Degree = impute_na(Medical_Degree, type = "value", val = "MD")) %>%
+             select(-Date_of_Birth) %>%
+             mutate(Year_numeric = as.numeric(Year)) %>%
+             mutate(Year_numeric = recode(Year_numeric, `1` = 2017, `2` = 2018, `3` = 2019, `4` = 2020)) %>%
+             mutate(Age = Year_numeric - Date_of_Birth_year) %>%
+             filter(Age > 26) %>%
+             select(-Count_of_Non_Peer_Reviewed_Online_Publication, -Count_of_Other_Articles, -Count_of_Peer_Reviewed_Online_Publication, -Count_of_Scientific_Monograph) %>%
+             mutate(Applicant_Name = str_to_title(Applicant_Name)) %>%
+             select(-SOAP_Reapply_Applicant) %>%
+             select(-SOAP_Reapply_Track_applied_by_Applicant, -SOAP_Track_applied_by_Applicant, -SOAP_Track_applied_by_Applicant_1, -SOAP_Reviewed, -Tracks_Applied_by_Applicant_3, -Tracks_Applied_by_Applicant_4, -Tracks_Applied_by_Applicant_5) %>%
+             mutate(Match_Status_Pending = Tracks_Applied_by_Applicant) %>%
+             reorder_cols(AAMC_ID, Applicant_Name, Alpha_Omega_Alpha_Yes_No, Date_of_Birth_year, Gender, Gold_Humanism_Honor_Society_Yes_No, Military_Service_Obligation, Participating_as_a_Couple_in_NRMP, Self_Identify, US_or_Canadian_Applicant, Visa_Sponsorship_Needed, Medical_Degree, Medical_Education_or_Training_Interrupted, Medical_School_Type, Medical_School_of_Graduation, Felony_Conviction, Misdemeanor_Conviction, Malpractice_Cases_Pending, USMLE_Step_1_Score, Count_of_Oral_Presentation, Count_of_Peer_Reviewed_Book_Chapter, Count_of_Peer_Reviewed_Journal_Articles_Abstracts, Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published, Count_of_Poster_Presentation, Year, Year_numeric, Age, SOAP_Match_Status, SOAP_Applicant, Tracks_Applied_by_Applicant, Tracks_Applied_by_Applicant_1, Tracks_Considered_by_Program, Tracks_Applied_by_Applicant_2, Match_Status_Pending) %>%
+             select(-Tracks_Applied_by_Applicant_2) %>%
+             arrange(desc(Tracks_Considered_by_Program)) %>%
+             select(-SOAP_Applicant, -Tracks_Considered_by_Program) %>%
+             arrange(desc(SOAP_Match_Status)) %>%
+             select(-Tracks_Applied_by_Applicant, -Tracks_Applied_by_Applicant_1) %>%
+             mutate(Match_Status_Pending = recode(Match_Status_Pending, `Ob-Gyn/Preliminary|1076220P0 (Preliminary)` = "Not_Matched", `Obstetrics-Gynecology|1076220C0 (Categorical)` = "Matched")) %>%
+             mutate_at(vars(Count_of_Oral_Presentation, Count_of_Peer_Reviewed_Journal_Articles_Abstracts, Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published, Count_of_Poster_Presentation), funs(parse_number)) %>%
+             fill(Count_of_Oral_Presentation, Count_of_Peer_Reviewed_Book_Chapter, Count_of_Peer_Reviewed_Journal_Articles_Abstracts, Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published, Count_of_Poster_Presentation, .direction = "down") %>%
+             mutate(white_non_white = Self_Identify) %>%
+             mutate(white_non_white = recode(white_non_white, White = "white", .default = "non_white"), Malpractice_Cases_Pending = recode(Malpractice_Cases_Pending, N = "No", Y = "Yes")) %>%
+             mutate(white_non_white = factor(white_non_white)) %>%
+             filter(USMLE_Step_1_Score >= 194) %>%
+             select(-Applicant_Name, -Date_of_Birth_year, -Self_Identify, -Medical_School_of_Graduation, -Felony_Conviction, -Malpractice_Cases_Pending, -USMLE_Step_1_Score, -Year, -Year_numeric, -SOAP_Match_Status, -Tracks_Considered_by_Program_1) %>%
+             rename(Match_Status = Match_Status_Pending) %>%
+             reorder_cols(AAMC_ID, Alpha_Omega_Alpha_Yes_No, Gender, Gold_Humanism_Honor_Society_Yes_No, Military_Service_Obligation, Participating_as_a_Couple_in_NRMP, US_or_Canadian_Applicant, Visa_Sponsorship_Needed, Medical_Degree, Medical_Education_or_Training_Interrupted, Medical_School_Type, Misdemeanor_Conviction, Count_of_Oral_Presentation, Count_of_Peer_Reviewed_Book_Chapter, Count_of_Peer_Reviewed_Journal_Articles_Abstracts, Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published, Count_of_Poster_Presentation, Age, white_non_white, Match_Status) %>%
+             mutate_at(vars(Medical_Degree, Match_Status), funs(factor)) %>%
+             clean_names(case = "parsed")
+  
+   
+>>>>>>> fb4497ba0fb56ac479a7404eaf83d120acb63b6f
   #Checking that all column names are the same ----
   colnamesarchive2015 <- names(archive2015) #"Type_of_medical_school"  
   colnamesarchive2016 <- names(archive2016) #"Medical School Type"  
@@ -577,6 +594,7 @@ all_bound_together <- all_a_dataframes %>%
   
     dplyr::mutate(Applicant_Name = str_to_title(Applicant_Name), formatted_names = humaniformat::format_reverse(Applicant_Name), firstname = humaniformat::first_name(formatted_names), lastname = humaniformat::last_name(formatted_names)) %>%
 
+    #GOBA_list_of_people_who_all_matched_into_OBGYN ----
     arrange(lastname) %>%
     # I need to look at matches from both sides.  ERAS shows who applied to OBGYN.  The GOBA_list_of_people_who_all_matched_into_OBGYN data shows who actually got into OBGYN.  
     left_join(GOBA_list_of_people_who_all_matched_into_OBGYN, by = c("lastname" = "lastname", "firstname" = "firstname"), ignorecase=TRUE) %>%
