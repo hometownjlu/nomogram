@@ -12,11 +12,142 @@
 
 rm(list = setdiff(ls(), lsf.str()))
 
-install.packages("devtools")
-devtools::install_github(repo = "exploratory-io/exploratory_func", dependencies = TRUE, upgrade = "never")
-library(exploratory)
-
-pkgs <- (c('caret', 'readxl', 'XML', 'reshape2', 'devtools', 'purrr', 'readr', 'ggplot2', 'dplyr', 'magick', 'janitor', 'lubridate', 'hms', 'tidyr', 'stringr', 'openxlsx', 'forcats', 'RcppRoll', 'tibble', 'bit64', 'munsell', 'scales', 'rgdal', 'tidyverse', "foreach", "PASWR", "rms", "pROC", "ROCR", "nnet", "packrat", "DynNom", "export", "caTools", "mlbench", "randomForest", "ipred", "xgboost", "Metrics", "RANN", "AppliedPredictiveModeling", "shiny", "earth", "fastAdaboost", "Boruta", "glmnet", "ggforce", "tidylog", "InformationValue", "pscl", "scoring", "DescTools", "gbm", "Hmisc", "arsenal", "pander", "moments", "leaps", "MatchIt", "car", "mice", "rpart", "beepr", "fansi", "utf8", "lmtest", "ResourceSelection", "rmarkdown", "rattle", "rmda", "funModeling", "tinytex", "caretEnsemble", "Rmisc", "corrplot", "progress", "perturb", "vctrs", "highr", "labeling", "DataExplorer", "rsconnect", "inspectdf", "ggpubr", "tableone", "knitr", "drake", "visNetwork", "rpart.plot", "RColorBrewer", "kableExtra", "kernlab", "naivebayes", "e1071", "data.table", "skimr", "naniar", "english", "mosaic", "broom", "mltools", "tidymodels", "tidyquant", "rsample", "yardstick", "parsnip", "dials", "cowplot", "lime", "flexdashboard", "shinyjs", "shinyWidgets", "plotly", "BH", "vip", "ezknitr", "here", "corrgram", "factoextra", "parallel", "doParallel", "odbc", "RSQLite", "discrim", "doMC",  "summarytools", "remotes", "fs", "PerformanceAnalytics", "correlationfunnel", "psych", "h2o", "ranger", 'R.methodsS3', 'plotROC', 'MLmetrics'))
+pkgs <- (c('caret', # modeling
+           #'readxl', 
+           #'XML', 
+           #''reshape2', 
+           'devtools', 
+           #'purrr', #installing tidyverse
+           #'readr', #Read in data with readr::read_csv, installing tidyverse
+           #'ggplot2', #To plot, installing tidyverse
+           #'dplyr', #To plot, installing tidyverse
+           #'magick', 
+           'janitor', #Cleaning data column names
+           'lubridate', #Nice for dates 
+           'hms', #pretty date and time
+           #'tidyr', #To plot, installing tidyverse
+           #'stringr', #installing tidyverse
+           #'openxlsx', 
+           #'forcats', #installing tidyverse
+           'RcppRoll', 
+           #'tibble', #installing tidyverse
+           'bit64', 
+           'munsell', 
+           'scales', 
+           'rgdal', 
+           "foreach", 
+           "PASWR", 
+           "rms", 
+           "pROC", #To make AUC curves
+           "ROCR", #To make AUC curves
+           #"packrat", #buggy af
+           "DynNom", 
+           "export", 
+           "caTools", 
+           "mlbench", 
+           "randomForest", 
+           "ipred", 
+           "xgboost", 
+           "Metrics", 
+           "RANN", 
+           "AppliedPredictiveModeling", 
+           "shiny", 
+           "earth", 
+           "fastAdaboost", 
+           "Boruta", 
+           "glmnet", 
+           "ggforce", 
+           "tidylog", 
+           "InformationValue", 
+           "pscl", 
+           "scoring", 
+           "DescTools", 
+           "gbm", 
+           "Hmisc", 
+           "arsenal", 
+           "pander", 
+           "moments", 
+           "leaps", 
+           #"MatchIt", 
+           "car", 
+           "mice", 
+           "rpart", 
+           #"beepr", 
+           "fansi", 
+           "utf8", 
+           "lmtest", 
+           "ResourceSelection", 
+           "rmarkdown", 
+           "rattle", 
+           "rmda", 
+           "funModeling", 
+           "tinytex", 
+           "caretEnsemble", 
+           "Rmisc", 
+           "corrplot", 
+           "progress", 
+           "perturb", 
+           "vctrs", 
+           "highr", 
+           "labeling", 
+           "DataExplorer", 
+           "rsconnect", 
+           "inspectdf", 
+           "ggpubr", 
+           "tableone", 
+           "knitr", 
+           "drake", 
+           "visNetwork", 
+           "rpart.plot", 
+           "RColorBrewer", 
+           "kableExtra", 
+           "kernlab", 
+           "naivebayes", 
+           "e1071", 
+           "data.table", 
+           "skimr", 
+           "naniar", 
+           "english", 
+           "mosaic", 
+           "broom", 
+           "mltools", 
+           "tidymodels", 
+           "tidyquant", 
+           "rsample", 
+           "yardstick", 
+           "parsnip", 
+           "dials", 
+           "cowplot", 
+           "lime", 
+           "flexdashboard", 
+           "shinyjs", 
+           "shinyWidgets", 
+           "plotly", 
+           "BH", 
+           "vip", 
+           "ezknitr", 
+           "here", 
+           "corrgram", 
+           "factoextra", 
+           "parallel", 
+           "doParallel", 
+           #"odbc", 
+           #"RSQLite", 
+           "discrim", 
+           "doMC",  
+           "summarytools", 
+           "remotes", 
+           "fs", 
+           "PerformanceAnalytics", 
+           "correlationfunnel", 
+           "psych", 
+           "h2o", 
+           "ranger", 
+           'R.methodsS3', 
+           'plotROC', 
+           'MLmetrics',
+           'tidyverse' #Loaded last so supercedes all other packages with same names.  
+           ))
 
 #install.packages(pkgs,dependencies = c("Depends", "Suggests", "Imports", "LinkingTo"), repos = "https://cloud.r-project.org")  #run this first time
 lapply(pkgs, require, character.only = TRUE)
@@ -49,25 +180,6 @@ library(exploratory)
 #brew install pandoc
 #brew install pkg-config
 
-# install.packages("officer")
-# install.packages("rvg")
-# install.packages("openxlsx")
-# install.packages("ggplot2")
-# install.packages("flextable")
-# install.packages("xtable")
-# install.packages("rgl")
-# install.packages("stargazer")
-# install.packages("tikzDevice")
-# install.packages("xml2")
-# install.packages("broom")
-# install.packages("devtools")
-# library(devtools)
-# devtools::install_github("tomwenseleers/export")
-
-# # The following two commands remove any previously installed H2O packages for R.
-# if ("package:h2o" %in% search()) { detach("package:h2o", unload=TRUE) }
-# if ("h2o" %in% rownames(installed.packages())) { remove.packages("h2o") }
-# 
 # # Next, we download packages that H2O depends on.
 # pkgs <- c("RCurl","jsonlite")
 # for (pkg in pkgs) {
@@ -1066,8 +1178,8 @@ pander::panderOptions("table.split.table", Inf)
 options(width = 100) # ensures skimr results fit on one line
 set.seed(123456)
 
-all_data <- all_data %>%
-  exploratory::reorder_cols(Applicant_Name, ACLS, Age, Alpha_Omega_Alpha, BLS, Citizenship, Count_of_Non_Peer_Reviewed_Online_Publication, Count_of_Oral_Presentation, Count_of_Other_Articles, Count_of_Peer_Reviewed_Book_Chapter, Count_of_Peer_Reviewed_Journal_Articles_Abstracts, Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published, Count_of_Peer_Reviewed_Online_Publication, Count_of_Poster_Presentation, Count_of_Scientific_Monograph, Couples_Match, Gender, Medical_Education_or_Training_Interrupted, Medical_Degree, Military_Service_Obligation, Misdemeanor_Conviction, PALS, Sigma_Sigma_Phi, US_or_Canadian_Applicant, USMLE_Step_1_Score, Visa_Sponsorship_Needed, white_non_white, Medical_Licensure_Problem, Type_of_medical_school, USMLE_Step_2_CK_Score, NIH_dollars, Match_Status)
+#all_data <- all_data %>%
+  #exploratory::reorder_cols(ACLS, Age, Alpha_Omega_Alpha, BLS, Citizenship, Count_of_Non_Peer_Reviewed_Online_Publication, Count_of_Oral_Presentation, Count_of_Other_Articles, Count_of_Peer_Reviewed_Book_Chapter, Count_of_Peer_Reviewed_Journal_Articles_Abstracts, Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published, Count_of_Peer_Reviewed_Online_Publication, Count_of_Poster_Presentation, Count_of_Scientific_Monograph, Couples_Match, Gender, Medical_Education_or_Training_Interrupted, Medical_Degree, Military_Service_Obligation, Misdemeanor_Conviction, PALS, Sigma_Sigma_Phi, US_or_Canadian_Applicant, USMLE_Step_1_Score, Visa_Sponsorship_Needed, white_non_white, Medical_Licensure_Problem, Type_of_medical_school, USMLE_Step_2_CK_Score, NIH_dollars, Match_Status)
 
 colnames(all_data)
 
