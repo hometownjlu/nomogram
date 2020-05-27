@@ -340,6 +340,38 @@ There are duplicate rows because there are multiple programs in Philadelphia, PA
   filter(merged_e_mails_domain %nin% c("gmail.com", "aol.com")) %>%
   distinct(merged_e_mails_domain, .keep_all = TRUE)
 ```
+There are many cities that have more than one residency program so we could not make a city, state match with the resident to the program.  
+
+Cities with multiple programs include and will need hand-searching to determine what program has what resident, (ouch):
+* Akron, OH
+* Atlanta, GA
+* Baltimore, MD
+* Boston, MA
+* Bronx, NY
+* Buffalo, NY
+* Brooklyn, NY
+* Charleston, SC
+* Chicago, IL
+* Cincinnatti, OH
+* Cleveland, OH
+* Columbus, OH
+* Dallas, TX
+* Dayton, OH
+* Detroit, MI
+* El Paso, TX
+* Gainesville, FL
+* Honolulu, HI
+* Houston, TX
+* Indianapolis, IN
+* Las Vegas, NV
+* Los Angeles, CA
+* Miami, FL
+* New Orleans, LA
+* New York, NY
+
+
+
+
 
 ## Match the google_search_result url domain to the e-mail domain of the coordinator, PD, etc.  
 ```r
