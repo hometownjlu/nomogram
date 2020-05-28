@@ -369,7 +369,52 @@ Cities with multiple programs include and will need hand-searching to determine 
 * New Orleans, LA
 * New York, NY
 
+* There are 140 programs (half) in discrete distinct city, state combinations (e.g. Danville, PA; Kansas City, MO).  We can match the resident living in these areas with the program only by city/state.  The second half where there are multiple programs in one city_state (e.g. New York, NY) are going to require some serious work with a hand search.  I matched everyone who trained at a unique city,state residency to their residency.  2,393 residents our of 9,964 residents were matched to a residency using the code below: 
+```r
+# Set libPaths.
 
+# Steps to produce ACGME_Duplicate_city_state
+`ACGME_Duplicate_city_state` <- exploratory::read_delim_file("/Users/tylermuffly/Downloads/ACGME_OBGYN Programs - ACGME_OBGYN Programs (2).csv" , ",", quote = "\"", skip = 0 , col_names = TRUE , na = c('','NA') , locale=readr::locale(encoding = "UTF-8", decimal_mark = ".", grouping_mark = "," ), trim_ws = TRUE , progress = FALSE) %>%
+  readr::type_convert() %>%
+  exploratory::clean_data_frame() %>%
+  select(ProgramNumber, ProgramName, `Clerkship Director Email`, `Clerkship Coordinator email`, email, email_suffix, city, `A state`, email_name) %>%
+  rename(state = `A state`, residency_program_email_suffix = email_suffix) %>%
+  mutate(merged_e_mails = coalesce(`Clerkship Coordinator email`, `Clerkship Director Email`, email, email_name)) %>%
+  distinct(merged_e_mails, .keep_all = TRUE) %>%
+  mutate(merged_e_mails_domain = url_domain(merged_e_mails)) %>%
+  filter(merged_e_mails_domain %nin% c("gmail.com", "aol.com")) %>%
+  distinct(merged_e_mails_domain, .keep_all = TRUE) %>%
+  distinct(ProgramNumber, .keep_all = TRUE) %>%
+  distinct(merged_e_mails_domain, .keep_all = TRUE) %>%
+  unite(city_state, city, state, sep = ", ", remove = FALSE, na.rm = FALSE) %>%
+  get_dupes(city_state)
+
+# Steps to produce ACGME_Unique_city_states
+`ACGME_Unique_city_states` <- exploratory::read_delim_file("/Users/tylermuffly/Downloads/ACGME_OBGYN Programs - ACGME_OBGYN Programs (2).csv" , ",", quote = "\"", skip = 0 , col_names = TRUE , na = c('','NA') , locale=readr::locale(encoding = "UTF-8", decimal_mark = ".", grouping_mark = "," ), trim_ws = TRUE , progress = FALSE) %>%
+  readr::type_convert() %>%
+  exploratory::clean_data_frame() %>%
+  select(ProgramNumber, ProgramName, `Clerkship Director Email`, `Clerkship Coordinator email`, email, email_suffix, city, `A state`, email_name) %>%
+  rename(state = `A state`, residency_program_email_suffix = email_suffix) %>%
+  mutate(merged_e_mails = coalesce(`Clerkship Coordinator email`, `Clerkship Director Email`, email, email_name)) %>%
+  distinct(merged_e_mails, .keep_all = TRUE) %>%
+  mutate(merged_e_mails_domain = url_domain(merged_e_mails)) %>%
+  filter(merged_e_mails_domain %nin% c("gmail.com", "aol.com")) %>%
+  distinct(merged_e_mails_domain, .keep_all = TRUE) %>%
+  distinct(ProgramNumber, .keep_all = TRUE) %>%
+  distinct(merged_e_mails_domain, .keep_all = TRUE) %>%
+  unite(city_state, city, state, sep = ", ", remove = FALSE, na.rm = FALSE) %>%
+  anti_join(ACGME_Duplicate_city_state, by = c("city_state" = "city_state"), ignorecase=TRUE) %>%
+  reorder_cols(city_state, ProgramName, ProgramNumber, `Clerkship Director Email`, `Clerkship Coordinator email`, email, residency_program_email_suffix, city, state, email_name, merged_e_mails, merged_e_mails_domain) %>%
+  distinct(city_state, .keep_all = TRUE)
+
+# Steps to produce the output
+exploratory::read_delim_file("/Users/tylermuffly/Dropbox/Nomogram/nomogram/results/GOBA/Hand_search_plus_GOBA_and_residencies_2.csv" , ",", quote = "\"", skip = 0 , col_names = TRUE , na = c('','NA') , locale=readr::locale(encoding = "UTF-8", decimal_mark = ".", grouping_mark = "," ), trim_ws = TRUE , progress = FALSE) %>%
+  readr::type_convert() %>%
+  exploratory::clean_data_frame() %>%
+  select(-X7, -X8, -X9) %>%
+  group_by(city_state) %>%
+  inner_join(ACGME_Unique_city_states, by = c("city_state" = "city_state"), ignorecase=TRUE)
+```
 
 
 
