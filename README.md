@@ -369,7 +369,7 @@ Cities with multiple programs include and will need hand-searching to determine 
 * New Orleans, LA
 * New York, NY
 
-* There are 140 programs (half) in discrete distinct city, state combinations (e.g. Danville, PA; Kansas City, MO).  We can match the resident living in these areas with the program only by city/state.  The second half where there are multiple programs in one city_state (e.g. New York, NY) are going to require some serious work with a hand search.  I matched everyone who trained at a unique city,state residency to their residency.  2,393 residents our of 9,964 residents were matched to a residency using the code below: 
+* There are 140 programs (half) in discrete distinct city, state combinations (e.g. Danville, PA; Kansas City, MO).  We can match the resident living in these areas with the program only by city/state.  The second half where there are multiple programs in one city_state (e.g. New York, NY) are going to require some serious work with a hand search.  I matched everyone who trained at a unique city,state residency to their residency.  2,393 residents our of 9,964 residents were matched to a residency using the code below (Hand_search_plus_GOBA_and_residencies_2 in exploratory.io): 
 ```r
 # Set libPaths.
 
