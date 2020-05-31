@@ -16,6 +16,12 @@ Matching Data pull and preparation
 * [Electronic Residency Application Service Program Director Workstation Login](https://apps.aamc.org/account/#/login?gotoUrl=http:%2F%2Fapps.aamc.org%2Feras-pdws-web%2F&allowInternal=false)
 * [American Board of Obstetrics and Gynecology](http://www.abog.org/)
 * [Blue Ridge Funding of OBGYN Clinical Departments](http://www.brimr.org/NIH_Awards/2019/NIH_Awards_2019.htm)
+* [List of resident physicians in Arizona](https://www.azmd.gov/Forms/Files/MD_202005211802_d1843c4e782042b9a4280af9aeb97175.pdf)
+* [List of resident physicians in Louisiana](https://www.lsbme.la.gov/sites/default/files/documents/Official%20Lists/2019/Official%20List%20Jan%202019.pdf)
+* [List of resident physicians in Oklahoma by search](https://www.okmedicalboard.org/licensee/MD/33806)
+* [ACGME List of OBGYN Residency Programs](https://apps.acgme.org/ads/Public/Programs/Search)
+* 
+
 
 These are scripts to pull and prepare data. This is an active project and scripts will change, so please always update to the latest version.
 
