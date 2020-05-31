@@ -640,3 +640,6 @@ Questions:
 
 
 Filter out fellows because they will have a lower userid number?
+
+Residents MIA - 
+Elise Diamond Medstar
