@@ -635,6 +635,129 @@ A lower score is better. The more wrong a forecast is, the higher the Brier Scor
 
 Please contact me with any questions or concerns: tyler (dot) muffly (at) dhha (dot) org.  
 
+
+# How did we get the data for who all the OBGYN residents were in the United States?
+A list of residency programs was searched from ACGME (https://apps.acgme.org/ads/Public/Programs/Search).  Then it was a hand search of every residency program's web site where they list their residents.  mturk.com was also considered for running the hand scrape in parallel so that it could be completed in 24 hours.  Wow!  
+* We could create a HIT where two turkers searched the resident names or searched the website for the resident names.  
+* Reward would be about $0.05 per task.  
+* Duration 1 hour.  
+* Qualifications: HIT Approval Rate (%) for all Requesters' HITs greater than 90 , Number of HITs Approved greater than 50.  
+
+Turkers could be asked not to submit any web sites with .com, .gov domains, Do not give websites ending in .com, Doximity, or LinkedIn pages, etc.  Eventually it would be a hand search of that mturk result or maybe do some fuzzy matching back to demographics on ```r NPPES```.  Mturk data uploads can include columns that are used as a unique identifier like ACGME residency program identification number.  Adding a list of resident options for the city_state combinations would be helpful to improve the quality of answers.  Second, we were able to match the residency name with the resident by using a unique city_state combination.  
+
+```r
+<!-- You must include this JavaScript file -->
+<script src="https://assets.crowd.aws/crowd-html-elements.js"></script>
+
+<!-- For the full list of available Crowd HTML Elements and their input/output documentation,
+      please refer to https://docs.aws.amazon.com/sagemaker/latest/dg/sms-ui-template-reference.html -->
+
+<!-- You must include crowd-form so that your task submits answers to MTurk -->
+<crowd-form answer-format="flatten-objects">
+
+  <p>
+    Please search the internet and find the educational webpage for where this physician is in their OBGYN residency training:
+
+    <strong>
+
+        <!-- The company you want researched will be substituted for the "company" variable 
+               when you publish a batch with a CSV input file containing multiple companies  -->
+        ${OBGYN_resident_name}
+      </strong>  
+      </p>
+      
+    <p>
+        Possibilities:  
+    </p>
+    <p> <strong>${Residency_option_1}
+    <p> ${Residency_option_2}
+    <p> ${Residency_option_3}
+    <p> ${Residency_option_4}
+    <p> ${Residency_option_5}
+    <p> ${Residency_option_5}
+    <p> ${Residency_option_6}
+    <p> ${Residency_option_7} </strong>
+   </p>
+
+  <p>Do not give websites ending in .com, Doximity, or LinkedIn pages, etc.</p>
+  <p>Include the http:// prefix from the website</p>
+
+  <crowd-input name="website" placeholder="http://example.org" required></crowd-input>
+
+</crowd-form>
+```
+
+# HTML for getting resident names from residency webpages that are called "Meet our residents" or "Who we are?".  
+```r
+<!-- You must include this JavaScript file -->
+<script src="https://assets.crowd.aws/crowd-html-elements.js"></script>
+
+<!-- For the full list of available Crowd HTML Elements and their input/output documentation,
+      please refer to https://docs.aws.amazon.com/sagemaker/latest/dg/sms-ui-template-reference.html -->
+
+<!-- You must include crowd-form so that your task submits answers to MTurk -->
+<crowd-form answer-format="flatten-objects">
+
+  <p>
+    Please search the internet address here for the list of physicians in this OBGYN residency training program:
+
+    <strong>
+
+        <!-- The company you want researched will be substituted for the "company" variable 
+               when you publish a batch with a CSV input file containing multiple companies  -->
+        ${OBGYN_residency_meet_our_residents_HTML}
+      </strong>  
+      </p>
+      
+    <p>
+        Names of residents (Bob J. Jones, MD):  
+    </p>
+ <div>
+                <p><strong>Address:</strong></p>
+                <p><crowd-input name="residentname1" placeholder="residentname1" required></crowd-input></p>
+                <p><crowd-input name="residentname2" placeholder="residentname2"></crowd-input></p>
+                <p><crowd-input name="residentname3" placeholder="residentname3" required></crowd-input></p>
+                <p><crowd-input name="residentname4" placeholder="residentname4" required></crowd-input></p>
+                <p><crowd-input name="residentname5" placeholder="residentname5" required></crowd-input></p>
+            </div>
+
+            <div>
+                <p><strong>Phone number:</strong></p>
+                <crowd-input name="phone" placeholder="Enter a phone number" type="tel" required></crowd-input>
+            </div>
+
+            <div>
+                <p><strong>Email address:</strong></p>
+                <crowd-input name="email" placeholder="e.g. example@email.com" type="email" required></crowd-input>
+            </div>
+
+            <div>
+                <p><strong>Contact's name:</strong></p>
+                <crowd-input name="contactName" placeholder="Enter name" required></crowd-input>
+            </div>
+
+            <div>
+                <p><strong>Contact's title:</strong></p>
+                <crowd-input name="contactTitle" placeholder="e.g. Sr. Manager" required></crowd-input>
+            </div>
+
+            <div>
+                <p><strong>Hours of operation:</strong></p>
+                <p>Opens at</p>
+                <p><crowd-input name="opensAt" type="time" required></crowd-input></p>
+                <p>Closes at</p>
+                <p><crowd-input name="closesAt" type="time" required></crowd-input></p>
+            </div>
+   </p>
+
+  <p>Do not give websites ending in .com, Doximity, or LinkedIn pages, etc.</p>
+  <p>Include the http:// prefix from the website</p>
+
+  <crowd-input name="website" placeholder="http://example.org" required></crowd-input>
+
+</crowd-form>
+```
+
 Questions:
 
 
