@@ -759,10 +759,14 @@ Turkers could be asked not to submit any web sites with .com, .gov domains, Do n
 ```
 
 Questions:
+Data Sources of who is a resident:
+1)  Web sites I gathered data from web sites that list residents and that seems old and outdated.  CU itself had data from 4 years ago with DLG's class. UGGGGH.  I thought this would work better.  
+2)  GOBA - Mismash of data from healthgrades, etc.  More "correct"/gold standard data but I had limited success matching to web site data (#1).  
+3)  Who applied to CU OBGYN residency each year.  
 
+I want to create an interactive map with the name and PGY of each resident in every US program.  
 
-
-Filter out fellows because they will have a lower userid number?
-
-Residents MIA - 
-Elise Diamond Medstar
+Moreover once I get data from #1 and #2 how can I match it to the applicant data except by name?  
+Excel Fuzzy Match?
+Joe Matching Functions?
+R Code for matching?  Once I get a result I don't know how to correct it in the original sheet.  
