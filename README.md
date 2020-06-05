@@ -757,6 +757,87 @@ Turkers could be asked not to submit any web sites with .com, .gov domains, Do n
 
 </crowd-form>
 ```
+## Record Linkage
+Comparing strings
+Damerau-Levenshtein distance is the minimum number of steps needed to get from String A to String B, using these operations:
+
+* Insertion of a new character.
+* Deletion of an existing character.
+* Substitution of an existing character.
+* Transposition of two existing consecutive characters.
+
+## Small distance, small difference
+
+There are multiple ways to calculate how similar or different two strings are. Now we’ll practice using the ```r stringdist``` package to compute string distances using various methods. It’s important to be familiar with different methods, as some methods work better on certain datasets, while others work better on other datasets.
+
+## Scoring and linking
+https://rpubs.com/Sergio_Garcia/data_cleaning_in_r
+Record linkage requires a number of steps that can be difficult to keep straight.
+
+* Clean the datasets
+* Generate pairs of records
+* Compare separate columns of each pair
+* Score pairs using summing or probability
+* Select pairs that are matches based on their score
+* Link the datasets together
+
+## Damerau-Levenshtein distance:
+Calculate Damerau-Levenshtein distance
+```r 
+install.packages("stringdist")
+library("stringdist")
+stringdist("las angelos", "los angeles", method = "dl")
+```
+
+Fixing typos with string distance
+```r
+library(fuzzyjoin)
+library(dplyr)
+
+a <- tibble::tibble(internet_first_names = c("Tyler", "Matt", "Stacy", "James", "Alene"))
+b <- tibble::tibble(goba_first_names = c("Ty", "Matthew", "Staci", "Jim", "Arlene"))
+
+# Join internet_first_names and goba_first_names and look at results
+a %>%
+  # Left join based on stringdist using applicant_first_names and resident_first_names cols
+  stringdist_left_join(b, by = c("internet_first_names" = "goba_first_names")) 
+```
+
+# Generating and comparing pairs
+# Link or join?
+Similar to joins, record linkage is the act of linking data from different sources regarding the same entity. But unlike joins, record linkage does not require exact matches between different pairs of data, and instead can find close matches using string similarity. This is why record linkage is effective when there are no common unique keys between the data sources you can rely upon when linking data sources such as a unique identifier.
+
+# Pair blocking
+```r internet_first_names``` and ```r goba_first_names``` are both lists of resident names. The datasets both contain information about first name, last name, city, and state. Some names appear in both datasets, but don’t necessarily have the same exact last name or city. We’ll work towards figuring out which residents appear in both datasets.
+
+The first step towards this goal is to generate pairs of records so that you can compare them. We’ll first generate all possible pairs, and then use your newly-cleaned first name column as a blocking variable.
+
+```r
+install.packages("reclin")
+# Load reclin
+library(reclin)
+
+internet_first_names <- tibble::tibble(internet_first_names = c("Tyler", "Matt", "Stacy", "James", "Alene"))
+goba_first_names <- tibble::tibble(goba_first_names = c("Ty", "Matthew", "Staci", "Jim", "Arlene"))
+
+# Generate all possible pairs
+pair_blocking(internet_first_names, goba_first_names) #blocking_var = "state")
+#By using state as a blocking variable, you were able to reduce the number of pairs you’ll need to compare.
+```
+## Comparing pairs
+Now that we’ve generated the pairs of names, it’s time to compare them. We can easily customize how we perform our comparisons using the by and default_comparator arguments. There’s no right answer as to what each should be set to, so we’ll try a couple options out.
+
+```r
+# Generate pairs
+pair_blocking(internet_first_names, goba_first_names) %>% #, blocking_var = "city") %>%
+  # Compare pairs by name using lcs()
+  compare_pairs(by = c("internet_first_names", "goba_first_names"),
+      default_comparator = lcs())
+
+```
+
+
+
 
 Questions:
 Data Sources of who is a resident:
