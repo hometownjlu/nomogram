@@ -836,7 +836,7 @@ pair_blocking(internet_first_names, goba_first_names) %>% #, blocking_var = "cit
 
 ```
 
-
+Consider ```r RecordLinkage``` package that is not available on CRAN.  
 
 
 Questions:
