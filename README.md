@@ -271,7 +271,6 @@ Full Name Cleaning in order to match by name it gets split into the parts of `fi
 For the cleaning the URL `exploratory::url_domain` we are going to need exploratory functions:
 
 ```r
-# Installing
 if (packageVersion("devtools") < 1.6) {
   install.packages("devtools")
 }
@@ -283,6 +282,12 @@ library(glue)
 
 install.packages("backports")
 library(backports)
+
+install.packages("psych")
+library(psych)
+
+pkgs <- c("qlcMatrix", "quanteda", "textshape", "mnormt", "sparsesvd", "docopt", "proxyC")
+install.packages(pkgs)
 
 devtools::install_github("exploratory-io/exploratory_func")
 library(exploratory)
