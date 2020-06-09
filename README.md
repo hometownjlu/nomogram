@@ -548,6 +548,10 @@ locations <- tibble::as_tibble(locations_df) %>%
 
 head(locations)
 ```
+#NPPES Data
+I had to load the data using JMP because of the multiple cores it could work on the 6 million rows and analyze the data.  I filtered the data to taxonomy code Students in a Healthcare system: ```r 390200000X ```.  I filtered the data to only people in the US with country address of "US".  I then filtered the bazillion variations of MD, M.D., DO, DO., etc.  Entity Type Code was set to 1 for individuals instead of hospitals.  This file now has 98,000 rows of residents.  
+
+
 
 ###`Model`
 Supervised learning is where you are the teacher in the model is the student. We are training our model to recognize patterns in the data using flashcards. The flashcards for the attributes of applicants to OB/GYN residency in on the back of the flash card is the matching status. Did the applicant match?  Yes or no.￼￼￼￼ Imagine you hand the model a stack of flashcards and we train the model to recognize this pattern future in the wild/with new data that it has never seen before.  
@@ -934,6 +938,8 @@ Matched 1,655 people at 85% posterior using first_name, last_name, and state.  P
 ```
 # Mircosoft Excel fuzzy match
 ???
+
+Match mturk with goba with state, first name, last name letter.  Then do stringdist to see if I can get a few more matches.  Then start hand searching.  
 
 
 Questions:
