@@ -172,9 +172,13 @@ Determining `Match_status` - Anyone who applied prelim did not match into a cate
 
 In GOBA, what year did each person match? - Could decrease the number of people in applicant side trying to match to.  Look at year graduated from medical school in the NPPES and that will tell you what year they started residency.  Alos all the years should be consecutive.  
 
+#NPPES Data
+I had to load the data using JMP because of the multiple cores it could work on the 6 million rows and analyze the data.  in JMP, I filtered the data to taxonomy code Students in a Healthcare system: ```r 390200000X ```.  I filtered the data to only people in the US with country address of "US".  I then filtered the bazillion variations of MD, M.D., DO, DO., etc.  Entity Type Code was set to 1 for individuals instead of hospitals.  This file now has 98,000 rows of residents.  
+
 ```r
 #NPPES ----
-NPPES1 <- read.csv("/Volumes/Projects/Pharma_Influence/Data/NPPES_Data_Dissemination_April_2020/npidata_pfile_20050523-20200412.csv") #This takes 20 minutes to load.  Christ have mercy!  There is no RSocrata API so I downloaded the file.  
+NPPES1 <- read.csv("~/Dropbox/Nomogram/nomogram/data/NPPES/npidata_pfile_20050523-20200510.txt", stringsAsFactors=FALSE)
+There is no RSocrata API so I downloaded the file.  
   Sys.time()
 
 NPPES <- NPPES1 %>%
@@ -201,6 +205,7 @@ dplyr::filter(Provider.Business.Practice.Location.Address.State.Name %nin% c("ZZ
   readr::write_csv("/Volumes/Projects/Pharma_Influence/Data/NPPES_Data_Dissemination_April_2020/npidata_pfile_20050523-20200412_2.csv")
 
 ```
+
 
 In GOBA, which residency did each person match? - I did a join on state, city to residency programs and had about a third with exact name matches.  For duplicate matches like matching to ten residency programs in New York, NY then we can google search for their name and each residency program name.  This info needs to be put in by hand and then fed back into the Match_Status variable.  
 
@@ -548,8 +553,6 @@ locations <- tibble::as_tibble(locations_df) %>%
 
 head(locations)
 ```
-#NPPES Data
-I had to load the data using JMP because of the multiple cores it could work on the 6 million rows and analyze the data.  I filtered the data to taxonomy code Students in a Healthcare system: ```r 390200000X ```.  I filtered the data to only people in the US with country address of "US".  I then filtered the bazillion variations of MD, M.D., DO, DO., etc.  Entity Type Code was set to 1 for individuals instead of hospitals.  This file now has 98,000 rows of residents.  
 
 
 
