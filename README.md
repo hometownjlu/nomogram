@@ -945,10 +945,15 @@ Matched 1,655 people at 85% posterior using first_name, last_name, and state.  P
 Match mturk with goba with state, first name, last name letter.  Then do stringdist to see if I can get a few more matches.  Then start hand searching.  
 
 
-Match everything to NPPES
+Match everything to NPPES:
 GOBA to NPPES - 742 matches
 CU applicants to NPPES - 418 matches
 output_results_of_NPPES_API - 153 matches
+mturk to NPPES - 225 matches
+upwork to NPPES - 331 matches
+
+
+Match GOBA to mturk - 3,147 unique matches
 
 Questions:
 Data Sources of who is a resident:
