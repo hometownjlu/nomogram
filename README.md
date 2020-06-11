@@ -946,14 +946,9 @@ Match mturk with goba with state, first name, last name letter.  Then do stringd
 
 
 Match everything to NPPES:
-GOBA to NPPES - 742 matches
-CU applicants to NPPES - 418 matches
-output_results_of_NPPES_API - 153 matches
-mturk to NPPES - 225 matches
-upwork to NPPES - 331 matches
+Limit all to Entity == 1, Suffix = MD/DO/etc, filtered for OBGYN or Student taxonomy codes.  Sort to only US country.  Sorted out anyone who had been boarded and active candidates.  
 
 
-Match GOBA to mturk - 3,147 unique matches
 
 Questions:
 Data Sources of who is a resident:
