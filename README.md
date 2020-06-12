@@ -962,3 +962,14 @@ Moreover once I get data from #1 and #2 how can I match it to the applicant data
 Excel Fuzzy Match?
 Joe Matching Functions?
 R Code for matching?  Once I get a result I don't know how to correct it in the original sheet.  
+
+
+# Created list of residents by:
+Searching every residency web page for "Our residents" and copying those names.  
+Searching every name using google to determine what residency the person is at.  
+Matching those names to NPI numbers of students or OBGYNs.  
+* first_middle_and_last_all_matched
+* matched_on_state_first_last
+* first_last_letter_city_state
+* other_last_name
+* other_first_and_last
