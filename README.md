@@ -969,7 +969,18 @@ Searching every residency web page for "Our residents" and copying those names.
 Searching every name using google to determine what residency the person is at.  
 Matching those names to NPI numbers of students or OBGYNs.  
 * first_middle_and_last_all_matched
-* matched_on_state_first_last
+* matched_on_state_first_last (FOR STATE MAKE SURE YOU ARE USING THE PROVIDER BUSINESS PRACTICE LOCATION ADDRESS STATE NAME) 
 * first_last_letter_city_state
 * other_last_name
 * other_first_and_last
+* first_name_last_name_only on the student taxonomy code on the huge_huge_original_npidata_pfile_20050523-20200510.jmp.  
+
+* Made sure that there were obgyn residencies in the city/state listed in the NPI code (cross-referenced with ACGME)
+* Made sure that everyone is an MD or DO in the NPPES search
+
+Searched ABMS to make sure that they were not boarded in any other field.  
+
+
+Things we need yet:
+What PGY are they?
+What residency are they at?
