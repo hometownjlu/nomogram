@@ -985,7 +985,7 @@ Searched ABMS to make sure that they were not boarded in any other field.
 
 
 Things we need yet:
-What PGY are they?
+What PGY are they?  Determine based on when they had their NPI number enumerated.  Usually is the year that they started.  
 What residency are they at?
 
 
