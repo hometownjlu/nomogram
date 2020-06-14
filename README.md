@@ -977,6 +977,9 @@ Matching those names to NPI numbers of students or OBGYNs.
 
 * Made sure that there were obgyn residencies in the city/state listed in the NPI code (cross-referenced with ACGME)
 * Made sure that everyone is an MD or DO in the NPPES search
+* Made sure that second line of address did not contain the words "Dermatology, anesthesia". 
+* Made sure that provider_enumeration_date was reasonable like less than 5 years ago.  
+* Made sure that second line of address did not contain the words "Dermatology, anesthesia".  Could not get this to work.  Ugh.   
 
 Searched ABMS to make sure that they were not boarded in any other field.  
 
@@ -984,3 +987,19 @@ Searched ABMS to make sure that they were not boarded in any other field.
 Things we need yet:
 What PGY are they?
 What residency are they at?
+
+
+When I need to roll back my exploratory.io because I did something stupid:
+```r
+cd .exploratory
+ls .exploratory
+cd projects
+ls
+cd BZd4SZb0
+ls
+vi project.json
+git log
+git diff
+git reset --hard 2ce38080113
+pwd
+```
