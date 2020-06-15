@@ -674,27 +674,15 @@ Turkers could be asked not to submit any web sites with .com, .gov domains, Do n
 
         <!-- The company you want researched will be substituted for the "company" variable 
                when you publish a batch with a CSV input file containing multiple companies  -->
-        ${OBGYN_resident_name}
-      </strong>  
-      </p>
-      
-    <p>
-        Possibilities:  
-    </p>
-    <p> <strong>${Residency_option_1}
-    <p> ${Residency_option_2}
-    <p> ${Residency_option_3}
-    <p> ${Residency_option_4}
-    <p> ${Residency_option_5}
-    <p> ${Residency_option_5}
-    <p> ${Residency_option_6}
-    <p> ${Residency_option_7} </strong>
-   </p>
+        ${company}
+
+    </strong>
+  </p>
 
   <p>Do not give websites ending in .com, Doximity, or LinkedIn pages, etc.</p>
   <p>Include the http:// prefix from the website</p>
 
-  <crowd-input name="website" placeholder="http://example.org" required></crowd-input>
+  <crowd-input name="website" placeholder="http://example.com" required></crowd-input>
 
 </crowd-form>
 ```
@@ -705,7 +693,14 @@ Turkers could be asked not to submit any web sites with .com, .gov domains, Do n
 <script src="https://assets.crowd.aws/crowd-html-elements.js"></script>
 
 <!-- For the full list of available Crowd HTML Elements and their input/output documentation,
-      please refer to https://docs.aws.amazon.com/sagemaker/latest/dg/sms-ui-template-reference.html -->
+      please refer to https://docs.aws.amazon.com/sagemaker/latest/dg/sms-ui-template-reference.html 
+      
+      
+      ACGME_OBGYN_Programs_ACGME_OBGYN_Programs_2_mutate_12 (2)
+      TYLER THIS WOULD BE YOUR INPUT FILE
+      
+      
+      -->
 
 <!-- You must include crowd-form so that your task submits answers to MTurk -->
 <crowd-form answer-format="flatten-objects">
@@ -715,59 +710,69 @@ Turkers could be asked not to submit any web sites with .com, .gov domains, Do n
 
     <strong>
 
-        <!-- The company you want researched will be substituted for the "company" variable 
-               when you publish a batch with a CSV input file containing multiple companies  -->
-        ${OBGYN_residency_meet_our_residents_HTML}
+        <!-- The residency name you want researched when you publish a batch with a CSV input file containing multiple companies  -->
+        ${ProgramName}
+
+        </p>
+    <p>
+        ${Resident page} 
       </strong>  
       </p>
       
     <p>
-        Names of residents (Bob J. Jones, MD):  
+        Please copy and paste one name per line.  Names of all the residents copied and pasted from web site (Name J. Example, MD):  
     </p>
  <div>
-                <p><strong>Address:</strong></p>
-                <p><crowd-input name="residentname1" placeholder="residentname1" required></crowd-input></p>
-                <p><crowd-input name="residentname2" placeholder="residentname2"></crowd-input></p>
-                <p><crowd-input name="residentname3" placeholder="residentname3" required></crowd-input></p>
-                <p><crowd-input name="residentname4" placeholder="residentname4" required></crowd-input></p>
-                <p><crowd-input name="residentname5" placeholder="residentname5" required></crowd-input></p>
+                <p><strong>Copy and paste one resident name per line please:</strong></p>
+<p><crowd-input name="residentname1" placeholder="copy and paste resident name 1, (Name J. Example, MD)" required></crowd-input> </p>
+<p><crowd-input name="residentname2" placeholder="copy and paste resident name 2, (Name J. Example, MD)" ></crowd-input></p>
+<p><crowd-input name="residentname3" placeholder="copy and paste resident name 3, (Name J. Example, MD)" ></crowd-input></p>
+<p><crowd-input name="residentname4" placeholder="copy and paste resident name 4, (Name J. Example, MD)" ></crowd-input></p>
+<p><crowd-input name="residentname5" placeholder="copy and paste resident name 5, (Name J. Example, MD)" ></crowd-input></p>
+<p><crowd-input name="residentname6" placeholder="copy and paste resident name 6, (Name J. Example, MD)" ></crowd-input></p>
+<p><crowd-input name="residentname7" placeholder="copy and paste resident name 7, (Name J. Example, MD)" ></crowd-input></p>
+<p><crowd-input name="residentname8" placeholder="copy and paste resident name 8, (Name J. Example, MD)" ></crowd-input></p>
+<p><crowd-input name="residentname9" placeholder="copy and paste resident name 9, (Name J. Example, MD)" ></crowd-input></p>
+<p><crowd-input name="residentname10" placeholder="copy and paste resident name 10, (Name J. Example, MD)" ></crowd-input></p>
+<p><crowd-input name="residentname11" placeholder="copy and paste resident name 11, (Name J. Example, MD)" ></crowd-input></p>
+<p><crowd-input name="residentname12" placeholder="copy and paste resident name 12, (Name J. Example, MD)" ></crowd-input></p>
+<p><crowd-input name="residentname13" placeholder="copy and paste resident name 13, (Name J. Example, MD)" ></crowd-input></p>
+<p><crowd-input name="residentname14" placeholder="copy and paste resident name 14, (Name J. Example, MD)" ></crowd-input></p>
+<p><crowd-input name="residentname15" placeholder="copy and paste resident name 15, (Name J. Example, MD)" ></crowd-input></p>
+<p><crowd-input name="residentname16" placeholder="copy and paste resident name 16, (Name J. Example, MD)" ></crowd-input></p>
+<p><crowd-input name="residentname17" placeholder="copy and paste resident name 17, (Name J. Example, MD)" ></crowd-input></p>
+<p><crowd-input name="residentname18" placeholder="copy and paste resident name 18, (Name J. Example, MD)" ></crowd-input></p>
+<p><crowd-input name="residentname19" placeholder="copy and paste resident name 19, (Name J. Example, MD)" ></crowd-input></p>
+<p><crowd-input name="residentname20" placeholder="copy and paste resident name 20, (Name J. Example, MD)" ></crowd-input></p>
+<p><crowd-input name="residentname21" placeholder="copy and paste resident name 21, (Name J. Example, MD)" ></crowd-input></p>
+<p><crowd-input name="residentname22" placeholder="copy and paste resident name 22, (Name J. Example, MD)" ></crowd-input></p>
+<p><crowd-input name="residentname23" placeholder="copy and paste resident name 23, (Name J. Example, MD)" ></crowd-input></p>
+<p><crowd-input name="residentname24" placeholder="copy and paste resident name 24, (Name J. Example, MD)" ></crowd-input></p>
+<p><crowd-input name="residentname25" placeholder="copy and paste resident name 25, (Name J. Example, MD)" ></crowd-input></p>
+<p><crowd-input name="residentname26" placeholder="copy and paste resident name 26, (Name J. Example, MD)" ></crowd-input></p>
+<p><crowd-input name="residentname27" placeholder="copy and paste resident name 27, (Name J. Example, MD)" ></crowd-input></p>
+<p><crowd-input name="residentname28" placeholder="copy and paste resident name 28, (Name J. Example, MD)" ></crowd-input></p>
+<p><crowd-input name="residentname29" placeholder="copy and paste resident name 29, (Name J. Example, MD)" ></crowd-input></p>
+<p><crowd-input name="residentname30" placeholder="copy and paste resident name 30, (Name J. Example, MD)" ></crowd-input></p>
+<p><crowd-input name="residentname31" placeholder="copy and paste resident name 31, (Name J. Example, MD)" ></crowd-input></p>
+<p><crowd-input name="residentname32" placeholder="copy and paste resident name 32, (Name J. Example, MD)" ></crowd-input></p>
+<p><crowd-input name="residentname33" placeholder="copy and paste resident name 33, (Name J. Example, MD)" ></crowd-input></p>
+<p><crowd-input name="residentname34" placeholder="copy and paste resident name 34, (Name J. Example, MD)" ></crowd-input></p>
+<p><crowd-input name="residentname35" placeholder="copy and paste resident name 35, (Name J. Example, MD)" ></crowd-input></p>
+<p><crowd-input name="residentname36" placeholder="copy and paste resident name 36, (Name J. Example, MD)" ></crowd-input></p>
+<p><crowd-input name="residentname37" placeholder="copy and paste resident name 37, (Name J. Example, MD)" ></crowd-input></p>
+<p><crowd-input name="residentname38" placeholder="copy and paste resident name 38, (Name J. Example, MD)" ></crowd-input></p>
+<p><crowd-input name="residentname39" placeholder="copy and paste resident name 39, (Name J. Example, MD)" ></crowd-input></p>
+<p><crowd-input name="residentname40" placeholder="copy and paste resident name 40, (Name J. Example, MD)" ></crowd-input></p>
+<p> <crowd-checkbox name="website-found" required>All resident names were entered to the best of my ability.</crowd-checkbox></p>
+<p><crowd-input name="comments" placeholder="Any comments or suggestions." ></crowd-input> </p>
+    <p>
+        Thank you.  
+     ${ProgramNumber}
+     ${city_state}
+    </p>
+
             </div>
-
-            <div>
-                <p><strong>Phone number:</strong></p>
-                <crowd-input name="phone" placeholder="Enter a phone number" type="tel" required></crowd-input>
-            </div>
-
-            <div>
-                <p><strong>Email address:</strong></p>
-                <crowd-input name="email" placeholder="e.g. example@email.com" type="email" required></crowd-input>
-            </div>
-
-            <div>
-                <p><strong>Contact's name:</strong></p>
-                <crowd-input name="contactName" placeholder="Enter name" required></crowd-input>
-            </div>
-
-            <div>
-                <p><strong>Contact's title:</strong></p>
-                <crowd-input name="contactTitle" placeholder="e.g. Sr. Manager" required></crowd-input>
-            </div>
-
-            <div>
-                <p><strong>Hours of operation:</strong></p>
-                <p>Opens at</p>
-                <p><crowd-input name="opensAt" type="time" required></crowd-input></p>
-                <p>Closes at</p>
-                <p><crowd-input name="closesAt" type="time" required></crowd-input></p>
-            </div>
-   </p>
-
-  <p>Do not give websites ending in .com, Doximity, or LinkedIn pages, etc.</p>
-  <p>Include the http:// prefix from the website</p>
-
-  <crowd-input name="website" placeholder="http://example.org" required></crowd-input>
-
-</crowd-form>
 ```
 ## Record Linkage
 Comparing strings
@@ -848,7 +853,7 @@ pair_blocking(internet_first_names, goba_first_names) %>% #, blocking_var = "cit
 
 ```
 
-Consider ```r RecordLinkage``` package that is not available on CRAN.  
+Consider ```r RecordLinkage``` package that is available on CRAN.  
 
 # Match GOBA (6,456 rows) to handsearch/mturk resdents (4,099 rows) using stringdist package
 Reliably only 0 (exact match), 1 (likely spelling error), or 2 string distance changes is appropriate.  
@@ -988,6 +993,17 @@ Things we need yet:
 What PGY are they?  Determine based on when they had their NPI number enumerated.  Usually is the year that they started.  
 What residency are they at?
 
+To get medical school because residents are not on Physician Compare?  
+https://doctorfinder.ama-assn.org/doctorfinder/disclaimer.do?
+Residents must all be automatic members of the AMA while in residency?  No the data is *spotty* to say the least.  
+Will give you their name, primary specialty, gender, location city, location state, location zip, medical school, residency training, major professional activity.  
+
+FSMB
+https://www.docinfo.org
+Give you where they went to medical school.  
+url <- "https://www.docinfo.org/search/?practype=Physician&docname=smith&usstate=Colorado"
+mturk to get name, reported locations, education_medical_school_in_bold, Year of Graduation, Active Licenses, certifications, and url where data found, may be the only way?  Give option: no match found.  Could give us FMG vs. US Senior.  
+
 
 When I need to roll back my exploratory.io because I did something stupid:
 ```r
@@ -1003,3 +1019,5 @@ git diff
 git reset --hard 2ce38080113
 pwd
 ```
+
+I would have to pay for stats from AMA so I would recommend that we instead get their application stats from residency programs.  
