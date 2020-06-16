@@ -1021,3 +1021,8 @@ pwd
 ```
 
 I would have to pay for stats from AMA so I would recommend that we instead get their application stats from residency programs.  
+
+# Medical School Data
+https://members.aamc.org/eweb/DynamicPage.aspx?site=AAMC&webcode=AAMCOrgSearchResult&orgtype=Medical%20School
+
+Could help answer the question: What US Medical Schools are Supplying 50 or More Applicants to OBGYN REsidency, 2019-2020?
