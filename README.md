@@ -1026,3 +1026,58 @@ I would have to pay for stats from AMA so I would recommend that we instead get 
 https://members.aamc.org/eweb/DynamicPage.aspx?site=AAMC&webcode=AAMCOrgSearchResult&orgtype=Medical%20School
 
 Could help answer the question: What US Medical Schools are Supplying 50 or More Applicants to OBGYN REsidency, 2019-2020?
+
+Possible:  
+```r
+<!-- You must include this JavaScript file -->
+<script src="https://assets.crowd.aws/crowd-html-elements.js"></script>
+
+<!-- For the full list of available Crowd HTML Elements and their input/output documentation,
+      please refer to https://docs.aws.amazon.com/sagemaker/latest/dg/sms-ui-template-reference.html 
+      
+      
+      merged_mturk_residencies_for_medical_school_search_on_mturk
+      TYLER THIS WOULD BE YOUR INPUT FILE
+      
+      
+      -->
+
+<!-- You must include crowd-form so that your task submits answers to MTurk -->
+<crowd-form answer-format="flatten-objects">
+
+  <p>
+    Please search for the this given OBGYN physician name and state at this url:
+    "https://www.docinfo.org/search/?practype=Physician&docname=&usstate="
+
+
+    <strong>
+
+        <!-- The residency name you want researched when you publish a batch with a CSV input file containing multiple companies  -->
+        ${name_suffix}
+
+        </p>
+    <p>
+        ${state}
+      </strong>  
+      </p>
+      
+    <p>
+        
+    </p>
+ <div>
+                <p><strong>Please copy and paste the "Physician Name":</strong></p>
+<p><crowd-input name="residentname1" placeholder="please copy and paste physician name, (Name J. Example, MD)" required></crowd-input> </p>
+
+                <p><strong>Please copy and paste the "Education" section:</strong></p>
+<p><crowd-input name="education" placeholder="please copy and paste medical school medical school name, (example: Jefferson Medical College)" ></crowd-input></p>
+<p><crowd-input name="Year_of_Graduation" placeholder="please copy and paste Year of Graduation, (example: 2000)" ></crowd-input></p>
+
+<p><crowd-input name="comments" placeholder="Any comments or suggestions." ></crowd-input> </p>
+    <p>
+        Thank you!  
+     ${NPI}
+     ${random_id}
+    </p>
+
+            </div>
+```
