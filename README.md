@@ -1024,8 +1024,9 @@ I would have to pay for stats from AMA so I would recommend that we instead get 
 
 # Medical School Data
 https://members.aamc.org/eweb/DynamicPage.aspx?site=AAMC&webcode=AAMCOrgSearchResult&orgtype=Medical%20School
+Could help answer the question: What US Medical Schools are Supplying 50 or More Applicants to OBGYN REsidency, 2019-2020 ?
 
-Could help answer the question: What US Medical Schools are Supplying 50 or More Applicants to OBGYN REsidency, 2019-2020?
+PG-Year also can be set by year that the person graduated medical school.  Year that they graduated medical school is found in https://www.docinfo.org.  
 
 Possible:  
 ```r
