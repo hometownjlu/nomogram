@@ -1065,13 +1065,12 @@ Possible:
     </p>
  <div>
                 <p><strong>Please copy and paste the "Physician Name":</strong></p>
-<p><crowd-input name="residentname1" placeholder="copy and paste physician name 1, (Name J. Example, MD)" required></crowd-input> </p>
+<p><crowd-input name="residentname1" placeholder="please copy and paste physician name, (Name J. Example, MD)" required></crowd-input> </p>
 
                 <p><strong>Please copy and paste the "Education" section:</strong></p>
-<p><crowd-input name="education" placeholder="copy and paste medical school medical school name, (example: Jefferson Medical College)" ></crowd-input></p>
-<p><crowd-input name="Year_of_Graduation" placeholder="copy and paste Year of Graduation, (example: 2000)" ></crowd-input></p>
+<p><crowd-input name="education" placeholder="please copy and paste medical school medical school name, (example: Jefferson Medical College)" ></crowd-input></p>
+<p><crowd-input name="Year_of_Graduation" placeholder="please copy and paste Year of Graduation, (example: 2000)" ></crowd-input></p>
 
-<p> <crowd-checkbox name="website-found" required>All data fields were entered to the best of my ability.</crowd-checkbox></p>
 <p><crowd-input name="comments" placeholder="Any comments or suggestions." ></crowd-input> </p>
     <p>
         Thank you!  
