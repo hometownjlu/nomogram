@@ -1081,3 +1081,73 @@ Possible:
 
             </div>
 ```
+
+# Git Large File System
+Error:
+```r
+remote: error: File Code/01-Split_Data.html is 150.77 MB; this exceeds GitHub's file size limit of 100.00 MB  
+```
+
+Install with ```r brew install git-lfs```
+Verify installation was good: ```r git lfs install```
+
+Open Terminal.
+Change your current working directory to an existing repository you'd like to use with Git LFS.
+To associate a file type in your repository with Git LFS, enter ```r git lfs track``` followed by the name of the file extension you want to automatically upload to Git LFS.
+For example, to associate a .psd file, enter the following command:
+```r $ git lfs track "*.psd" ```
+
+
+# gitignore that I use
+```r
+#.Rproj.user
+#.Rhistory
+#.RData
+#.Ruserdata
+#packrat/lib*/
+#packrat/src/
+#
+# History files
+.Rhistory
+.Rapp.history
+
+# Session Data files
+.RData
+
+# User-specific files
+.Ruserdata
+
+# Example code in package build process
+*-Ex.R
+
+# Output files from R CMD build
+/*.tar.gz
+
+# Output files from R CMD check
+/*.Rcheck/
+
+# RStudio files
+.Rproj.user/
+
+# produced vignettes
+vignettes/*.html
+vignettes/*.pdf
+
+# OAuth2 token, see https://github.com/hadley/httr/releases/tag/v0.3
+.httr-oauth
+
+# knitr and R markdown default cache directories
+*_cache/
+/cache/
+
+# Temporary files created by R markdown
+*.utf8.md
+*.knit.md
+
+# R Environment Variables
+.Renviron
+packrat/lib*/
+packrat/src/
+
+*.html
+```
