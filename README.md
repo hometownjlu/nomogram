@@ -1095,7 +1095,12 @@ Open Terminal.
 Change your current working directory to an existing repository you'd like to use with Git LFS.
 To associate a file type in your repository with Git LFS, enter ```r git lfs track``` followed by the name of the file extension you want to automatically upload to Git LFS.
 For example, to associate a .psd file, enter the following command:
-```r $ git lfs track "*.psd" ```
+```r 
+$ git lfs track "*.psd" 
+git add file.psd
+git commit -m "Add design file"
+git push origin master
+```
 
 
 # gitignore that I use
