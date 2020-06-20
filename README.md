@@ -1156,3 +1156,10 @@ packrat/src/
 
 *.html
 ```
+
+# How to Roll Back Commits One at a Time
+https://gist.github.com/CrookedNumber/8964442
+```r
+git reset --hard HEAD^
+git push origin -f
+```
