@@ -1163,3 +1163,18 @@ https://gist.github.com/CrookedNumber/8964442
 git reset --hard HEAD^
 git push origin -f
 ```
+
+# How to load that 8 GB NPPES file
+looks like you can use the colClasses property of the read.csv() function to load only a subset of columns for a .csv file.
+
+I tested this out - loading all 'npidata_pfile_20050523-20200412_2.csv' file took 15 minutes on my computer.  loading only the first 105 columns (out of 330) was quicker (6 minutes).
+
+to do this I took advantage of the fact that the string '"NULL" in the colClasses variable skips that column.  NA in the colClassess variable loads that column as normal .. so I executed the following to load only the first 105 columns (which is all we use):
+
+```r
+cls_end <- replicate(225, "NULL")
+cls_begin <- replicate (105, NA)
+cls <- append(cls_begin, cls_end)
+
+NPPES <- read.csv("~/Dropbox/Pharma_Influence/Data/NPPES_Data_Dissemination_April_2020/npidata_pfile_20050523-20200412.csv",stringsAsFactors = FALSE, colClasses = cls)
+```
