@@ -597,6 +597,7 @@ This is how we determined who would be represented in the survey.  The requireme
 * Half are males vs. females applicants
 * Half are matched vs. unmatched applicants
 * Half are white vs. non-white applicants  
+* All applicants had a Step 1 score greater than 194 or greater than passing
 
 ```r
   filter(Year == "2020") %>%
