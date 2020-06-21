@@ -591,6 +591,23 @@ Identifying clerkship directors was challenging.  There is not an up to date lis
 * List of residency directors was easier to find with ACGME listings.  
 ![Interactive map of OBGYN residency programs colored by accrediation status](https://github.com/mufflyt/nomogram/blob/dev_0.1/Map%20of%20OBGYN%20residency%20programs.png?raw=true](https://exploratory.io/viz/8171776323392484/Chart-1-WXe3SSx8Vu)
 
+This is how we determined who would be represented in the survey.  The requirements were:
+* Must have applied to CU categorical position so that we had all their statistics.  
+* Applied for 2020 start year, therefore class of 2024.  
+* Half are males vs. females applicants
+* Half are matched vs. unmatched applicants
+* Half are white vs. non-white applicants  
+
+```r
+  filter(Year == "2020") %>%
+  group_by(Gender, Match_Status, white_non_white) %>%
+  sample_rows(1) %>%
+  filter((is.na(SOAP_Reapply_Track_applied_by_Applicant) | SOAP_Reapply_Track_applied_by_Applicant != "Ob-Gyn/Preliminary|1076220P0 (Preliminary)") & (is.na(AAMC_ID) | AAMC_ID != 13882545)) %>%
+  select(-AAMC_ID, -Tracks_Applied_by_Applicant_2, -SOAP_Reapply_Applicant, -SOAP_Reapply_Track_applied_by_Applicant, -SOAP_Track_applied_by_Applicant, -SOAP_Track_applied_by_Applicant_1, -SOAP_Reviewed, -Tracks_Applied_by_Applicant_3, -Tracks_Applied_by_Applicant_4, -Tracks_Applied_by_Applicant_5, -Known_that_they_SOA_Ped) %>%
+  reorder_cols(Applicant_Name, suffix, Age, Self_Identify, white_non_white, Gender, US_or_Canadian_Applicant, Medical_School_Type, Medical_Education_or_Training_Interrupted, Alpha_Omega_Alpha_Yes_No, Gold_Humanism_Honor_Society_Yes_No, Military_Service_Obligation, Participating_as_a_Couple_in_NRMP, Visa_Sponsorship_Needed, Misdemeanor_Conviction, Count_of_Oral_Presentation, Count_of_Peer_Reviewed_Book_Chapter, Count_of_Peer_Reviewed_Journal_Articles_Abstracts, Count_of_Peer_Reviewed_Journal_Articles_Abstracts_Other_than_Published, Count_of_Poster_Presentation, Year, Date_of_Birth, first_last_name, first_name, last_name, middle_name, Match_Status) %>%
+  select(-Year, -Date_of_Birth, -first_last_name, -first_name, -last_name, -middle_name) %>%
+  ungroup()
+```
 
 ###`Dynamic Nomogram`
 We will use DynNom, an R package, to create a Shiny interactive nomogram.  Demonstrate the results of a statistical model object as a dynamic nomogram in an RStudio panel or web browser. The package provides two generics functions: DynNom, which display statistical model objects as a dynamic nomogram; DNbuilder, which builds required scripts to publish a dynamic nomogram on a web server such as the <https://www.shinyapps.io/>. 
